@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://garvshaw89.gmail.com/sitemap.xml
+Sitemap: https://portfoliowebsite-7tvxld4nh-garvshaw.vercel.app/sitemap.xml

@@ -34,13 +34,20 @@
 
 <!-- Live Visitor Counter & Social Badges -->
 <p align="center">
+  <a href="https://portfoliowebsite-7tvxld4nh-garvshaw.vercel.app/" target="_blank" rel="noopener noreferrer">
+    <img src="https://img.shields.io/badge/LIVE_WEBSITE-portfoliowebsite--garvshaw.vercel.app-06B6D4?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Portfolio Website" />
+  </a>
+</p>
+
+<p align="center">
   <img src="https://komarev.com/ghpvc/?username=garvshaw89-glitch&label=PROFILE+VIEWS&color=06b6d4&style=flat-square" alt="Live Views" />
   <img src="https://img.shields.io/badge/STATUS-OPEN%20FOR%20COLLABORATION-brightgreen?style=flat-square&logo=git&logoColor=white" alt="Status" />
+  <img src="https://img.shields.io/badge/DEPLOYMENT-VERCEL%20PRODUCTION-000000?style=flat-square&logo=vercel&logoColor=white" alt="Vercel Deployment" />
   <img src="https://img.shields.io/badge/LICENSE-MIT-purple?style=flat-square" alt="License" />
 </p>
 
 <p align="center">
-  <a href="https://garvshaw89.gmail.com"><strong>🌐 Launch Live Portfolio</strong></a> •
+  <a href="https://portfoliowebsite-7tvxld4nh-garvshaw.vercel.app/" target="_blank" rel="noopener noreferrer"><strong>🌐 Launch Live Portfolio</strong></a> •
   <a href="#-flagship-projects"><strong>💼 Explore Projects</strong></a> •
   <a href="#-interactive-design-architecture"><strong>✨ Architecture</strong></a> •
   <a href="#-connect-with-garv"><strong>📫 Direct Inquiry</strong></a>
@@ -253,6 +260,9 @@ portfolio/
 
 <p>Have an ambitious project in mind, an opportunity in AI/Cloud engineering, or want to collaborate?</p>
 
+<a href="https://portfoliowebsite-7tvxld4nh-garvshaw.vercel.app/" target="_blank" rel="noopener noreferrer">
+  <img src="https://img.shields.io/badge/Live_Portfolio-Vercel_Deployment-06B6D4?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Portfolio" />
+</a>
 <a href="mailto:garvshawinfo@gmail.com">
   <img src="https://img.shields.io/badge/Email-garvshawinfo@gmail.com-D14836?style=for-the-badge&logo=gmail&logoColor=white" alt="Email Garv" />
 </a>
