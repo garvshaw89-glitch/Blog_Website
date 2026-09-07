@@ -10,7 +10,7 @@
 A modern, high-performance developer portfolio showcasing work at the intersection of **Artificial Intelligence**, **Cloud Computing**, **Software Development**, **Business**, and **Finance**. Built with a futuristic cybernetic aesthetic, interactive 3D physics, and zero-vulnerability production standards.
 
 ## 🌐 Live Website
-- https://portfoliowebsite-omega-rouge.vercel.app/
+- https://portfoliowebsite-7tvxld4nh-garvshaw.vercel.app/
 ---
 
 ## ✨ Features
