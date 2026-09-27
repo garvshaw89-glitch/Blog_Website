@@ -1,28 +1,28 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { interactionEngine } from '../context/SingularityInteractionEngine';
 
 /**
  * DIGITAL SINGULARITY 3D INTERACTIVE ENVIRONMENT
  *
- * Planetary Orbital Feature:
- * - When cursor moves, nearby background particles (dots) get drawn close to the cursor
- *   and dynamically enter planetary Keplerian orbits around the cursor position.
- * - Each orbiting particle is assigned an orbital radius, angular speed, inclination tilt,
- *   and phase angle.
- * - When cursor approaches a particle (within 200px / influence field), it transitions into
- *   an orbiting planet state. As cursor moves across the screen, these planetary dots travel
- *   with the cursor, rotating around it like moons/planets in a miniature planetary solar system!
- * - When cursor moves away, particles gracefully slingshot back to their equilibrium celestial positions.
+ * UnrealBloomPass Post-Processing Architecture:
+ * - RenderPass: Captures the primary scene graph and camera perspective.
+ * - UnrealBloomPass: Configured with soft, elegant luminosity thresholds and radii:
+ *     * Threshold: ~0.24 (selectively isolates emissive neural filaments, energy particles & specular glass rims)
+ *     * Strength: ~0.45 - 0.70 (calm soft glow, expanding with cursor velocity energy)
+ *     * Radius: ~0.42 (diffused, creamy optical bloom without blinding halos)
+ * - OutputPass: Applies ACESFilmic tone mapping and sRGB color space conversion.
  *
- * 200px Radius Grid & Particle Warping:
- * - Converts 200px viewport radius into exact 3D world units.
- * - Smooth funneled gravitational displacement on grid vertices.
- *
- * Layered 3D Depth System:
- * - Foreground (Z: +1 to +8): 2.4x scroll speed.
- * - Midground (Z: -6 to 0): 1.0x scroll speed.
- * - Background (Z: -18 to -8): 0.35x scroll speed.
+ * Performance Budget & Adaptive Device Scaling:
+ * - On low-end / mobile / battery-constrained devices or reduced-motion mode:
+ *     * Automatically disables or bypasses the multi-pass bloom composer to save fillrate,
+ *       falling back seamlessly to direct hardware renderer.render(scene, camera).
+ *     * On mid-tier / tablet: scales down bloom render target resolution to 0.7x for sustained 60 FPS.
+ *     * On desktop fine-pointer: runs full-fidelity bloom with dynamic energy responsiveness.
  */
 
 export const InteractiveBackgroundIllusion: React.FC = () => {
@@ -35,6 +35,11 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
 
     const isMobile = window.innerWidth < 768;
     const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Detect hardware tier (logical cores / memory hints if available)
+    const hardwareConcurrency = navigator.hardwareConcurrency || 4;
+    const isLowEndDevice = isMobile || hardwareConcurrency < 4 || prefersReducedMotion;
 
     // 1. Scene, Camera, Renderer
     const scene = new THREE.Scene();
@@ -52,24 +57,66 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
 
     const renderer = new THREE.WebGLRenderer({
       powerPreference: 'high-performance',
-      antialias: !isMobile,
+      antialias: !isMobile && !isLowEndDevice,
       alpha: true,
       stencil: false,
       depth: true,
     });
 
-    const maxDpr = isMobile ? 1.0 : isTablet ? 1.4 : 1.75;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
+    const maxDpr = isMobile ? 1.0 : isTablet ? 1.3 : 1.75;
+    const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+    renderer.setPixelRatio(dpr);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.15;
 
     container.appendChild(renderer.domElement);
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.inset = '0';
     renderer.domElement.style.pointerEvents = 'none';
 
-    // 2. Volumetric Lights & Cursor Point Source
+    // 2. Post-Processing Chain (EffectComposer + UnrealBloomPass + OutputPass)
+    let composer: EffectComposer | null = null;
+    let bloomPass: UnrealBloomPass | null = null;
+
+    // Only instantiate bloom post-processing on capable devices within performance budget
+    if (!isLowEndDevice) {
+      try {
+        const renderTargetResolution = new THREE.Vector2(
+          window.innerWidth * (isTablet ? 0.75 : 1.0),
+          window.innerHeight * (isTablet ? 0.75 : 1.0)
+        );
+
+        composer = new EffectComposer(renderer);
+        composer.setPixelRatio(dpr);
+        composer.setSize(window.innerWidth, window.innerHeight);
+
+        const renderPass = new RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        // Soft, balanced bloom parameters:
+        // - resolution: Vector2
+        // - strength: 0.52 (soft and luminous, not blinding)
+        // - radius: 0.38 (creamy, tight diffusion)
+        // - threshold: 0.22 (captures luminous filaments, particles, and glints)
+        bloomPass = new UnrealBloomPass(
+          renderTargetResolution,
+          0.52,
+          0.38,
+          0.22
+        );
+        composer.addPass(bloomPass);
+
+        const outputPass = new OutputPass();
+        composer.addPass(outputPass);
+      } catch (err) {
+        console.warn('Post-processing bloom fallback to native renderer:', err);
+        composer = null;
+        bloomPass = null;
+      }
+    }
+
+    // 3. Volumetric Lights & Cursor Point Source
     const ambientLight = new THREE.AmbientLight(0x081524, 1.9);
     scene.add(ambientLight);
 
@@ -96,7 +143,7 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
     scene.add(midgroundGroup);
     scene.add(foregroundGroup);
 
-    // 3. Holographic 3D Warp Grid (Midground)
+    // 4. Holographic 3D Warp Grid (Midground)
     const gridCols = isMobile ? 24 : 48;
     const gridRows = isMobile ? 18 : 36;
     const gridGeo = new THREE.PlaneGeometry(38, 30, gridCols, gridRows);
@@ -113,24 +160,20 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
 
     const originalGridPositions = gridGeo.attributes.position.clone();
 
-    // 4. Multi-Tier Particles with Planetary Orbital Physics
-    // - Foreground: 20% particles (Z: +1 to +8)
-    // - Midground: 50% particles (Z: -6 to 0)
-    // - Background: 30% particles (Z: -18 to -8)
+    // 5. Multi-Tier Particles with Planetary Orbital Physics
     const particleCount = isMobile ? 180 : isTablet ? 340 : 580;
     const particleGeometry = new THREE.BufferGeometry();
     const pPositions = new Float32Array(particleCount * 3);
     const pOriginals = new Float32Array(particleCount * 3);
     const pVelocities = new Float32Array(particleCount * 3);
     const pColors = new Float32Array(particleCount * 3);
-    const pTiers = new Uint8Array(particleCount); // 0 = foreground, 1 = midground, 2 = background
+    const pTiers = new Uint8Array(particleCount);
 
-    // Planetary Orbital States per particle:
-    const pOrbitAngle = new Float32Array(particleCount); // Current orbital angle (theta)
-    const pOrbitSpeed = new Float32Array(particleCount); // Angular speed in rad/frame
-    const pOrbitRadius = new Float32Array(particleCount); // Target orbital radius around cursor (0.8 to 4.5 units)
-    const pOrbitTilt = new Float32Array(particleCount); // 3D orbital plane inclination angle
-    const pCaptureWeight = new Float32Array(particleCount); // 0 = free/home, 1 = fully captured in orbit
+    const pOrbitAngle = new Float32Array(particleCount);
+    const pOrbitSpeed = new Float32Array(particleCount);
+    const pOrbitRadius = new Float32Array(particleCount);
+    const pOrbitTilt = new Float32Array(particleCount);
+    const pCaptureWeight = new Float32Array(particleCount);
 
     const colCyan = new THREE.Color(0x06b6d4);
     const colSky = new THREE.Color(0x38bdf8);
@@ -142,17 +185,17 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
     for (let i = 0; i < particleCount; i++) {
       const idx = i * 3;
       const tierRand = Math.random();
-      let tier = 1; // midground
+      let tier = 1;
       let depthZ = -2;
 
       if (tierRand < 0.22) {
-        tier = 0; // Foreground (fast kinetic response)
+        tier = 0;
         depthZ = 1.5 + Math.random() * 6.5;
       } else if (tierRand < 0.72) {
-        tier = 1; // Midground (standard flow)
+        tier = 1;
         depthZ = -6 + Math.random() * 6;
       } else {
-        tier = 2; // Background (slow cosmic drift)
+        tier = 2;
         depthZ = -18 + Math.random() * 9;
       }
 
@@ -176,17 +219,14 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
       pVelocities[idx + 1] = 0;
       pVelocities[idx + 2] = 0;
 
-      // Assign planetary orbital attributes:
-      // Inner planets orbit faster (Kepler's 3rd Law approximation), outer planets orbit slower
       const orbitR = 0.8 + Math.random() * 3.8;
       pOrbitRadius[i] = orbitR;
       pOrbitAngle[i] = Math.random() * Math.PI * 2;
       const dir = Math.random() > 0.35 ? 1 : -1;
       pOrbitSpeed[i] = dir * (0.028 + (1.2 / (orbitR + 0.5)) * 0.035);
-      pOrbitTilt[i] = (Math.random() - 0.5) * 0.85; // 3D ellipse inclination
+      pOrbitTilt[i] = (Math.random() - 0.5) * 0.85;
       pCaptureWeight[i] = 0;
 
-      // Color scheme
       let col = colCyan;
       if (tier === 0) col = Math.random() > 0.4 ? colWhite : colSky;
       else if (tier === 1) col = Math.random() > 0.5 ? colCyan : colGold;
@@ -230,7 +270,7 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
     const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
     scene.add(particleSystem);
 
-    // 5. Floating Glass Objects Distributed into Depth Layers
+    // 6. Floating Glass Objects Distributed into Depth Layers
     const glassFragments: {
       mesh: THREE.Mesh;
       basePos: THREE.Vector3;
@@ -312,7 +352,7 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
       });
     }
 
-    // 6. Deep Space Holographic Rings (Background Layer)
+    // 7. Deep Space Holographic Rings (Background Layer)
     const ringCount = isMobile ? 3 : 5;
     const deepRings: { mesh: THREE.Mesh; rx: number; ry: number; rz: number }[] = [];
     const ringMat = new THREE.MeshStandardMaterial({
@@ -343,7 +383,7 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
       });
     }
 
-    // 7. Neural Energy Filaments (Midground Layer)
+    // 8. Neural Energy Filaments (Midground Layer)
     const filCount = isMobile ? 4 : 8;
     const filamentLines: {
       line: THREE.Line;
@@ -357,7 +397,7 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
     const filMat = new THREE.LineBasicMaterial({
       color: 0x22d3ee,
       transparent: true,
-      opacity: 0.24,
+      opacity: 0.28,
       blending: THREE.AdditiveBlending,
     });
 
@@ -391,7 +431,7 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
       });
     }
 
-    // 8. Click Shockwave System
+    // 9. Click Shockwave System
     interface ActiveShockwave {
       mesh: THREE.Mesh;
       radius: number;
@@ -424,7 +464,6 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
         opacity: 0.9,
       });
 
-      // Violent pulse push on particles
       const positions = particleGeometry.attributes.position.array as Float32Array;
       for (let i = 0; i < particleCount; i++) {
         const idx = i * 3;
@@ -439,12 +478,10 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
           pVelocities[idx] += Math.cos(angle) * push;
           pVelocities[idx + 1] += Math.sin(angle) * push;
           pVelocities[idx + 2] += (Math.random() - 0.5) * push * 0.5;
-          // Temporarily break out of orbit when shockwave hits
           pCaptureWeight[i] = Math.max(0, pCaptureWeight[i] - 0.5);
         }
       }
 
-      // Pulse on glass fragments
       for (const frag of glassFragments) {
         const dist = frag.mesh.position.distanceTo(mesh.position);
         if (dist < 9) {
@@ -461,7 +498,7 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
       }
     };
 
-    // 9. Raycasting: project mouse coordinates to 3D world plane at Z = 0
+    // 10. Raycasting: project mouse coordinates to 3D world plane at Z = 0
     const raycaster = new THREE.Raycaster();
     const planeZ0 = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
     const planeIntersection = new THREE.Vector3();
@@ -490,15 +527,24 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
     });
 
     const onResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
-      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      const newDpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+      renderer.setPixelRatio(newDpr);
+      renderer.setSize(w, h);
+
+      if (composer) {
+        composer.setPixelRatio(newDpr);
+        composer.setSize(w, h);
+      }
     };
 
     window.addEventListener('resize', onResize, { passive: true });
 
-    // 10. Unified 60-120 FPS Main Render Loop
+    // 11. Unified 60-120 FPS Main Render Loop
     let animId: number;
     let targetPrimaryCol = new THREE.Color(0x06b6d4);
     let targetSecondaryCol = new THREE.Color(0x3b82f6);
@@ -557,6 +603,16 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
       rimLight.color.lerp(targetSecondaryCol, 0.04);
       cursorLight.intensity = 2.8 + normalizedEnergy * 1.2;
 
+      // Dynamic Bloom Modulation based on environmental energy
+      if (bloomPass) {
+        // Base soft bloom intensity 0.48, naturally rising to 0.72 on high-energy sweeps
+        bloomPass.strength = THREE.MathUtils.lerp(
+          bloomPass.strength,
+          0.48 + normalizedEnergy * 0.24,
+          0.05
+        );
+      }
+
       const cursorX = worldPos.x;
       const cursorY = worldPos.y;
 
@@ -600,8 +656,6 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
       gridGeo.attributes.position.needsUpdate = true;
 
       // 2. PLANETARY ORBITAL PARTICLE SYSTEM
-      // When the cursor moves, nearby particles get drawn close to the cursor and rotate
-      // like planets orbiting around the cursor!
       const pos = particleGeometry.attributes.position.array as Float32Array;
 
       for (let i = 0; i < particleCount; i++) {
@@ -616,12 +670,10 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
 
         const tier = pTiers[i];
 
-        // 200px influence radius in world space at this particle's depth plane
         const distToParticleZ = Math.abs(camera.position.z - pz);
         const frustumHeightAtZ = 2 * distToParticleZ * Math.tan(vFovRad / 2);
         const particleWarpRadius = 200 * (frustumHeightAtZ / viewH) * (1 + normalizedEnergy * 0.18);
 
-        // Target 1: Natural resting celestial home coordinates (with scroll parallax)
         let tierScrollOffset = 0;
         if (tier === 0) tierScrollOffset = -fgScrollY * 0.4;
         else if (tier === 1) tierScrollOffset = -mgScrollY * 0.25;
@@ -631,37 +683,27 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
         const homeY = oy + tierScrollOffset;
         const homeZ = oz;
 
-        // Check distance from cursor to particle's HOME place.
-        // This ensures dots ONLY react and orbit when the cursor actually visits their territory.
-        // When cursor moves away to a distance, distFromHome exceeds particleWarpRadius,
-        // causing capture weight to promptly drop to 0, returning the dot cleanly to its place!
         const distFromHome = Math.hypot(cursorX - homeX, cursorY - homeY);
 
         if (distFromHome < particleWarpRadius) {
-          // Cursor is nearby this dot's territory: attract toward cursor and spin into orbit!
           const proximity = 1 - distFromHome / particleWarpRadius;
           pCaptureWeight[i] = Math.min(1.0, pCaptureWeight[i] + 0.08 * (0.5 + proximity));
-          // Orbit angle advances while cursor is nearby
           pOrbitAngle[i] += pOrbitSpeed[i] * (1 + normalizedEnergy * 1.4);
         } else {
-          // Cursor moved distance away: quickly release and return to home place!
           pCaptureWeight[i] = Math.max(0.0, pCaptureWeight[i] - 0.06);
         }
 
         const capture = pCaptureWeight[i];
 
         if (capture > 0.001) {
-          // Target 2: Planetary orbit coordinate around cursor
           const r = pOrbitRadius[i];
           const theta = pOrbitAngle[i];
           const tilt = pOrbitTilt[i];
 
-          // Orbit position relative to cursor
           const orbitX = cursorX + Math.cos(theta) * r;
           const orbitY = cursorY + Math.sin(theta) * (r * 0.88);
           const orbitZ = (Math.sin(theta) * Math.sin(tilt) * r * 0.6);
 
-          // Smoothly blend between home position and cursor planet orbit
           const targetX = THREE.MathUtils.lerp(homeX, orbitX, capture);
           const targetY = THREE.MathUtils.lerp(homeY, orbitY, capture);
           const targetZ = THREE.MathUtils.lerp(homeZ, orbitZ, capture);
@@ -671,14 +713,12 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
           pVelocities[idx + 1] += (targetY - py) * followSpeed;
           pVelocities[idx + 2] += (targetZ - pz) * followSpeed;
         } else {
-          // Return to its exact home place with crisp spring return
           const returnSpring = tier === 2 ? 0.04 : 0.065;
           pVelocities[idx] += (homeX - px) * returnSpring;
           pVelocities[idx + 1] += (homeY - py) * returnSpring;
           pVelocities[idx + 2] += (homeZ - pz) * returnSpring;
         }
 
-        // Kinetic dampening: fast settling when returning home
         const dampening = capture > 0.001 ? 0.88 : 0.82;
         pVelocities[idx] *= dampening;
         pVelocities[idx + 1] *= dampening;
@@ -769,7 +809,13 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
         }
       }
 
-      renderer.render(scene, camera);
+      // Render through Post-Processing Composer if available, otherwise direct render
+      if (composer) {
+        composer.render();
+      } else {
+        renderer.render(scene, camera);
+      }
+
       animId = requestAnimationFrame(animate);
     };
 
@@ -780,6 +826,9 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
       window.removeEventListener('resize', onResize);
       cancelAnimationFrame(animId);
 
+      if (composer) {
+        composer.dispose();
+      }
       renderer.dispose();
       gridGeo.dispose();
       gridMat.dispose();
