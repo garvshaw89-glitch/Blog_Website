@@ -31,6 +31,7 @@ export const ContactButton: React.FC<ContactButtonProps> = ({
     <motion.button
       id={id}
       data-magnetic="true"
+      data-magnetic-range="120"
       data-cursor="button"
       whileHover={{ scale: 1.05, filter: 'brightness(1.18)' }}
       whileTap={{ scale: 0.96 }}

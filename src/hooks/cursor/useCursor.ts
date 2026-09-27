@@ -34,8 +34,12 @@ export interface MagneticVectorOptions extends SpringPhysicsConfig {
   strength?: number;
   /** Maximum displacement clamp in pixels (default 8px) */
   maxDisplacement?: number;
+  /** Custom detection radius/range in pixels (overrides default bounding calculation) */
+  range?: number;
   /** Fallback CSS transition curve (if spring physics animation loop is bypassed) */
   transition?: string;
+  /** Whether to apply visual feedback classes (scale-105 / scale-110 / ring-1) when near */
+  enableVisualFeedback?: boolean;
 }
 
 export interface MagneticVectorResult {
@@ -43,6 +47,7 @@ export interface MagneticVectorResult {
   y: number;
   distance: number;
   angle: number;
+  range: number;
   isWithinThreshold: boolean;
 }
 
@@ -113,6 +118,15 @@ export function calculateMagneticVector(
   const distance = Math.hypot(deltaX, deltaY);
   const angle = Math.atan2(deltaY, deltaX);
 
+  // Allow per-element custom detection radius via 'data-magnetic-range' attribute
+  const elementRangeAttr = element.getAttribute('data-magnetic-range');
+  const parsedRange = elementRangeAttr ? parseFloat(elementRangeAttr) : NaN;
+  const effectiveRange = !isNaN(parsedRange)
+    ? parsedRange
+    : options.range !== undefined
+    ? options.range
+    : Math.max(rect.width, rect.height) * 0.9;
+
   // Allow per-element overrides via data attributes
   const elementStrengthAttr = element.getAttribute('data-magnetic-strength');
   const parsedStrength = elementStrengthAttr ? parseFloat(elementStrengthAttr) : NaN;
@@ -124,18 +138,29 @@ export function calculateMagneticVector(
   const parsedMax = elementMaxAttr ? parseFloat(elementMaxAttr) : NaN;
   const maxOffset = !isNaN(parsedMax) ? parsedMax : (options.maxDisplacement ?? 8);
 
-  const moveX = Math.max(-maxOffset, Math.min(maxOffset, deltaX * effectiveStrength));
-  const moveY = Math.max(-maxOffset, Math.min(maxOffset, deltaY * effectiveStrength));
+  const isWithinThreshold = distance <= effectiveRange;
 
-  // Interactive radius: bounding box plus comfortable margin
-  const threshold = Math.max(rect.width, rect.height) * 0.9;
-  const isWithinThreshold = distance <= threshold;
+  // Calculate falloff so attraction scales smoothly as cursor approaches the element
+  let pullFactor = effectiveStrength;
+  if (effectiveRange > 0 && distance > 0) {
+    // Proximity factor: 1 at center, tapering smoothly to 0 at the threshold boundary
+    const proximity = Math.max(0, 1 - distance / effectiveRange);
+    pullFactor = effectiveStrength * (0.4 + 0.6 * proximity);
+  }
+
+  const moveX = isWithinThreshold
+    ? Math.max(-maxOffset, Math.min(maxOffset, deltaX * pullFactor))
+    : 0;
+  const moveY = isWithinThreshold
+    ? Math.max(-maxOffset, Math.min(maxOffset, deltaY * pullFactor))
+    : 0;
 
   return {
     x: moveX,
     y: moveY,
     distance,
     angle,
+    range: effectiveRange,
     isWithinThreshold,
   };
 }
@@ -262,9 +287,44 @@ export function applyMagneticAttraction(
   // Remove any conflicting CSS transitions while physics engine is running
   element.style.transition = 'none';
 
+  // Apply subtle visual feedback classes when within magnetic range
+  const shouldApplyVisualFeedback = options.enableVisualFeedback !== false;
+  if (shouldApplyVisualFeedback) {
+    if (vector.isWithinThreshold) {
+      if (!element.classList.contains('magnetic-active')) {
+        element.classList.add('magnetic-active');
+      }
+      // Add ring-1 and subtle scale if not present or as requested
+      if (!element.classList.contains('ring-1')) {
+        element.classList.add('ring-1', 'ring-cyan-400/60');
+      }
+      // Add subtle scale feedback for elements indicating active magnetic pull
+      if (element.getAttribute('data-magnetic-scale') !== 'false' && !element.classList.contains('scale-[1.04]')) {
+        element.classList.add('scale-[1.04]');
+      }
+    } else {
+      removeMagneticVisualFeedback(element);
+    }
+  }
+
   startSpringLoop(element, session);
 
   return vector;
+}
+
+/**
+ * Removes active magnetic visual feedback classes from an element.
+ */
+export function removeMagneticVisualFeedback(element: HTMLElement | null): void {
+  if (!element) return;
+  element.classList.remove(
+    'magnetic-active',
+    'ring-1',
+    'ring-cyan-400/60',
+    'scale-[1.04]',
+    'scale-105',
+    'scale-110'
+  );
 }
 
 /**
@@ -276,6 +336,8 @@ export function resetMagneticElement(
   config?: SpringPhysicsConfig
 ): void {
   if (!element) return;
+
+  removeMagneticVisualFeedback(element);
 
   const session = springSessions.get(element);
   if (session) {
@@ -298,6 +360,7 @@ export function resetMagneticElement(
  */
 export function stopMagneticSpring(element: HTMLElement | null): void {
   if (!element) return;
+  removeMagneticVisualFeedback(element);
   const session = springSessions.get(element);
   if (session && session.rafId !== null) {
     cancelAnimationFrame(session.rafId);

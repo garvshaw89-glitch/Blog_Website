@@ -5,6 +5,7 @@ import { applyMagneticAttraction, resetMagneticElement, stopMagneticSpring } fro
 interface UseMagneticOptions {
   maxDisplacement?: number; // Maximum offset in px (default 6)
   strength?: number;        // Magnetic pull coefficient (default 0.22, range 0.15 - 0.30)
+  range?: number;           // Custom detection radius in px
   damping?: number;         // Spring damping (default 22)
   stiffness?: number;       // Spring stiffness (default 220)
   disabled?: boolean;
@@ -21,6 +22,7 @@ export function useMagneticElement<T extends HTMLElement = HTMLElement>(
   const {
     maxDisplacement = 6,
     strength = 0.22,
+    range,
     damping = 22,
     stiffness = 220,
     disabled = false,
@@ -34,6 +36,7 @@ export function useMagneticElement<T extends HTMLElement = HTMLElement>(
 
       const vector = applyMagneticAttraction(elementRef.current, e.clientX, e.clientY, {
         strength,
+        range,
         maxDisplacement,
         damping,
         stiffness,
@@ -43,7 +46,7 @@ export function useMagneticElement<T extends HTMLElement = HTMLElement>(
         resetMagneticElement(elementRef.current, { damping, stiffness });
       }
     },
-    [disabled, prefersReduced, maxDisplacement, strength, damping, stiffness]
+    [disabled, prefersReduced, maxDisplacement, strength, range, damping, stiffness]
   );
 
   const handleMouseLeave = useCallback(() => {
