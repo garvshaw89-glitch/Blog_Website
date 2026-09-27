@@ -1,8 +1,8 @@
 /* ==========================================================================
-   PREMIUM DESIGNER CURSOR - ZERO DELAY, PERFECT CONCENTRIC CENTERING
+   DIGITAL SINGULARITY CURSOR SYSTEM - ULTRALUXURY HARDWARE-ACCELERATED
    ========================================================================== */
 
-/* Root overlay container: zero dimensions, pointer-events none, maximum z-index */
+/* Root overlay container: zero dimensions, pointer-events none, guaranteed top visibility */
 .custom-cursor {
   position: fixed !important;
   left: 0 !important;
@@ -19,7 +19,7 @@
   transform: none !important;
 }
 
-/* 1. Inner Core: 6px solid brand dot - ALWAYS centered at exact mouse pointer */
+/* 1. Core: 6px high-contrast center point */
 .cursor-inner-core {
   position: fixed !important;
   top: 0 !important;
@@ -33,7 +33,7 @@
   z-index: 2147483647 !important;
   background-color: #ffffff !important;
   border: 1px solid rgba(6, 182, 212, 0.95) !important;
-  box-shadow: 0 0 6px #06b6d4, 0 0 10px rgba(6, 182, 212, 0.8) !important;
+  box-shadow: 0 0 8px #06b6d4, 0 0 14px rgba(6, 182, 212, 0.85) !important;
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.95)) !important;
   transform: translate3d(0, 0, 0);
   will-change: transform;
@@ -43,20 +43,17 @@
   transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1),
               height 0.18s cubic-bezier(0.16, 1, 0.3, 1),
               margin 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.18s ease,
-              background-color 0.18s ease;
+              box-shadow 0.18s ease;
 }
 
-/* Button hover expands core slightly while staying perfectly centered */
 .cursor-inner-core.is-button {
   width: 8px;
   height: 8px;
   margin-top: -4px !important;
   margin-left: -4px !important;
-  box-shadow: 0 0 8px #22d3ee, 0 0 14px rgba(6, 182, 212, 0.95) !important;
+  box-shadow: 0 0 10px #22d3ee, 0 0 18px rgba(6, 182, 212, 0.95) !important;
 }
 
-/* Text hover adjustment */
 .cursor-inner-core.is-text {
   width: 4px;
   height: 4px;
@@ -64,65 +61,84 @@
   margin-left: -2px !important;
 }
 
-/* 2. Outer Ring: 38px thin circular ring - perfectly centered on cursor */
+/* 2. Inner Ring: 28px thin glowing boundary */
+.cursor-inner-ring {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 26px;
+  height: 26px;
+  margin-top: -13px !important;
+  margin-left: -13px !important;
+  border-radius: 50% !important;
+  pointer-events: none !important;
+  z-index: 2147483646 !important;
+  border: 1px solid rgba(34, 211, 238, 0.7) !important;
+  background: rgba(6, 182, 212, 0.05) !important;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.35) !important;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              margin 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 3. Outer Ring: 46px luxury trailing boundary */
 .cursor-outer-ring {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  width: 38px;
-  height: 38px;
-  margin-top: -19px !important;
-  margin-left: -19px !important;
-  border-radius: 50% !important;
-  pointer-events: none !important;
-  z-index: 2147483646 !important;
-  border: 1.5px solid rgba(6, 182, 212, 0.65) !important;
-  background: rgba(6, 182, 212, 0.04) !important;
-  box-shadow: 0 0 12px rgba(6, 182, 212, 0.28), inset 0 0 8px rgba(6, 182, 212, 0.08) !important;
-  filter: drop-shadow(0 0 2.5px rgba(0, 0, 0, 0.85)) !important;
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
-  opacity: 1 !important;
-  visibility: visible !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              height 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              margin 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.18s ease,
-              background-color 0.18s ease,
-              box-shadow 0.18s ease;
-}
-
-.cursor-outer-ring.is-button {
-  width: 48px;
-  height: 48px;
-  margin-top: -24px !important;
-  margin-left: -24px !important;
-  border-color: rgba(34, 211, 238, 0.85) !important;
-  background: rgba(6, 182, 212, 0.1) !important;
-  box-shadow: 0 0 18px rgba(6, 182, 212, 0.45), inset 0 0 10px rgba(6, 182, 212, 0.15) !important;
-}
-
-.cursor-outer-ring.is-link {
   width: 44px;
   height: 44px;
   margin-top: -22px !important;
   margin-left: -22px !important;
+  border-radius: 50% !important;
+  pointer-events: none !important;
+  z-index: 2147483645 !important;
+  border: 1.5px solid rgba(6, 182, 212, 0.5) !important;
+  background: rgba(6, 182, 212, 0.03) !important;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.25), inset 0 0 10px rgba(6, 182, 212, 0.08) !important;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)) !important;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              margin 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.22s ease,
+              background-color 0.22s ease,
+              box-shadow 0.22s ease;
+}
+
+.cursor-outer-ring.is-button {
+  width: 52px;
+  height: 52px;
+  margin-top: -26px !important;
+  margin-left: -26px !important;
+  border-color: rgba(34, 211, 238, 0.85) !important;
+  background: rgba(6, 182, 212, 0.12) !important;
+  box-shadow: 0 0 22px rgba(6, 182, 212, 0.5) !important;
+}
+
+.cursor-outer-ring.is-link {
+  width: 48px;
+  height: 48px;
+  margin-top: -24px !important;
+  margin-left: -24px !important;
   border-color: rgba(34, 211, 238, 0.8) !important;
-  background: rgba(6, 182, 212, 0.07) !important;
-  box-shadow: 0 0 14px rgba(6, 182, 212, 0.35) !important;
+  background: rgba(6, 182, 212, 0.08) !important;
 }
 
 .cursor-outer-ring.is-project {
-  width: 54px;
-  height: 54px;
-  margin-top: -27px !important;
-  margin-left: -27px !important;
+  width: 60px;
+  height: 60px;
+  margin-top: -30px !important;
+  margin-left: -30px !important;
   border-color: rgba(34, 211, 238, 0.95) !important;
-  background: rgba(5, 7, 10, 0.85) !important;
-  box-shadow: 0 0 22px rgba(6, 182, 212, 0.45), inset 0 0 12px rgba(6, 182, 212, 0.2) !important;
+  background: rgba(5, 7, 10, 0.88) !important;
+  box-shadow: 0 0 26px rgba(6, 182, 212, 0.5) !important;
 }
 
 .cursor-outer-ring.is-text {
@@ -133,71 +149,73 @@
   border-color: rgba(6, 182, 212, 0.35) !important;
 }
 
-/* 3. Secondary Ring: 62px subtle larger depth ring - perfectly centered */
-.cursor-secondary-ring {
+/* 4. Planetary Gyroscope Orbit Rings (Rotating slowly around cursor) */
+.cursor-orbit-ring-1 {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  width: 62px;
-  height: 62px;
-  margin-top: -31px !important;
-  margin-left: -31px !important;
+  width: 34px;
+  height: 34px;
+  margin-top: -17px !important;
+  margin-left: -17px !important;
   border-radius: 50% !important;
   pointer-events: none !important;
-  z-index: 2147483645 !important;
-  border: 1px solid rgba(6, 182, 212, 0.22) !important;
-  background: transparent !important;
-  opacity: 0.32 !important;
-  visibility: visible !important;
-  display: block !important;
-  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6)) !important;
+  z-index: 2147483644 !important;
+  border: 1px dashed rgba(34, 211, 238, 0.45) !important;
   transform: translate3d(0, 0, 0);
   will-change: transform;
-  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              height 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              margin 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.22s ease,
-              opacity 0.22s ease;
 }
 
-.cursor-secondary-ring.is-button {
-  width: 72px;
-  height: 72px;
-  margin-top: -36px !important;
-  margin-left: -36px !important;
-  border-color: rgba(34, 211, 238, 0.35) !important;
-  opacity: 0.45 !important;
+.cursor-orbit-ring-2 {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 56px;
+  height: 56px;
+  margin-top: -28px !important;
+  margin-left: -28px !important;
+  border-radius: 50% !important;
+  pointer-events: none !important;
+  z-index: 2147483643 !important;
+  border: 1px solid rgba(6, 182, 212, 0.22) !important;
+  border-top-color: rgba(34, 211, 238, 0.6) !important;
+  border-bottom-color: transparent !important;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
 }
 
-.cursor-secondary-ring.is-link {
-  width: 68px;
-  height: 68px;
-  margin-top: -34px !important;
-  margin-left: -34px !important;
-  opacity: 0.4 !important;
+/* 5. Orbiting Energy Micro-Sparkles */
+.cursor-sparkle {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 2.5px;
+  height: 2.5px;
+  border-radius: 50% !important;
+  background: #a5f3fc !important;
+  box-shadow: 0 0 4px #22d3ee !important;
+  pointer-events: none !important;
+  z-index: 2147483646 !important;
+  will-change: transform, opacity;
 }
 
-.cursor-secondary-ring.is-project {
-  width: 78px;
-  height: 78px;
-  margin-top: -39px !important;
-  margin-left: -39px !important;
-  border-color: rgba(34, 211, 238, 0.4) !important;
-  opacity: 0.5 !important;
+/* 6. Multi-Layer Energy Trail Elements */
+.cursor-trail-node {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  border-radius: 50% !important;
+  pointer-events: none !important;
+  z-index: 2147483642 !important;
+  will-change: transform, opacity;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.8) 0%, rgba(6, 182, 212, 0.2) 70%, transparent 100%);
+  filter: blur(1px);
 }
 
-.cursor-secondary-ring.is-text {
-  width: 52px;
-  height: 52px;
-  margin-top: -26px !important;
-  margin-left: -26px !important;
-  opacity: 0.2 !important;
-}
-
-/* 4. Tiny VIEW Label for Project Cards */
+/* 7. Tiny VIEW Label for Project Cards */
 .cursor-view-label {
   position: absolute;
-  top: calc(50% + 18px);
+  top: calc(50% + 20px);
   left: 50%;
   transform: translate(-50%, 0);
   font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
@@ -206,11 +224,11 @@
   letter-spacing: 0.14em !important;
   text-transform: uppercase !important;
   color: #a5f3fc !important;
-  background: rgba(5, 7, 10, 0.9);
-  border: 1px solid rgba(6, 182, 212, 0.55);
-  padding: 1px 6px;
+  background: rgba(5, 7, 10, 0.92);
+  border: 1px solid rgba(6, 182, 212, 0.6);
+  padding: 1.5px 7px;
   border-radius: 4px;
-  text-shadow: 0 0 6px rgba(6, 182, 212, 0.8), 0 1px 2px rgba(0, 0, 0, 0.95) !important;
+  text-shadow: 0 0 6px rgba(6, 182, 212, 0.8) !important;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.85));
   white-space: nowrap !important;
   pointer-events: none !important;
@@ -219,43 +237,45 @@
   display: block;
 }
 
-/* 5. Click Ripple Effect: expanding ring centered at click coordinates */
-@keyframes cursorRippleExpand {
+/* 8. Shockwave Pulse */
+@keyframes singularityShockwave {
   0% {
     width: 14px;
     height: 14px;
     margin-top: -7px;
     margin-left: -7px;
-    opacity: 0.85;
-    border-width: 1.5px;
+    opacity: 0.95;
+    border-width: 2px;
+  }
+  40% {
+    opacity: 0.8;
   }
   100% {
-    width: 68px;
-    height: 68px;
-    margin-top: -34px;
-    margin-left: -34px;
+    width: 140px;
+    height: 140px;
+    margin-top: -70px;
+    margin-left: -70px;
     opacity: 0;
     border-width: 1px;
   }
 }
 
-.cursor-click-ripple {
+.cursor-shockwave {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   border-radius: 50% !important;
-  border: 1.5px solid rgba(6, 182, 212, 0.8) !important;
-  box-shadow: 0 0 12px rgba(6, 182, 212, 0.5) !important;
+  border: 2px solid rgba(34, 211, 238, 0.9) !important;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.7), inset 0 0 10px rgba(6, 182, 212, 0.3) !important;
   pointer-events: none !important;
-  z-index: 2147483644 !important;
+  z-index: 2147483641 !important;
   transform: translate3d(0, 0, 0);
-  animation: cursorRippleExpand 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  animation: singularityShockwave 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
-/* Magnetic active glow feedback on target element */
+/* Magnetic active glow */
 [data-magnetic] {
   transition: box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              outline 0.25s cubic-bezier(0.16, 1, 0.3, 1),
               filter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

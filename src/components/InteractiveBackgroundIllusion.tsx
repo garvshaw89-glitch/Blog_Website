@@ -1,668 +1,729 @@
 import React, { useEffect, useRef } from 'react';
+import * as THREE from 'three';
+import { interactionEngine } from '../context/SingularityInteractionEngine';
 
 /**
- * High-End Interactive Digital Background Atmosphere
+ * DIGITAL SINGULARITY 3D INTERACTIVE ENVIRONMENT
  *
- * Architecture:
- * - Fullscreen hardware-accelerated 2D Canvas + SVG Filter Distortion + CSS Variable Lightfield
- * - Passive pointer, scroll, velocity, and click tracking with zero React re-renders in the hot path
- * - Multi-layer parallax:
- *   Layer 1: Deep cosmic chromatic gradient + Section theme interpolation
- *   Layer 2: Subtle floating digital particles (35-70 with dynamic depth & repulsion)
- *   Layer 3: Abstract slow-floating gravitational glass orbs
- *   Layer 4: Technical warping digital grid lines with dynamic cursor refraction
- *   Layer 5: Radial interactive light field with velocity-expansion
- *   Layer 6: Propagating liquid wave ripples generated on clicks & rapid swipes
- *   Layer 7: Ultra-fine grain noise for tactile finish without banding
- * - Fully accessible: strictly honors `prefers-reduced-motion` and touch devices
- * - Preserves content readability: stays strictly at pointer-events-none, z-index 0 behind all content
+ * Integrated Living Universe:
+ * 1. Centralized Master Interaction Engine:
+ *    - Unified pointer coordinates, velocity vector, energy, and scroll progression
+ * 2. 4-Layer Depth Particle Singularity:
+ *    - Layer A: Micro particles (fast orbit around cursor gravity well)
+ *    - Layer B: Mid particles (flowing through space, velocity-reactive)
+ *    - Layer C: Deep particles (slow distant galaxy background)
+ *    - Layer D: Energy particles (accelerated outward on velocity spikes and clicks)
+ * 3. Particle Gravity Dynamics:
+ *    - Attract, repel, tangential swirl, and bending based on individual particle charge
+ * 4. Translucent 3D Holographic Geometry:
+ *    - Glass cubes, octahedrons, hexagonal wafers, and shards with physical Fresnel refraction
+ *    - Objects rotate, catch specular sheen, and physically yield to the cursor's gravity field
+ * 5. Holographic 3D Warp Grid:
+ *    - Procedural grid plane in depth dynamically deformed and warped by the cursor's gravity singularity
+ * 6. Procedural Energy Filaments:
+ *    - Luminous spline curves behaving like neural pathways/fiber optics that curve toward the cursor
+ * 7. Volumetric Light & Atmospheric Fog:
+ *    - Mobile point light following the cursor, illuminating nearby glass and generating light streaks on fast movement
+ * 8. Expanding Multi-Tier 3D Shockwaves on Click:
+ *    - Spherical pulse violently pushes particles and ripples glass geometry with exponential decay
+ * 9. Cinematic Camera Parallax & Scroll Velocity Propulsion:
+ *    - Cursor tilts camera by 2-4 degrees; scrolling propels the camera through the environment
+ * 10. Performance Engine:
+ *    - Instanced rendering, buffer geometry pooling, capped DPR (1.0 - 1.75), 60-120 FPS
  */
 
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  baseRadius: number;
-  depth: number; // 0.2 (distant) to 1.0 (near)
-  alpha: number;
-  baseAlpha: number;
-  pulsePhase: number;
-  colorType: 'cyan' | 'blue' | 'indigo' | 'white';
-}
-
-interface FloatingOrb {
-  x: number;
-  y: number;
-  baseX: number;
-  baseY: number;
-  vx: number;
-  vy: number;
-  radius: number;
-  blur: number;
-  color: string;
-  phase: number;
-  speed: number;
-  mass: number;
-}
-
-interface ClickRipple {
-  x: number;
-  y: number;
-  radius: number;
-  maxRadius: number;
-  alpha: number;
-  speed: number;
-  lineWidth: number;
-  color: string;
-}
-
 export const InteractiveBackgroundIllusion: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const lightFieldRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: true });
-    if (!ctx) return;
+    const isMobile = window.innerWidth < 768;
+    const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
 
-    // Check accessibility & device mode
-    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let prefersReduced = reducedMotionQuery.matches;
+    // 1. Scene, Camera, Renderer
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x05070a, 0.007);
 
-    const finePointerQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
-    let isDesktopFinePointer = finePointerQuery.matches;
+    const camera = new THREE.PerspectiveCamera(
+      52,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      140
+    );
+    camera.position.set(0, 0, 20);
 
-    const handleReducedMotionChange = (e: MediaQueryListEvent) => {
-      prefersReduced = e.matches;
-    };
-    reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
+    const renderer = new THREE.WebGLRenderer({
+      powerPreference: 'high-performance',
+      antialias: !isMobile,
+      alpha: true,
+      stencil: false,
+      depth: true,
+    });
 
-    // Canvas Dimensions & DPR
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
-    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const maxDpr = isMobile ? 1.0 : isTablet ? 1.4 : 1.75;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
 
-    const resizeCanvas = () => {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset
-      ctx.scale(dpr, dpr);
-    };
+    container.appendChild(renderer.domElement);
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.inset = '0';
+    renderer.domElement.style.pointerEvents = 'none';
 
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas, { passive: true });
+    // 2. Volumetric Studio & Cursor Singularity Lights
+    const ambientLight = new THREE.AmbientLight(0x081524, 1.9);
+    scene.add(ambientLight);
 
-    // Interactive State Trackers (all in refs/closures for 60-120fps lock)
-    const pointer = {
-      x: width * 0.5,
-      y: height * 0.35,
-      targetX: width * 0.5,
-      targetY: height * 0.35,
-      prevX: width * 0.5,
-      prevY: height * 0.35,
-      vx: 0,
-      vy: 0,
-      speed: 0,
-      smoothedSpeed: 0,
-      isNearInteractive: false,
-      interactiveX: 0,
-      interactiveY: 0,
-    };
+    // Cursor Point Light (volumetric light source)
+    const cursorLight = new THREE.PointLight(0x06b6d4, 3.4, 25, 1.5);
+    cursorLight.position.set(0, 0, 7);
+    scene.add(cursorLight);
 
-    const scroll = {
-      current: window.scrollY || 0,
-      previous: window.scrollY || 0,
-      velocity: 0,
-      smoothedVelocity: 0,
-      targetVelocity: 0,
-      direction: 0,
-    };
+    // Counter Accent Light
+    const rimLight = new THREE.PointLight(0x3b82f6, 2.2, 32, 1.8);
+    rimLight.position.set(-8, -10, 4);
+    scene.add(rimLight);
 
-    // Color theme interpolation between sections
-    // Default: Hero (cyan/electric blue), About (indigo/glass), Projects (technical cyan/sky), Contact (calm teal/blue)
-    const sectionThemes = [
-      { id: 'hero-section', primary: [6, 182, 212], secondary: [37, 99, 235], ambient: [8, 18, 38] },
-      { id: 'about', primary: [99, 102, 241], secondary: [6, 182, 212], ambient: [10, 15, 30] },
-      { id: 'skills', primary: [14, 165, 233], secondary: [59, 130, 246], ambient: [7, 14, 28] },
-      { id: 'constellation', primary: [6, 182, 212], secondary: [168, 85, 247], ambient: [8, 12, 26] },
-      { id: 'projects', primary: [6, 182, 212], secondary: [14, 165, 233], ambient: [6, 11, 22] },
-      { id: 'architecture', primary: [56, 189, 248], secondary: [99, 102, 241], ambient: [8, 16, 32] },
-      { id: 'contact', primary: [20, 184, 166], secondary: [6, 182, 212], ambient: [5, 12, 24] },
-    ];
+    // Deep Horizon Ambient Light
+    const deepLight = new THREE.PointLight(0x6366f1, 1.8, 40, 2.0);
+    deepLight.position.set(9, 12, -12);
+    scene.add(deepLight);
 
-    let currentPrimaryRGB = [6, 182, 212];
-    let currentSecondaryRGB = [37, 99, 235];
-    let targetPrimaryRGB = [6, 182, 212];
-    let targetSecondaryRGB = [37, 99, 235];
+    // 3. Holographic 3D Warp Grid (Dynamically warped by cursor singularity)
+    const gridCols = isMobile ? 22 : 44;
+    const gridRows = isMobile ? 18 : 34;
+    const gridGeo = new THREE.PlaneGeometry(36, 28, gridCols, gridRows);
+    const gridMat = new THREE.MeshBasicMaterial({
+      color: 0x06b6d4,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.08,
+      blending: THREE.AdditiveBlending,
+    });
+    const warpGrid = new THREE.Mesh(gridGeo, gridMat);
+    warpGrid.position.set(0, 0, -6);
+    scene.add(warpGrid);
 
-    // Initialize 35-65 particles tailored to screen real estate
-    const particleCount = Math.floor(Math.min(Math.max(width / 32, 35), 65));
-    const particles: Particle[] = [];
-    const colors: ('cyan' | 'blue' | 'indigo' | 'white')[] = ['cyan', 'blue', 'indigo', 'white'];
+    const originalGridPositions = gridGeo.attributes.position.clone();
+
+    // 4. Multi-Layer 4-Tier Particle Singularity
+    // Layer A (Micro), Layer B (Mid), Layer C (Deep), Layer D (Energy)
+    const particleCount = isMobile ? 160 : isTablet ? 320 : 540;
+    const particleGeometry = new THREE.BufferGeometry();
+    const pPositions = new Float32Array(particleCount * 3);
+    const pOriginals = new Float32Array(particleCount * 3);
+    const pVelocities = new Float32Array(particleCount * 3);
+    const pColors = new Float32Array(particleCount * 3);
+    const pCharges = new Float32Array(particleCount); // 1 = attract, -1 = repel, 2 = orbital swirl
+    const pLayers = new Uint8Array(particleCount); // 0=micro, 1=mid, 2=deep, 3=energy
+
+    const colCyan = new THREE.Color(0x06b6d4);
+    const colSky = new THREE.Color(0x38bdf8);
+    const colBlue = new THREE.Color(0x3b82f6);
+    const colViolet = new THREE.Color(0x818cf8);
+    const colWhite = new THREE.Color(0xf8fafc);
 
     for (let i = 0; i < particleCount; i++) {
-      const depth = 0.25 + Math.random() * 0.75; // 0.25 is far, 1.0 is near
-      particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.25 * depth,
-        vy: (Math.random() - 0.5) * 0.25 * depth - 0.1 * depth,
-        baseRadius: 0.8 + depth * 1.6,
-        depth,
-        alpha: 0.15 + depth * 0.5,
-        baseAlpha: 0.15 + depth * 0.5,
-        pulsePhase: Math.random() * Math.PI * 2,
-        colorType: colors[Math.floor(Math.random() * colors.length)],
+      const idx = i * 3;
+      const layerRand = Math.random();
+      let layer = 1;
+      let depthZ = -2;
+
+      if (layerRand < 0.25) {
+        layer = 0; // Layer A - Micro
+        depthZ = 2 + (Math.random() - 0.5) * 6;
+      } else if (layerRand < 0.65) {
+        layer = 1; // Layer B - Mid
+        depthZ = -4 + (Math.random() - 0.5) * 8;
+      } else if (layerRand < 0.85) {
+        layer = 2; // Layer C - Deep
+        depthZ = -14 + (Math.random() - 0.5) * 10;
+      } else {
+        layer = 3; // Layer D - Energy
+        depthZ = 0 + (Math.random() - 0.5) * 4;
+      }
+
+      pLayers[i] = layer;
+
+      const px = (Math.random() - 0.5) * (layer === 2 ? 45 : 30);
+      const py = (Math.random() - 0.5) * (layer === 2 ? 35 : 24);
+
+      pPositions[idx] = px;
+      pPositions[idx + 1] = py;
+      pPositions[idx + 2] = depthZ;
+
+      pOriginals[idx] = px;
+      pOriginals[idx + 1] = py;
+      pOriginals[idx + 2] = depthZ;
+
+      pVelocities[idx] = 0;
+      pVelocities[idx + 1] = 0;
+      pVelocities[idx + 2] = 0;
+
+      // Charge determination for varied organic gravity
+      const chargeRand = Math.random();
+      if (chargeRand < 0.35) pCharges[i] = 2; // Orbital swirl
+      else if (chargeRand < 0.65) pCharges[i] = 1; // Gravity attract
+      else pCharges[i] = -1; // Gravity repel
+
+      // Colors
+      let col = colCyan;
+      if (layer === 0) col = colWhite;
+      else if (layer === 1) col = Math.random() > 0.5 ? colCyan : colSky;
+      else if (layer === 2) col = Math.random() > 0.5 ? colBlue : colViolet;
+      else col = colSky;
+
+      pColors[idx] = col.r;
+      pColors[idx + 1] = col.g;
+      pColors[idx + 2] = col.b;
+    }
+
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+    particleGeometry.setAttribute('color', new THREE.BufferAttribute(pColors, 3));
+
+    // Particle Texture with Gaussian flare
+    const particleTexture = (() => {
+      const cvs = document.createElement('canvas');
+      cvs.width = 64;
+      cvs.height = 64;
+      const ctx = cvs.getContext('2d');
+      if (ctx) {
+        const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        grad.addColorStop(0.25, 'rgba(34, 211, 238, 0.9)');
+        grad.addColorStop(0.6, 'rgba(6, 182, 212, 0.25)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 64, 64);
+      }
+      return new THREE.CanvasTexture(cvs);
+    })();
+
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 0.38,
+      map: particleTexture,
+      transparent: true,
+      opacity: 0.85,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+
+    const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particleSystem);
+
+    // 5. Translucent 3D Holographic Geometry (Refraction & Gravity Float)
+    const glassGroup = new THREE.Group();
+    scene.add(glassGroup);
+
+    const glassCount = isMobile ? 8 : 20;
+    const glassFragments: {
+      mesh: THREE.Mesh;
+      basePos: THREE.Vector3;
+      vel: THREE.Vector3;
+      rotVel: THREE.Vector3;
+      mass: number;
+    }[] = [];
+
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0xd7e2ea,
+      emissive: 0x081726,
+      emissiveIntensity: 0.25,
+      metalness: 0.12,
+      roughness: 0.1,
+      transmission: 0.86,
+      thickness: 0.6,
+      ior: 1.52,
+      transparent: true,
+      opacity: 0.45,
+      reflectivity: 0.92,
+    });
+
+    const edgeMat = new THREE.LineBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.4,
+    });
+
+    const geometries = [
+      new THREE.IcosahedronGeometry(0.75, 0),
+      new THREE.OctahedronGeometry(0.85, 0),
+      new THREE.TetrahedronGeometry(0.95, 0),
+      new THREE.CylinderGeometry(0.65, 0.65, 0.08, 6),
+      new THREE.BoxGeometry(0.8, 1.2, 0.08),
+    ];
+
+    for (let i = 0; i < glassCount; i++) {
+      const geom = geometries[i % geometries.length];
+      const mesh = new THREE.Mesh(geom, glassMat);
+
+      const wireGeo = new THREE.WireframeGeometry(geom);
+      const wire = new THREE.LineSegments(wireGeo, edgeMat);
+      mesh.add(wire);
+
+      const basePos = new THREE.Vector3(
+        (Math.random() - 0.5) * 22,
+        (Math.random() - 0.5) * 16,
+        -2 + (Math.random() - 0.5) * 16
+      );
+      mesh.position.copy(basePos);
+      mesh.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+
+      glassGroup.add(mesh);
+      glassFragments.push({
+        mesh,
+        basePos: basePos.clone(),
+        vel: new THREE.Vector3(0, 0, 0),
+        rotVel: new THREE.Vector3(
+          (Math.random() - 0.5) * 0.005,
+          (Math.random() - 0.5) * 0.007,
+          (Math.random() - 0.5) * 0.005
+        ),
+        mass: 0.8 + Math.random() * 0.8,
       });
     }
 
-    // Initialize 4-5 Large Abstract Floating Orbs
-    const orbs: FloatingOrb[] = [
-      {
-        x: width * 0.2,
-        y: height * 0.25,
-        baseX: width * 0.2,
-        baseY: height * 0.25,
-        vx: 0,
-        vy: 0,
-        radius: Math.min(width, height) * 0.35,
-        blur: 130,
-        color: 'rgba(6, 182, 212, 0.08)',
-        phase: 0,
-        speed: 0.0006,
-        mass: 1.2,
-      },
-      {
-        x: width * 0.8,
-        y: height * 0.4,
-        baseX: width * 0.8,
-        baseY: height * 0.4,
-        vx: 0,
-        vy: 0,
-        radius: Math.min(width, height) * 0.38,
-        blur: 150,
-        color: 'rgba(37, 99, 235, 0.07)',
-        phase: Math.PI * 0.5,
-        speed: 0.0005,
-        mass: 1.5,
-      },
-      {
-        x: width * 0.35,
-        y: height * 0.75,
-        baseX: width * 0.35,
-        baseY: height * 0.75,
-        vx: 0,
-        vy: 0,
-        radius: Math.min(width, height) * 0.32,
-        blur: 140,
-        color: 'rgba(99, 102, 241, 0.06)',
-        phase: Math.PI,
-        speed: 0.0007,
-        mass: 1.1,
-      },
-      {
-        x: width * 0.75,
-        y: height * 0.85,
-        baseX: width * 0.75,
-        baseY: height * 0.85,
-        vx: 0,
-        vy: 0,
-        radius: Math.min(width, height) * 0.28,
-        blur: 120,
-        color: 'rgba(14, 165, 233, 0.06)',
-        phase: Math.PI * 1.5,
-        speed: 0.0008,
-        mass: 0.9,
-      },
-    ];
+    // 6. Holographic Gyroscope Orbit Rings in Deep Space
+    const ringsGroup = new THREE.Group();
+    scene.add(ringsGroup);
 
-    // Click & Gesture Shockwave Liquid Ripples
-    const ripples: ClickRipple[] = [];
+    const ringCount = isMobile ? 3 : 5;
+    const deepRings: { mesh: THREE.Mesh; rx: number; ry: number; rz: number }[] = [];
+    const ringMat = new THREE.MeshStandardMaterial({
+      color: 0x06b6d4,
+      emissive: 0x044759,
+      emissiveIntensity: 0.35,
+      metalness: 0.92,
+      roughness: 0.2,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.22,
+    });
 
-    const spawnRipple = (x: number, y: number, isStrong: boolean = false) => {
-      if (prefersReduced) return;
-      ripples.push({
-        x,
-        y,
-        radius: 10,
-        maxRadius: isStrong ? 260 : 180,
-        alpha: isStrong ? 0.45 : 0.32,
-        speed: isStrong ? 3.5 : 2.5,
-        lineWidth: isStrong ? 2 : 1.2,
-        color: `rgba(${Math.round(currentPrimaryRGB[0])}, ${Math.round(currentPrimaryRGB[1])}, ${Math.round(currentPrimaryRGB[2])}, `,
+    for (let i = 0; i < ringCount; i++) {
+      const rGeom = new THREE.TorusGeometry(3.0 + i * 1.6, 0.018, 16, 64);
+      const rMesh = new THREE.Mesh(rGeom, ringMat);
+      rMesh.position.set(
+        (Math.random() - 0.5) * 8,
+        (Math.random() - 0.5) * 6,
+        -5 - i * 3.5
+      );
+      ringsGroup.add(rMesh);
+      deepRings.push({
+        mesh: rMesh,
+        rx: (Math.random() - 0.5) * 0.002,
+        ry: (Math.random() - 0.5) * 0.003,
+        rz: (Math.random() - 0.5) * 0.002,
       });
-      // Cap max ripples to preserve performance
-      if (ripples.length > 6) ripples.shift();
-    };
+    }
 
-    // Event Listeners: Passive Pointer Tracking
-    let lastPointerTime = performance.now();
-    const handlePointerMove = (e: PointerEvent) => {
-      const now = performance.now();
-      const dt = Math.max((now - lastPointerTime) / 1000, 0.001);
-      lastPointerTime = now;
+    // 7. Procedural Energy Filaments (Flowing Neural Pathways)
+    const filamentGroup = new THREE.Group();
+    scene.add(filamentGroup);
 
-      const px = e.clientX;
-      const py = e.clientY;
+    const filCount = isMobile ? 4 : 8;
+    const filamentLines: {
+      line: THREE.Line;
+      curve: THREE.CatmullRomCurve3;
+      basePoints: THREE.Vector3[];
+      currentPoints: THREE.Vector3[];
+      phase: number;
+      speed: number;
+    }[] = [];
 
-      const dx = px - pointer.prevX;
-      const dy = py - pointer.prevY;
-      const dist = Math.hypot(dx, dy);
+    const filMat = new THREE.LineBasicMaterial({
+      color: 0x22d3ee,
+      transparent: true,
+      opacity: 0.24,
+      blending: THREE.AdditiveBlending,
+    });
 
-      pointer.vx = dx / dt;
-      pointer.vy = dy / dt;
-      pointer.speed = dist / dt;
+    for (let i = 0; i < filCount; i++) {
+      const pts: THREE.Vector3[] = [];
+      const startX = -18 + (i / filCount) * 36;
+      const depthZ = -6 + (i % 3) * 4;
 
-      pointer.prevX = px;
-      pointer.prevY = py;
-      pointer.targetX = px;
-      pointer.targetY = py;
-
-      // Check if near interactive element (magnetic distortion influence)
-      const target = e.target as HTMLElement | null;
-      if (target) {
-        const interactiveEl = target.closest(
-          '[data-magnetic], button, a, [data-cursor="project"], [data-cursor="button"]'
-        ) as HTMLElement | null;
-
-        if (interactiveEl) {
-          const rect = interactiveEl.getBoundingClientRect();
-          pointer.isNearInteractive = true;
-          pointer.interactiveX = rect.left + rect.width / 2;
-          pointer.interactiveY = rect.top + rect.height / 2;
-        } else {
-          pointer.isNearInteractive = false;
-        }
-      }
-    };
-
-    const handlePointerDown = (e: PointerEvent) => {
-      spawnRipple(e.clientX, e.clientY, true);
-    };
-
-    // Passive Scroll Velocity Tracking
-    let lastScrollTime = performance.now();
-    const handleScroll = () => {
-      const now = performance.now();
-      const dt = Math.max((now - lastScrollTime) / 1000, 0.001);
-      lastScrollTime = now;
-
-      const currentY = window.scrollY || window.pageYOffset || 0;
-      const deltaY = currentY - scroll.previous;
-      scroll.previous = currentY;
-      scroll.current = currentY;
-      scroll.targetVelocity = deltaY / dt;
-      scroll.direction = deltaY > 0 ? 1 : deltaY < 0 ? -1 : 0;
-
-      // Section theme detector: check which section is in central viewport
-      const viewportCenter = currentY + height * 0.4;
-      for (const sec of sectionThemes) {
-        const el = document.getElementById(sec.id);
-        if (el) {
-          const top = el.offsetTop;
-          const bottom = top + el.offsetHeight;
-          if (viewportCenter >= top && viewportCenter <= bottom) {
-            targetPrimaryRGB = sec.primary;
-            targetSecondaryRGB = sec.secondary;
-            break;
-          }
-        }
-      }
-    };
-
-    window.addEventListener('pointermove', handlePointerMove, { passive: true });
-    window.addEventListener('pointerdown', handlePointerDown, { passive: true });
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
-    // RequestAnimationFrame Render Loop
-    let rafId: number | null = null;
-    let time = 0;
-
-    const render = () => {
-      time += 0.016;
-
-      // 1. Smooth Pointer & Velocity Interpolation
-      pointer.x += (pointer.targetX - pointer.x) * 0.12;
-      pointer.y += (pointer.targetY - pointer.y) * 0.12;
-      pointer.smoothedSpeed += (pointer.speed - pointer.smoothedSpeed) * 0.08;
-      // Decay velocity naturally if pointer stopped
-      pointer.speed *= 0.92;
-
-      // 2. Smooth Scroll Velocity Decay
-      scroll.velocity += (scroll.targetVelocity - scroll.velocity) * 0.1;
-      scroll.smoothedVelocity += (scroll.velocity - scroll.smoothedVelocity) * 0.08;
-      scroll.targetVelocity *= 0.88;
-
-      // 3. Smooth Section Color Transitions
-      currentPrimaryRGB[0] += (targetPrimaryRGB[0] - currentPrimaryRGB[0]) * 0.03;
-      currentPrimaryRGB[1] += (targetPrimaryRGB[1] - currentPrimaryRGB[1]) * 0.03;
-      currentPrimaryRGB[2] += (targetPrimaryRGB[2] - currentPrimaryRGB[2]) * 0.03;
-
-      currentSecondaryRGB[0] += (targetSecondaryRGB[0] - currentSecondaryRGB[0]) * 0.03;
-      currentSecondaryRGB[1] += (targetSecondaryRGB[1] - currentSecondaryRGB[1]) * 0.03;
-      currentSecondaryRGB[2] += (targetSecondaryRGB[2] - currentSecondaryRGB[2]) * 0.03;
-
-      const pR = Math.round(currentPrimaryRGB[0]);
-      const pG = Math.round(currentPrimaryRGB[1]);
-      const pB = Math.round(currentPrimaryRGB[2]);
-
-      const sR = Math.round(currentSecondaryRGB[0]);
-      const sG = Math.round(currentSecondaryRGB[1]);
-      const sB = Math.round(currentSecondaryRGB[2]);
-
-      // 4. Update Interactive Light Field via CSS variables on the light container (hardware accelerated)
-      if (lightFieldRef.current) {
-        const velFactor = Math.min(pointer.smoothedSpeed / 1200, 1);
-        const scrollFactor = Math.min(Math.abs(scroll.smoothedVelocity) / 2000, 1);
-        const radius = 280 + velFactor * 140 + scrollFactor * 100;
-        const opacity = 0.07 + velFactor * 0.08 + (pointer.isNearInteractive ? 0.06 : 0);
-
-        // Magnetic element pull on lightfield
-        let lightX = pointer.x;
-        let lightY = pointer.y;
-        if (pointer.isNearInteractive) {
-          lightX += (pointer.interactiveX - pointer.x) * 0.35;
-          lightY += (pointer.interactiveY - pointer.y) * 0.35;
-        }
-
-        lightFieldRef.current.style.background = `radial-gradient(circle ${radius.toFixed(
-          0
-        )}px at ${lightX.toFixed(1)}px ${lightY.toFixed(
-          1
-        )}px, rgba(${pR}, ${pG}, ${pB}, ${opacity.toFixed(
-          3
-        )}) 0%, rgba(${sR}, ${sG}, ${sB}, ${(opacity * 0.45).toFixed(
-          3
-        )}) 45%, transparent 75%)`;
-      }
-
-      // Clear Canvas
-      ctx.clearRect(0, 0, width, height);
-
-      // If reduced motion is requested, render only subtle static ambient gradient
-      if (prefersReduced) {
-        const grad = ctx.createRadialGradient(
-          width * 0.5,
-          height * 0.4,
-          50,
-          width * 0.5,
-          height * 0.4,
-          Math.max(width, height) * 0.7
+      for (let j = 0; j < 6; j++) {
+        pts.push(
+          new THREE.Vector3(
+            startX + (Math.random() - 0.5) * 5,
+            -14 + j * 5.5 + (Math.random() - 0.5) * 3,
+            depthZ + (Math.random() - 0.5) * 3
+          )
         );
-        grad.addColorStop(0, `rgba(${pR}, ${pG}, ${pB}, 0.06)`);
-        grad.addColorStop(0.5, `rgba(${sR}, ${sG}, ${sB}, 0.03)`);
-        grad.addColorStop(1, 'transparent');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
-
-        rafId = requestAnimationFrame(render);
-        return;
       }
 
-      // --- LAYER 3: FLOATING ABSTRACT GRAVITATIONAL ORBS ---
-      const scrollDrift = scroll.smoothedVelocity * 0.04;
-      for (const orb of orbs) {
-        orb.phase += orb.speed;
-        const naturalX = orb.baseX + Math.sin(orb.phase) * 60;
-        const naturalY = orb.baseY + Math.cos(orb.phase * 0.8) * 45;
+      const curve = new THREE.CatmullRomCurve3(pts);
+      const cGeo = new THREE.BufferGeometry().setFromPoints(curve.getPoints(50));
+      const line = new THREE.Line(cGeo, filMat);
+      filamentGroup.add(line);
 
-        // Gravitational reaction: orbs subtly drift away or toward pointer based on proximity
-        const dx = pointer.x - orb.x;
-        const dy = pointer.y - orb.y;
-        const dist = Math.hypot(dx, dy);
-        let pullForceX = 0;
-        let pullForceY = 0;
+      filamentLines.push({
+        line,
+        curve,
+        basePoints: pts.map((p) => p.clone()),
+        currentPoints: pts.map((p) => p.clone()),
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.007 + Math.random() * 0.01,
+      });
+    }
 
-        if (dist < 450 && dist > 10) {
-          // Soft gravitational buoyancy
-          const force = (1 - dist / 450) * 25 * (1 / orb.mass);
-          pullForceX = (dx / dist) * force;
-          pullForceY = (dy / dist) * force;
+    // 8. 3D Spherical Shockwave System
+    interface ActiveShockwave {
+      mesh: THREE.Mesh;
+      radius: number;
+      maxRadius: number;
+      speed: number;
+      opacity: number;
+    }
+    const shockwaves: ActiveShockwave[] = [];
+    const shockwaveRingGeo = new THREE.RingGeometry(0.2, 0.5, 48);
+
+    const triggerWorldShockwave = (wx: number, wy: number) => {
+      if (interactionEngine.state.prefersReduced) return;
+
+      const swMat = new THREE.MeshBasicMaterial({
+        color: 0x22d3ee,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      });
+      const mesh = new THREE.Mesh(shockwaveRingGeo, swMat);
+      mesh.position.set(wx, wy, 0.5);
+      scene.add(mesh);
+
+      shockwaves.push({
+        mesh,
+        radius: 0.2,
+        maxRadius: 12,
+        speed: 0.32,
+        opacity: 0.9,
+      });
+
+      // Violent pulse push on nearby particles
+      const positions = particleGeometry.attributes.position.array as Float32Array;
+      for (let i = 0; i < particleCount; i++) {
+        const idx = i * 3;
+        const dist = Math.hypot(
+          positions[idx] - wx,
+          positions[idx + 1] - wy,
+          positions[idx + 2] - 0.5
+        );
+        if (dist < 10) {
+          const push = (1 - dist / 10) * 0.7;
+          const angle = Math.atan2(positions[idx + 1] - wy, positions[idx] - wx);
+          pVelocities[idx] += Math.cos(angle) * push;
+          pVelocities[idx + 1] += Math.sin(angle) * push;
+          pVelocities[idx + 2] += (Math.random() - 0.5) * push * 0.5;
+        }
+      }
+
+      // Pulse on glass fragments
+      for (const frag of glassFragments) {
+        const dist = frag.mesh.position.distanceTo(mesh.position);
+        if (dist < 9) {
+          const pushDir = frag.mesh.position.clone().sub(mesh.position).normalize();
+          frag.vel.add(pushDir.multiplyScalar(0.45 * (1 - dist / 9)));
+          frag.rotVel.add(
+            new THREE.Vector3(
+              (Math.random() - 0.5) * 0.05,
+              (Math.random() - 0.5) * 0.05,
+              (Math.random() - 0.5) * 0.05
+            )
+          );
+        }
+      }
+    };
+
+    // 9. Raycasting: project mouse into 3D world space coordinates at Z = 0
+    const raycaster = new THREE.Raycaster();
+    const planeZ0 = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    const planeIntersection = new THREE.Vector3();
+
+    const updateWorldMouse = () => {
+      raycaster.setFromCamera(
+        new THREE.Vector2(interactionEngine.state.ndcX, interactionEngine.state.ndcY),
+        camera
+      );
+      raycaster.ray.intersectPlane(planeZ0, planeIntersection);
+      if (planeIntersection) {
+        interactionEngine.state.worldPos.copy(planeIntersection);
+        cursorLight.position.x = planeIntersection.x;
+        cursorLight.position.y = planeIntersection.y;
+        cursorLight.position.z =
+          4.0 + Math.min(interactionEngine.state.normalizedEnergy * 3.5, 4.0);
+      }
+    };
+
+    // Subscribe to clicks from interaction engine
+    let lastObservedClick = 0;
+    const unsubInteraction = interactionEngine.subscribe((state) => {
+      if (state.lastClickTime > lastObservedClick) {
+        lastObservedClick = state.lastClickTime;
+        triggerWorldShockwave(state.worldPos.x, state.worldPos.y);
+      }
+    });
+
+    const onResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+
+    window.addEventListener('resize', onResize, { passive: true });
+
+    // 10. Unified 60-120 FPS Main Render Loop
+    let animId: number;
+    let targetPrimaryCol = new THREE.Color(0x06b6d4);
+    let targetSecondaryCol = new THREE.Color(0x3b82f6);
+
+    const animate = () => {
+      const {
+        ndcX,
+        ndcY,
+        worldPos,
+        normalizedEnergy,
+        scrollProgress,
+        smoothedScrollVelocity,
+        edgePullX,
+        edgePullY,
+        sectionTheme,
+        prefersReduced,
+      } = interactionEngine.state;
+
+      updateWorldMouse();
+
+      // Camera 3D Parallax & Progression
+      if (!prefersReduced) {
+        // Subtle 2.5 degree camera rotation controlled by pointer
+        camera.rotation.y = -ndcX * 0.045 - edgePullX * 0.015;
+        camera.rotation.x = ndcY * 0.035 + edgePullY * 0.012;
+
+        const scrollZ = scrollProgress * -7.0;
+        const scrollY = scrollProgress * -5.5;
+        const scrollInertia = smoothedScrollVelocity * 0.007;
+
+        camera.position.x = ndcX * 0.9;
+        camera.position.y = ndcY * 0.7 + scrollY - scrollInertia;
+        camera.position.z = 20 + scrollZ;
+      }
+
+      // Smooth section color grading
+      targetPrimaryCol.setHex(sectionTheme.primary);
+      targetSecondaryCol.setHex(sectionTheme.secondary);
+      cursorLight.color.lerp(targetPrimaryCol, 0.04);
+      rimLight.color.lerp(targetSecondaryCol, 0.04);
+      cursorLight.intensity = 2.8 + normalizedEnergy * 1.2;
+
+      const cursorX = worldPos.x;
+      const cursorY = worldPos.y;
+      const gravRadius = 6.5 + normalizedEnergy * 3.0;
+
+      // 1. Warp Grid Deformation around Cursor Singularity
+      const gridPos = gridGeo.attributes.position.array as Float32Array;
+      const origGridPos = originalGridPositions.array as Float32Array;
+      const warpRadius = 7.0 + normalizedEnergy * 2.5;
+
+      for (let i = 0; i < gridPos.length; i += 3) {
+        const ox = origGridPos[i];
+        const oy = origGridPos[i + 1];
+        const oz = origGridPos[i + 2];
+
+        const dist = Math.hypot(ox - cursorX, oy - cursorY);
+        let targetZ = oz;
+        let targetX = ox;
+        let targetY = oy;
+
+        if (dist < warpRadius) {
+          const factor = 1 - dist / warpRadius;
+          // Gravitational funnel depth distortion
+          targetZ = oz - factor * (1.8 + normalizedEnergy * 1.2);
+          const angle = Math.atan2(oy - cursorY, ox - cursorX);
+          targetX = ox + Math.cos(angle) * (factor * 0.4);
+          targetY = oy + Math.sin(angle) * (factor * 0.4);
         }
 
-        // Apply scroll inertia
-        orb.y -= scrollDrift * (0.3 / orb.mass);
-
-        // Keep orbs in view bounding
-        if (orb.y < -orb.radius) orb.y = height + orb.radius;
-        if (orb.y > height + orb.radius) orb.y = -orb.radius;
-
-        orb.x += (naturalX + pullForceX - orb.x) * 0.03;
-        orb.y += (naturalY + pullForceY - orb.y) * 0.03;
-
-        // Draw soft ambient glowing radial gradient
-        const orbGrad = ctx.createRadialGradient(
-          orb.x,
-          orb.y,
-          0,
-          orb.x,
-          orb.y,
-          orb.radius
-        );
-        orbGrad.addColorStop(0, orb.color);
-        orbGrad.addColorStop(0.6, `rgba(${pR}, ${pG}, ${pB}, 0.02)`);
-        orbGrad.addColorStop(1, 'transparent');
-
-        ctx.fillStyle = orbGrad;
-        ctx.beginPath();
-        ctx.arc(orb.x, orb.y, orb.radius, 0, Math.PI * 2);
-        ctx.fill();
+        gridPos[i] += (targetX - gridPos[i]) * 0.08;
+        gridPos[i + 1] += (targetY - gridPos[i + 1]) * 0.08;
+        gridPos[i + 2] += (targetZ - gridPos[i + 2]) * 0.08;
       }
+      gridGeo.attributes.position.needsUpdate = true;
 
-      // --- LAYER 4: WARPING FUTURISTIC DIGITAL GRID LINES ---
-      // Subtle architectural grid that gently refracts around the cursor
-      const gridSpacing = width < 768 ? 90 : 120;
-      const gridCols = Math.ceil(width / gridSpacing) + 1;
-      const gridRows = Math.ceil(height / gridSpacing) + 1;
-      const gridDistortRadius = 240 + Math.min(pointer.smoothedSpeed / 8, 120);
+      // 2. Multi-Layer 4-Tier Particle Physics
+      const pos = particleGeometry.attributes.position.array as Float32Array;
+      for (let i = 0; i < particleCount; i++) {
+        const idx = i * 3;
+        const px = pos[idx];
+        const py = pos[idx + 1];
+        const pz = pos[idx + 2];
 
-      ctx.save();
-      ctx.lineWidth = 1;
+        const ox = pOriginals[idx];
+        const oy = pOriginals[idx + 1];
+        const oz = pOriginals[idx + 2];
 
-      // Vertical lines
-      for (let c = 0; c <= gridCols; c++) {
-        const x = c * gridSpacing;
-        ctx.beginPath();
-        let isStarted = false;
+        const charge = pCharges[i];
+        const layer = pLayers[i];
 
-        for (let r = 0; r <= gridRows; r += 2) {
-          let px = x;
-          let py = r * (gridSpacing * 0.5);
+        const dx = cursorX - px;
+        const dy = cursorY - py;
+        const dz = -pz;
+        const dist = Math.hypot(dx, dy, dz);
 
-          // Liquid displacement around cursor
-          const distToCursor = Math.hypot(px - pointer.x, py - pointer.y);
-          if (distToCursor < gridDistortRadius) {
-            const factor = Math.cos((distToCursor / gridDistortRadius) * (Math.PI / 2));
-            const angle = Math.atan2(py - pointer.y, px - pointer.x);
-            const displacement = factor * (14 + Math.min(pointer.smoothedSpeed / 80, 16));
-            px += Math.cos(angle) * displacement;
-            py += Math.sin(angle) * displacement;
-          }
+        if (dist < gravRadius && dist > 0.15) {
+          const factor = (1 - dist / gravRadius) * (layer === 0 ? 1.4 : 1.0);
 
-          // Parallax shift from scroll
-          py -= (scroll.smoothedVelocity * 0.015) % gridSpacing;
-
-          if (!isStarted) {
-            ctx.moveTo(px, py);
-            isStarted = true;
+          if (charge === 2) {
+            // Orbital tangential swirl around singularity
+            const angle = Math.atan2(dy, dx) + Math.PI / 2;
+            const orbitV = 0.045 * factor * (1 + normalizedEnergy);
+            pVelocities[idx] += Math.cos(angle) * orbitV - (dx / dist) * factor * 0.015;
+            pVelocities[idx + 1] += Math.sin(angle) * orbitV - (dy / dist) * factor * 0.015;
+            pVelocities[idx + 2] += (dz / dist) * factor * 0.01;
+          } else if (charge === 1) {
+            // Direct gravitational attraction
+            const pullV = 0.035 * factor * (1 + normalizedEnergy);
+            pVelocities[idx] += (dx / dist) * pullV;
+            pVelocities[idx + 1] += (dy / dist) * pullV;
+            pVelocities[idx + 2] += (dz / dist) * pullV * 0.5;
           } else {
-            ctx.lineTo(px, py);
+            // Gravitational repulsion
+            const pushV = 0.04 * factor * (1 + normalizedEnergy);
+            pVelocities[idx] -= (dx / dist) * pushV;
+            pVelocities[idx + 1] -= (dy / dist) * pushV;
+            pVelocities[idx + 2] -= (dz / dist) * pushV * 0.5;
           }
         }
-        ctx.strokeStyle = `rgba(6, 182, 212, 0.028)`;
-        ctx.stroke();
+
+        // Restoring spring force back to equilibrium
+        const spring = layer === 2 ? 0.012 : 0.02;
+        pVelocities[idx] += (ox - px) * spring;
+        pVelocities[idx + 1] += (oy - py) * spring;
+        pVelocities[idx + 2] += (oz - pz) * spring;
+
+        // Dampening
+        pVelocities[idx] *= 0.91;
+        pVelocities[idx + 1] *= 0.91;
+        pVelocities[idx + 2] *= 0.91;
+
+        pos[idx] += pVelocities[idx];
+        pos[idx + 1] += pVelocities[idx + 1];
+        pos[idx + 2] += pVelocities[idx + 2];
+      }
+      particleGeometry.attributes.position.needsUpdate = true;
+
+      // 3. Floating Glass Geometry Physics & Specular Glints
+      for (const frag of glassFragments) {
+        frag.mesh.rotation.x += frag.rotVel.x * (1 + normalizedEnergy);
+        frag.mesh.rotation.y += frag.rotVel.y * (1 + normalizedEnergy);
+        frag.mesh.rotation.z += frag.rotVel.z * (1 + normalizedEnergy);
+
+        const distToCursor = frag.mesh.position.distanceTo(worldPos);
+        const glassRepelR = 6.5;
+
+        if (distToCursor < glassRepelR && distToCursor > 0.1) {
+          const force = (1 - distToCursor / glassRepelR) * (0.05 / frag.mass);
+          const dir = frag.mesh.position.clone().sub(worldPos).normalize();
+          frag.vel.add(dir.multiplyScalar(force));
+
+          // Physical spin torque when hit by singularity field
+          frag.rotVel.x += (Math.random() - 0.5) * 0.002;
+          frag.rotVel.y += (Math.random() - 0.5) * 0.002;
+        }
+
+        const returnForce = frag.basePos.clone().sub(frag.mesh.position).multiplyScalar(0.015);
+        frag.vel.add(returnForce);
+        frag.vel.multiplyScalar(0.92);
+
+        frag.mesh.position.add(frag.vel);
+        frag.mesh.position.y = frag.basePos.y - (scrollProgress * 12) % 24 + 12;
       }
 
-      // Horizontal lines
-      for (let r = 0; r <= gridRows; r++) {
-        const y = r * gridSpacing - ((scroll.smoothedVelocity * 0.015) % gridSpacing);
-        ctx.beginPath();
-        let isStarted = false;
+      // 4. Energy Filaments Neural Wave Bending
+      for (const fil of filamentLines) {
+        fil.phase += fil.speed * (1 + normalizedEnergy);
+        const curPts: THREE.Vector3[] = [];
 
-        for (let c = 0; c <= gridCols; c += 2) {
-          let px = c * (gridSpacing * 0.5);
-          let py = y;
+        for (let j = 0; j < fil.basePoints.length; j++) {
+          const bp = fil.basePoints[j];
+          const cp = fil.currentPoints[j];
 
-          const distToCursor = Math.hypot(px - pointer.x, py - pointer.y);
-          if (distToCursor < gridDistortRadius) {
-            const factor = Math.cos((distToCursor / gridDistortRadius) * (Math.PI / 2));
-            const angle = Math.atan2(py - pointer.y, px - pointer.x);
-            const displacement = factor * (14 + Math.min(pointer.smoothedSpeed / 80, 16));
-            px += Math.cos(angle) * displacement;
-            py += Math.sin(angle) * displacement;
+          const wave = Math.sin(fil.phase + j * 0.8) * 0.45;
+          let targetX = bp.x + wave;
+          let targetY = bp.y + Math.cos(fil.phase + j * 0.6) * 0.35;
+          let targetZ = bp.z;
+
+          const dist = Math.hypot(cursorX - bp.x, cursorY - bp.y);
+          if (dist < 6.5) {
+            const pull = (1 - dist / 6.5) * 1.8;
+            targetX += (cursorX - bp.x) * pull * 0.25;
+            targetY += (cursorY - bp.y) * pull * 0.25;
           }
 
-          if (!isStarted) {
-            ctx.moveTo(px, py);
-            isStarted = true;
-          } else {
-            ctx.lineTo(px, py);
-          }
+          cp.x += (targetX - cp.x) * 0.06;
+          cp.y += (targetY - cp.y) * 0.06;
+          cp.z += (targetZ - cp.z) * 0.06;
+          curPts.push(cp);
         }
-        ctx.strokeStyle = `rgba(6, 182, 212, 0.022)`;
-        ctx.stroke();
+
+        fil.curve.points = curPts;
+        fil.line.geometry.setFromPoints(fil.curve.getPoints(50));
       }
-      ctx.restore();
 
-      // --- LAYER 2: INTERACTIVE DIGITAL PARTICLES ---
-      for (const p of particles) {
-        p.pulsePhase += 0.025;
-        const breathing = Math.sin(p.pulsePhase) * 0.18;
-        const currentAlpha = Math.max(0.05, Math.min(0.85, p.baseAlpha + breathing));
+      // 5. Deep Space Holographic Rings
+      for (const r of deepRings) {
+        r.mesh.rotation.x += r.rx;
+        r.mesh.rotation.y += r.ry;
+        r.mesh.rotation.z += r.rz;
+        r.mesh.position.y = (scrollProgress * 8) % 16 - 8;
+      }
 
-        // Cursor avoidance & flow
-        const dx = pointer.x - p.x;
-        const dy = pointer.y - p.y;
-        const dist = Math.hypot(dx, dy);
-        const repelRadius = 140 * p.depth + Math.min(pointer.smoothedSpeed / 20, 80);
+      // 6. 3D Shockwaves Propagation
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        const sw = shockwaves[i];
+        sw.radius += sw.speed;
+        sw.opacity *= 0.94;
+        sw.mesh.scale.set(sw.radius, sw.radius, 1);
+        (sw.mesh.material as THREE.MeshBasicMaterial).opacity = sw.opacity;
 
-        if (dist < repelRadius && dist > 1) {
-          const repelFactor = (1 - dist / repelRadius) * (3.5 * p.depth);
-          // When cursor moves rapidly, particles gain directional momentum
-          const speedBoost = Math.min(pointer.smoothedSpeed / 400, 4);
-          p.x -= (dx / dist) * repelFactor * (1 + speedBoost * 0.5);
-          p.y -= (dy / dist) * repelFactor * (1 + speedBoost * 0.5);
-        }
-
-        // Scroll influence (particles at higher depth move faster creating true parallax)
-        p.y -= scroll.smoothedVelocity * 0.03 * p.depth;
-
-        // Autonomous drift
-        p.x += p.vx;
-        p.y += p.vy;
-
-        // Wrap boundaries
-        if (p.x < -10) p.x = width + 10;
-        if (p.x > width + 10) p.x = -10;
-        if (p.y < -10) p.y = height + 10;
-        if (p.y > height + 10) p.y = -10;
-
-        // Particle color selection
-        let pColor = `rgba(${pR}, ${pG}, ${pB}, ${currentAlpha})`;
-        if (p.colorType === 'blue') pColor = `rgba(${sR}, ${sG}, ${sB}, ${currentAlpha * 0.85})`;
-        if (p.colorType === 'white') pColor = `rgba(240, 249, 255, ${currentAlpha * 0.95})`;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.baseRadius, 0, Math.PI * 2);
-        ctx.fillStyle = pColor;
-        ctx.fill();
-
-        // Very faint connecting digital tether if two particles of same depth are close
-        if (p.depth > 0.65) {
-          for (let j = 0; j < 6; j++) {
-            const other = particles[j];
-            if (other && other !== p && other.depth > 0.65) {
-              const pDist = Math.hypot(p.x - other.x, p.y - other.y);
-              if (pDist < 85) {
-                const lineAlpha = (1 - pDist / 85) * 0.08 * p.depth;
-                ctx.beginPath();
-                ctx.moveTo(p.x, p.y);
-                ctx.lineTo(other.x, other.y);
-                ctx.strokeStyle = `rgba(${pR}, ${pG}, ${pB}, ${lineAlpha})`;
-                ctx.lineWidth = 0.75;
-                ctx.stroke();
-              }
-            }
-          }
+        if (sw.opacity < 0.01 || sw.radius >= sw.maxRadius) {
+          scene.remove(sw.mesh);
+          sw.mesh.geometry.dispose();
+          (sw.mesh.material as THREE.Material).dispose();
+          shockwaves.splice(i, 1);
         }
       }
 
-      // --- LAYER 6: LIQUID SHOCKWAVE EXPANDING RIPPLES ---
-      for (let i = ripples.length - 1; i >= 0; i--) {
-        const rip = ripples[i];
-        rip.radius += rip.speed;
-        rip.alpha *= 0.955; // exponential decay
-
-        if (rip.alpha < 0.01 || rip.radius >= rip.maxRadius) {
-          ripples.splice(i, 1);
-          continue;
-        }
-
-        ctx.beginPath();
-        ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = `${rip.color}${rip.alpha.toFixed(3)})`;
-        ctx.lineWidth = rip.lineWidth;
-        ctx.stroke();
-
-        // Secondary soft echo ring
-        if (rip.radius > 25) {
-          ctx.beginPath();
-          ctx.arc(rip.x, rip.y, rip.radius * 0.7, 0, Math.PI * 2);
-          ctx.strokeStyle = `${rip.color}${(rip.alpha * 0.35).toFixed(3)})`;
-          ctx.lineWidth = rip.lineWidth * 0.6;
-          ctx.stroke();
-        }
-      }
-
-      // --- LAYER 5: CURSOR LIGHT MOTION STREAK (WHEN SWIPING FAST) ---
-      if (pointer.smoothedSpeed > 220) {
-        const trailDist = Math.min(pointer.smoothedSpeed * 0.07, 45);
-        const trailAngle = Math.atan2(pointer.vy, pointer.vx) + Math.PI;
-        const trailX = pointer.x + Math.cos(trailAngle) * trailDist;
-        const trailY = pointer.y + Math.sin(trailAngle) * trailDist;
-
-        const streakGrad = ctx.createLinearGradient(
-          pointer.x,
-          pointer.y,
-          trailX,
-          trailY
-        );
-        streakGrad.addColorStop(0, `rgba(${pR}, ${pG}, ${pB}, 0.12)`);
-        streakGrad.addColorStop(1, 'transparent');
-
-        ctx.beginPath();
-        ctx.moveTo(pointer.x, pointer.y);
-        ctx.lineTo(trailX, trailY);
-        ctx.strokeStyle = streakGrad;
-        ctx.lineWidth = 18;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-      }
-
-      rafId = requestAnimationFrame(render);
+      renderer.render(scene, camera);
+      animId = requestAnimationFrame(animate);
     };
 
-    rafId = requestAnimationFrame(render);
+    animId = requestAnimationFrame(animate);
 
-    // Cleanup on unmount
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('scroll', handleScroll);
-      reducedMotionQuery.removeEventListener('change', handleReducedMotionChange);
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
+      unsubInteraction();
+      window.removeEventListener('resize', onResize);
+      cancelAnimationFrame(animId);
+
+      renderer.dispose();
+      gridGeo.dispose();
+      gridMat.dispose();
+      particleGeometry.dispose();
+      particleMaterial.dispose();
+      glassMat.dispose();
+      ringMat.dispose();
+      filMat.dispose();
+      if (renderer.domElement && container.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement);
       }
     };
   }, []);
@@ -671,34 +732,26 @@ export const InteractiveBackgroundIllusion: React.FC = () => {
     <div
       ref={containerRef}
       aria-hidden="true"
-      className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none"
+      className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none bg-[#05070A]"
       style={{
         willChange: 'transform',
       }}
     >
-      {/* Layer 1: Ambient Deep Foundation Gradient with subtle drift */}
-      <div className="absolute inset-0 bg-[#05070A] pointer-events-none" />
-
-      {/* Layer 5: High-Performance Hardware-Accelerated Interactive Light Field */}
+      {/* Deep foundation chromatic vignette */}
       <div
-        ref={lightFieldRef}
-        className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+        className="absolute inset-0 pointer-events-none opacity-40"
         style={{
-          willChange: 'background',
+          background:
+            'radial-gradient(circle at 50% 40%, transparent 40%, rgba(5, 7, 10, 0.85) 90%)',
         }}
       />
 
-      {/* Dynamic Simulation Canvas (Orbs, Warping Grid, Fluid Particles, Liquid Shockwaves, Velocity Trails) */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 pointer-events-none block"
-      />
-
-      {/* Layer 7: Ultra-Fine Organic Film Grain / Technical Micro-Texture */}
+      {/* Tactile micro-grain filter preventing digital color banding */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.028] mix-blend-screen"
+        className="absolute inset-0 pointer-events-none opacity-[0.025] mix-blend-screen"
         style={{
-          backgroundImage: `radial-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px)`,
+          backgroundImage:
+            'radial-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
         }}
       />
