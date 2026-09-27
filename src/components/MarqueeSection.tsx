@@ -1,72 +1,111 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { MARQUEE_IMAGES } from '../data/portfolioData';
-import { ApiDev3dScreen } from './ApiDev3dScreen';
+import { MARQUEE_ITEMS } from '../data/portfolioData';
+import { ArrowUpRight } from 'lucide-react';
 
 interface MarqueeSectionProps {
   id?: string;
 }
 
 export const MarqueeSection: React.FC<MarqueeSectionProps> = ({ id = 'marquee-gallery' }) => {
-  // Split images into two distinct sets
-  const half = Math.ceil(MARQUEE_IMAGES.length / 2);
-  const row1Images = MARQUEE_IMAGES.slice(0, half);
-  const row2Images = MARQUEE_IMAGES.slice(half);
+  // Split items into 2 rows
+  const half = Math.ceil(MARQUEE_ITEMS.length / 2);
+  const row1Items = MARQUEE_ITEMS.slice(0, half);
+  const row2Items = MARQUEE_ITEMS.slice(half);
 
-  const renderCard = (src: string, key: string, labelIndex: number) => (
-    <motion.div
+  const scrollToProjects = () => {
+    const el = document.getElementById('projects');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const renderProjectCard = (item: typeof MARQUEE_ITEMS[0], key: string) => (
+    <div
       key={key}
-      whileHover={{ y: -8, scale: 1.025 }}
-      transition={{ type: 'spring', stiffness: 350, damping: 22 }}
-      className="shrink-0 w-[280px] sm:w-[360px] md:w-[420px] h-[180px] sm:h-[230px] md:h-[270px] rounded-2xl overflow-hidden bg-slate-900/60 border border-white/10 shadow-lg group relative hover:border-cyan-400 hover:shadow-[0_0_30px_rgba(6,182,212,0.3)] transition-all duration-300"
+      onClick={scrollToProjects}
+      data-cursor="project"
+      className="shrink-0 w-[300px] sm:w-[380px] md:w-[440px] h-[200px] sm:h-[240px] md:h-[260px] rounded-3xl overflow-hidden bg-[#070D18]/90 border border-white/10 group relative hover:border-cyan-400 hover:shadow-[0_0_35px_rgba(6,182,212,0.35)] transition-all duration-300 cursor-pointer flex flex-col justify-end p-5"
     >
-      {src === 'api-dev-3d-screen' ? (
-        <ApiDev3dScreen />
-      ) : (
-        <>
-          <img
-            src={src}
-            alt={`Showcase item ${labelIndex}`}
-            loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-108"
-          />
-          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none z-10" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </>
-      )}
-    </motion.div>
+      {/* Background Image Preview */}
+      <img
+        src={item.image}
+        alt={`${item.title} preview`}
+        loading="lazy"
+        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 opacity-40 group-hover:opacity-60"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#05070A] via-[#05070A]/70 to-transparent z-0" />
+
+      {/* Card Content Overlay */}
+      <div className="relative z-10">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="font-mono text-[10px] uppercase px-2.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+            {item.badge}
+          </span>
+          <span
+            className={`font-mono text-[10px] uppercase px-2 py-0.5 rounded ${
+              item.status === 'Building'
+                ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
+                : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+            }`}
+          >
+            ● {item.status}
+          </span>
+        </div>
+
+        <div className="flex items-baseline justify-between gap-2 mb-1">
+          <h4 className="font-display font-black text-xl sm:text-2xl text-white uppercase tracking-tight group-hover:text-cyan-300 transition-colors">
+            {item.title}
+          </h4>
+          <ArrowUpRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+        </div>
+
+        <p className="font-sans text-xs text-slate-300 mb-3 line-clamp-1">
+          {item.category}
+        </p>
+
+        <div className="flex flex-wrap gap-1.5">
+          {item.tech.map((t) => (
+            <span
+              key={t}
+              className="text-[10px] font-mono px-2 py-0.5 rounded bg-black/50 text-slate-300 border border-white/10"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 
   return (
     <section
       id={id}
-      className="relative w-full bg-transparent pt-24 sm:pt-32 md:pt-40 pb-10 overflow-hidden select-none"
+      className="relative w-full bg-transparent pt-16 sm:pt-24 pb-12 overflow-hidden select-none"
     >
-      {/* Side Fade Vignettes for Seamless Edge Flow */}
+      {/* Side Vignettes for cinematic fade */}
       <div className="pointer-events-none absolute inset-y-0 left-0 w-16 sm:w-32 bg-gradient-to-r from-[#05070A] to-transparent z-10" />
       <div className="pointer-events-none absolute inset-y-0 right-0 w-16 sm:w-32 bg-gradient-to-l from-[#05070A] to-transparent z-10" />
 
       <div className="flex flex-col gap-4 w-full">
-        {/* Row 1: Smooth Infinite Left Scroll */}
+        {/* Row 1: Left */}
         <div className="w-full overflow-hidden">
           <div className="animate-marquee-left flex">
             <div className="flex gap-4 pr-4 shrink-0">
-              {row1Images.map((src, index) => renderCard(src, `r1-a-${index}`, index + 1))}
+              {row1Items.map((item, idx) => renderProjectCard(item, `r1-a-${idx}`))}
             </div>
             <div className="flex gap-4 pr-4 shrink-0" aria-hidden="true">
-              {row1Images.map((src, index) => renderCard(src, `r1-b-${index}`, index + 1))}
+              {row1Items.map((item, idx) => renderProjectCard(item, `r1-b-${idx}`))}
             </div>
           </div>
         </div>
 
-        {/* Row 2: Smooth Infinite Right Scroll */}
+        {/* Row 2: Right */}
         <div className="w-full overflow-hidden">
           <div className="animate-marquee-right flex">
             <div className="flex gap-4 pr-4 shrink-0">
-              {row2Images.map((src, index) => renderCard(src, `r2-a-${index}`, index + half + 1))}
+              {row2Items.map((item, idx) => renderProjectCard(item, `r2-a-${idx}`))}
             </div>
             <div className="flex gap-4 pr-4 shrink-0" aria-hidden="true">
-              {row2Images.map((src, index) => renderCard(src, `r2-b-${index}`, index + half + 1))}
+              {row2Items.map((item, idx) => renderProjectCard(item, `r2-b-${idx}`))}
             </div>
           </div>
         </div>
@@ -74,4 +113,3 @@ export const MarqueeSection: React.FC<MarqueeSectionProps> = ({ id = 'marquee-ga
     </section>
   );
 };
-

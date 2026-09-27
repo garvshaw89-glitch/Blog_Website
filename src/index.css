@@ -1,23 +1,60 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --bg-primary: #05070a;
+    --bg-secondary: #090e17;
+    --surface: #0e1524;
+    --surface-hover: #152238;
+    --surface-glass: rgba(14, 21, 36, 0.7);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-accent: rgba(6, 182, 212, 0.3);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent: #06b6d4;
+    --accent-hover: #22d3ee;
+    --accent-glow: rgba(6, 182, 212, 0.25);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+  }
+
   * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: 'Kanit', sans-serif;
   }
 
-  html, body {
-    background-color: #05070A;
-    color: #D7E2EA;
-    font-family: 'Kanit', sans-serif;
-    overflow-x: clip;
+  html {
+    scroll-behavior: smooth;
+    background-color: #05070a;
+    color: #d7e2ea;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  body {
+    background-color: #05070a;
+    color: #d7e2ea;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: clip;
+    min-height: 100vh;
+  }
+
+  /* Headings & Displays use Kanit display font */
+  h1, h2, h3, .font-display {
+    font-family: 'Kanit', sans-serif;
+  }
+
+  /* Code, Metadata, Status, Labels use JetBrains Mono */
+  code, kbd, samp, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
 }
 
+/* Gradient typography utilities */
 .hero-heading {
   background: linear-gradient(180deg, #64748B 0%, #CBD5E1 55%, #38BDF8 100%);
   -webkit-background-clip: text;
@@ -32,24 +69,53 @@
   background-clip: text;
 }
 
-/* Custom scrollbar with cyan glow */
+.text-gradient-silver {
+  background: linear-gradient(180deg, #FFFFFF 0%, #CBD5E1 60%, #94A3B8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-cyan {
+  background: linear-gradient(135deg, #E0F2FE 0%, #38BDF8 50%, #06B6D4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Subtle Technical Grid & Blueprint Backdrops */
+.bg-tech-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.bg-tech-dots {
+  background-size: 24px 24px;
+  background-image: radial-gradient(rgba(6, 182, 212, 0.12) 1px, transparent 1px);
+}
+
+/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #05070A;
+  background: #05070a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1E293B;
+  background: #1e293b;
   border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #0EA5E9;
+  background: #0ea5e9;
 }
 
+/* Dual-direction Marquee Keyframes */
 @keyframes marquee-scroll-left {
   0% {
     transform: translate3d(0, 0, 0);
@@ -72,17 +138,53 @@
   display: flex;
   width: max-content;
   will-change: transform;
-  animation: marquee-scroll-left 45s linear infinite;
+  animation: marquee-scroll-left 42s linear infinite;
 }
 
 .animate-marquee-right {
   display: flex;
   width: max-content;
   will-change: transform;
-  animation: marquee-scroll-right 45s linear infinite;
+  animation: marquee-scroll-right 42s linear infinite;
 }
 
 .animate-marquee-left:hover,
 .animate-marquee-right:hover {
   animation-play-state: paused;
+}
+
+/* Data pulse & radar scan animations */
+@keyframes radar-scan {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(200%);
+    opacity: 0;
+  }
+}
+
+.animate-radar-scan {
+  animation: radar-scan 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Accessibility: Strict Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .animate-marquee-left,
+  .animate-marquee-right {
+    animation: none !important;
+    transform: none !important;
+  }
+  .animate-radar-scan {
+    animation: none !important;
+  }
 }
