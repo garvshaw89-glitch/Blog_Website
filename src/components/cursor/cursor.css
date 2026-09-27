@@ -1,14 +1,14 @@
 /* ==========================================================================
-   PREMIUM DESIGNER CURSOR - GUARANTEED CONTINUOUS VISIBILITY
+   PREMIUM DESIGNER CURSOR - ZERO DELAY, PERFECT CONCENTRIC CENTERING
    ========================================================================== */
 
-/* Root container: always visible, maximum z-index, zero interaction interference */
+/* Root overlay container: zero dimensions, pointer-events none, maximum z-index */
 .custom-cursor {
   position: fixed !important;
   left: 0 !important;
   top: 0 !important;
-  width: 40px !important;
-  height: 40px !important;
+  width: 0 !important;
+  height: 0 !important;
   pointer-events: none !important;
   z-index: 2147483647 !important;
   opacity: 1 !important;
@@ -19,13 +19,15 @@
   transform: none !important;
 }
 
-/* 1. Inner Core: 5-7px crisp solid brand white dot with electric cyan rim & glow */
+/* 1. Inner Core: 6px solid brand dot - ALWAYS centered at exact mouse pointer */
 .cursor-inner-core {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   width: 6px;
   height: 6px;
+  margin-top: -3px !important;
+  margin-left: -3px !important;
   border-radius: 50% !important;
   pointer-events: none !important;
   z-index: 2147483647 !important;
@@ -33,37 +35,44 @@
   border: 1px solid rgba(6, 182, 212, 0.95) !important;
   box-shadow: 0 0 6px #06b6d4, 0 0 10px rgba(6, 182, 212, 0.8) !important;
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.95)) !important;
-  transform: translate3d(-50%, -50%, 0);
+  transform: translate3d(0, 0, 0);
   will-change: transform;
   opacity: 1 !important;
   visibility: visible !important;
   display: block !important;
-  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-              height 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.2s ease,
-              background-color 0.2s ease;
+  transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              margin 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.18s ease,
+              background-color 0.18s ease;
 }
 
-/* Button hover expands core slightly */
+/* Button hover expands core slightly while staying perfectly centered */
 .cursor-inner-core.is-button {
-  width: 7.5px;
-  height: 7.5px;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px !important;
+  margin-left: -4px !important;
   box-shadow: 0 0 8px #22d3ee, 0 0 14px rgba(6, 182, 212, 0.95) !important;
 }
 
 /* Text hover adjustment */
 .cursor-inner-core.is-text {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
+  margin-top: -2px !important;
+  margin-left: -2px !important;
 }
 
-/* 2. Outer Ring: 32-42px thin circular ring with smooth animation & subtle glow */
+/* 2. Outer Ring: 38px thin circular ring - perfectly centered on cursor */
 .cursor-outer-ring {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   width: 38px;
   height: 38px;
+  margin-top: -19px !important;
+  margin-left: -19px !important;
   border-radius: 50% !important;
   pointer-events: none !important;
   z-index: 2147483646 !important;
@@ -71,23 +80,26 @@
   background: rgba(6, 182, 212, 0.04) !important;
   box-shadow: 0 0 12px rgba(6, 182, 212, 0.28), inset 0 0 8px rgba(6, 182, 212, 0.08) !important;
   filter: drop-shadow(0 0 2.5px rgba(0, 0, 0, 0.85)) !important;
-  transform: translate3d(-50%, -50%, 0);
+  transform: translate3d(0, 0, 0);
   will-change: transform;
   opacity: 1 !important;
   visibility: visible !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              height 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.22s ease,
-              background-color 0.22s ease,
-              box-shadow 0.22s ease;
+  transition: width 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              margin 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.18s ease,
+              background-color 0.18s ease,
+              box-shadow 0.18s ease;
 }
 
 .cursor-outer-ring.is-button {
   width: 48px;
   height: 48px;
+  margin-top: -24px !important;
+  margin-left: -24px !important;
   border-color: rgba(34, 211, 238, 0.85) !important;
   background: rgba(6, 182, 212, 0.1) !important;
   box-shadow: 0 0 18px rgba(6, 182, 212, 0.45), inset 0 0 10px rgba(6, 182, 212, 0.15) !important;
@@ -96,6 +108,8 @@
 .cursor-outer-ring.is-link {
   width: 44px;
   height: 44px;
+  margin-top: -22px !important;
+  margin-left: -22px !important;
   border-color: rgba(34, 211, 238, 0.8) !important;
   background: rgba(6, 182, 212, 0.07) !important;
   box-shadow: 0 0 14px rgba(6, 182, 212, 0.35) !important;
@@ -104,6 +118,8 @@
 .cursor-outer-ring.is-project {
   width: 54px;
   height: 54px;
+  margin-top: -27px !important;
+  margin-left: -27px !important;
   border-color: rgba(34, 211, 238, 0.95) !important;
   background: rgba(5, 7, 10, 0.85) !important;
   box-shadow: 0 0 22px rgba(6, 182, 212, 0.45), inset 0 0 12px rgba(6, 182, 212, 0.2) !important;
@@ -112,16 +128,20 @@
 .cursor-outer-ring.is-text {
   width: 32px;
   height: 32px;
+  margin-top: -16px !important;
+  margin-left: -16px !important;
   border-color: rgba(6, 182, 212, 0.35) !important;
 }
 
-/* 3. Secondary Ring: 55-70px subtle larger ring that creates depth */
+/* 3. Secondary Ring: 62px subtle larger depth ring - perfectly centered */
 .cursor-secondary-ring {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   width: 62px;
   height: 62px;
+  margin-top: -31px !important;
+  margin-left: -31px !important;
   border-radius: 50% !important;
   pointer-events: none !important;
   z-index: 2147483645 !important;
@@ -131,17 +151,20 @@
   visibility: visible !important;
   display: block !important;
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6)) !important;
-  transform: translate3d(-50%, -50%, 0);
+  transform: translate3d(0, 0, 0);
   will-change: transform;
-  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.3s ease,
-              opacity 0.3s ease;
+  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              margin 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.22s ease,
+              opacity 0.22s ease;
 }
 
 .cursor-secondary-ring.is-button {
   width: 72px;
   height: 72px;
+  margin-top: -36px !important;
+  margin-left: -36px !important;
   border-color: rgba(34, 211, 238, 0.35) !important;
   opacity: 0.45 !important;
 }
@@ -149,12 +172,16 @@
 .cursor-secondary-ring.is-link {
   width: 68px;
   height: 68px;
+  margin-top: -34px !important;
+  margin-left: -34px !important;
   opacity: 0.4 !important;
 }
 
 .cursor-secondary-ring.is-project {
   width: 78px;
   height: 78px;
+  margin-top: -39px !important;
+  margin-left: -39px !important;
   border-color: rgba(34, 211, 238, 0.4) !important;
   opacity: 0.5 !important;
 }
@@ -162,10 +189,12 @@
 .cursor-secondary-ring.is-text {
   width: 52px;
   height: 52px;
+  margin-top: -26px !important;
+  margin-left: -26px !important;
   opacity: 0.2 !important;
 }
 
-/* 4. Tiny VIEW Label for Project Cards (always high-contrast) */
+/* 4. Tiny VIEW Label for Project Cards */
 .cursor-view-label {
   position: absolute;
   top: calc(50% + 18px);
@@ -190,21 +219,23 @@
   display: block;
 }
 
-/* 5. Click Ripple Effect: expanding ring that self-terminates without touching core */
+/* 5. Click Ripple Effect: expanding ring centered at click coordinates */
 @keyframes cursorRippleExpand {
   0% {
-    width: 20px;
-    height: 20px;
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+    margin-left: -7px;
     opacity: 0.85;
     border-width: 1.5px;
-    transform: translate3d(-50%, -50%, 0);
   }
   100% {
     width: 68px;
     height: 68px;
+    margin-top: -34px;
+    margin-left: -34px;
     opacity: 0;
     border-width: 1px;
-    transform: translate3d(-50%, -50%, 0);
   }
 }
 
@@ -217,7 +248,8 @@
   box-shadow: 0 0 12px rgba(6, 182, 212, 0.5) !important;
   pointer-events: none !important;
   z-index: 2147483644 !important;
-  animation: cursorRippleExpand 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  transform: translate3d(0, 0, 0);
+  animation: cursorRippleExpand 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
 /* Magnetic active glow feedback on target element */

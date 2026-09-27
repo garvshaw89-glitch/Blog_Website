@@ -14,15 +14,14 @@ interface RippleItem {
 }
 
 export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0.22 }) => {
-  // Direct DOM element references for 60-120 FPS performance (zero React state during mouse movement)
+  // Direct DOM element references for zero React re-renders during mouse movement
   const coreRef = useRef<HTMLDivElement | null>(null);
   const ringRef = useRef<HTMLDivElement | null>(null);
   const secRingRef = useRef<HTMLDivElement | null>(null);
   const labelRef = useRef<HTMLSpanElement | null>(null);
 
-  // Position references
+  // Position references (coordinates track exact mouse position)
   const targetPos = useRef({ x: -100, y: -100 });
-  const corePos = useRef({ x: -100, y: -100 });
   const ringPos = useRef({ x: -100, y: -100 });
   const secRingPos = useRef({ x: -100, y: -100 });
 
@@ -67,7 +66,6 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
     const initX = window.innerWidth / 2;
     const initY = window.innerHeight / 2;
     targetPos.current = { x: initX, y: initY };
-    corePos.current = { x: initX, y: initY };
     ringPos.current = { x: initX, y: initY };
     secRingPos.current = { x: initX, y: initY };
 
@@ -88,6 +86,26 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
 
       targetPos.current.x = clientX;
       targetPos.current.y = clientY;
+
+      // INSTANT ZERO-LATENCY UPDATE FOR INNER CORE
+      // Directly lock inner core to client pointer for zero perceived delay
+      if (coreRef.current) {
+        coreRef.current.style.transform = `translate3d(${clientX}px, ${clientY}px, 0)`;
+      }
+
+      // If reduced motion, synchronize rings immediately as well
+      if (prefersReducedRef.current) {
+        ringPos.current.x = clientX;
+        ringPos.current.y = clientY;
+        secRingPos.current.x = clientX;
+        secRingPos.current.y = clientY;
+        if (ringRef.current) {
+          ringRef.current.style.transform = `translate3d(${clientX}px, ${clientY}px, 0)`;
+        }
+        if (secRingRef.current) {
+          secRingRef.current.style.transform = `translate3d(${clientX}px, ${clientY}px, 0)`;
+        }
+      }
 
       // Inspect target for semantic hover states
       const target = e.target as HTMLElement | null;
@@ -168,40 +186,26 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
       }
     };
 
-    // Main 60-120 FPS Motion Loop
+    // Main 60-120 FPS Motion Loop for the trailing rings (crisp, responsive, centered)
     const tick = () => {
       const targetX = targetPos.current.x;
       const targetY = targetPos.current.y;
 
-      if (prefersReducedRef.current) {
-        corePos.current.x = targetX;
-        corePos.current.y = targetY;
-        ringPos.current.x = targetX;
-        ringPos.current.y = targetY;
-        secRingPos.current.x = targetX;
-        secRingPos.current.y = targetY;
-      } else {
-        // Inner dot: very fast, near-immediate follow
-        corePos.current.x += (targetX - corePos.current.x) * 0.75;
-        corePos.current.y += (targetY - corePos.current.y) * 0.75;
+      if (!prefersReducedRef.current) {
+        // Outer ring: crisp follow (0.42 factor for quick response without feeling sluggish)
+        ringPos.current.x += (targetX - ringPos.current.x) * 0.42;
+        ringPos.current.y += (targetY - ringPos.current.y) * 0.42;
 
-        // Outer ring: slightly delayed smooth inertia
-        ringPos.current.x += (targetX - ringPos.current.x) * 0.18;
-        ringPos.current.y += (targetY - ringPos.current.y) * 0.18;
+        // Secondary ring: smooth aesthetic trailing halo (0.22 factor)
+        secRingPos.current.x += (targetX - secRingPos.current.x) * 0.22;
+        secRingPos.current.y += (targetY - secRingPos.current.y) * 0.22;
 
-        // Secondary ring: slightly more delayed depth ring
-        secRingPos.current.x += (targetX - secRingPos.current.x) * 0.08;
-        secRingPos.current.y += (targetY - secRingPos.current.y) * 0.08;
-      }
-
-      if (coreRef.current) {
-        coreRef.current.style.transform = `translate3d(${corePos.current.x}px, ${corePos.current.y}px, 0)`;
-      }
-      if (ringRef.current) {
-        ringRef.current.style.transform = `translate3d(${ringPos.current.x}px, ${ringPos.current.y}px, 0)`;
-      }
-      if (secRingRef.current) {
-        secRingRef.current.style.transform = `translate3d(${secRingPos.current.x}px, ${secRingPos.current.y}px, 0)`;
+        if (ringRef.current) {
+          ringRef.current.style.transform = `translate3d(${ringPos.current.x}px, ${ringPos.current.y}px, 0)`;
+        }
+        if (secRingRef.current) {
+          secRingRef.current.style.transform = `translate3d(${secRingPos.current.x}px, ${secRingPos.current.y}px, 0)`;
+        }
       }
 
       rafIdRef.current = requestAnimationFrame(tick);
@@ -241,8 +245,8 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         position: 'fixed',
         left: 0,
         top: 0,
-        width: '40px',
-        height: '40px',
+        width: 0,
+        height: 0,
         pointerEvents: 'none',
         zIndex: 2147483647,
         opacity: 1,
@@ -250,13 +254,13 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         display: 'block',
       }}
     >
-      {/* 3. Secondary Ring: 55-70px subtle larger ring that creates depth */}
+      {/* 3. Secondary Ring: 62px subtle larger ring that creates depth - concentric */}
       <div
         ref={secRingRef}
         className="cursor-secondary-ring"
       />
 
-      {/* 2. Outer Ring: 32-42px thin circular ring with smooth animation */}
+      {/* 2. Outer Ring: 38px thin circular ring with smooth animation - concentric */}
       <div
         ref={ringRef}
         className="cursor-outer-ring"
@@ -271,7 +275,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         </span>
       </div>
 
-      {/* 1. Inner Core: 5-7px crisp solid brand dot with strong contrast */}
+      {/* 1. Inner Core: 6px crisp solid brand dot - locked immediately to pointer tip */}
       <div
         ref={coreRef}
         className="cursor-inner-core"
