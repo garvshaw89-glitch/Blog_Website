@@ -5,9 +5,16 @@ import { CursorCore } from './CursorCore';
 import { CursorRing } from './CursorRing';
 import { CursorGlow } from './CursorGlow';
 import { CursorTrail } from './CursorTrail';
+import { CursorMicroParticles } from './CursorMicroParticles';
 import { CursorRipple } from './CursorRipple';
+import './cursor.css';
 
-export const CustomCursor: React.FC = () => {
+export interface CustomCursorProps {
+  /** Configurable magnetic attraction strength (default: 0.22, recommended range: 0.15 - 0.30) */
+  magneticStrength?: number;
+}
+
+export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength }) => {
   const {
     cursorType,
     cursorLabel,
@@ -24,7 +31,7 @@ export const CustomCursor: React.FC = () => {
   }
 
   return (
-    <CursorInteractionManager>
+    <CursorInteractionManager magneticStrength={magneticStrength}>
       {({
         mouseX,
         mouseY,
@@ -36,15 +43,23 @@ export const CustomCursor: React.FC = () => {
         velocityScaleY,
         velocityAngle,
         trailPoints,
+        microParticles,
         ripples,
         currentSpeed,
+        scrollSpeed,
+        entranceScale,
+        entranceOpacity,
         onRippleComplete,
         prefersReducedMotion,
       }) => (
         <div
           aria-hidden="true"
-          className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden select-none transition-opacity duration-300"
-          style={{ opacity: isVisible ? 1 : 0 }}
+          className="fixed inset-0 pointer-events-none z-[99999] overflow-hidden select-none transition-opacity duration-300"
+          style={{
+            opacity: isVisible ? entranceOpacity : 0,
+            transform: `scale(${entranceScale})`,
+            transformOrigin: 'center center',
+          }}
         >
           {/* 1. Atmospheric Ambient Lighting Glow */}
           <CursorGlow
@@ -55,15 +70,23 @@ export const CustomCursor: React.FC = () => {
             prefersReducedMotion={prefersReducedMotion}
           />
 
-          {/* 2. Micro Particle Trail (visible only on brisk motion) */}
-          <CursorTrail
-            points={trailPoints}
-            speed={currentSpeed}
+          {/* 2. Micro Spark Particles (generated on high velocity flicks) */}
+          <CursorMicroParticles
+            particles={microParticles}
             cursorTheme={cursorTheme}
             prefersReducedMotion={prefersReducedMotion}
           />
 
-          {/* 3. Click Expanding Ripple */}
+          {/* 3. 5–10 Staggered Trailing Particles */}
+          <CursorTrail
+            points={trailPoints}
+            speed={currentSpeed}
+            scrollSpeed={scrollSpeed}
+            cursorTheme={cursorTheme}
+            prefersReducedMotion={prefersReducedMotion}
+          />
+
+          {/* 4. Click Expanding Ripple */}
           <CursorRipple
             ripples={ripples}
             cursorTheme={cursorTheme}
@@ -71,7 +94,7 @@ export const CustomCursor: React.FC = () => {
             onRippleComplete={onRippleComplete}
           />
 
-          {/* 4. Outer Glass Follower Ring with Velocity Stretcher & Dynamic Labels */}
+          {/* 5. Outer Glass Follower Ring with Velocity Stretcher, Rotation & Dynamic Labels */}
           <CursorRing
             x={smoothX}
             y={smoothY}
@@ -86,7 +109,7 @@ export const CustomCursor: React.FC = () => {
             prefersReducedMotion={prefersReducedMotion}
           />
 
-          {/* 5. Zero-Lag High-Contrast Precision Core */}
+          {/* 6. Zero-Lag High-Contrast Precision Center Dot */}
           <CursorCore
             x={mouseX}
             y={mouseY}

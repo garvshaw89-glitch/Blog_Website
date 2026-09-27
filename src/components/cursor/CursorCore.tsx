@@ -22,9 +22,10 @@ export const CursorCore: React.FC<CursorCoreProps> = ({
   prefersReducedMotion,
 }) => {
   // Hide core when inside specialized label states like project cards to keep typography clean
-  const isHidden = cursorType === 'project' || cursorType === 'image' || cursorType === 'drag';
+  const isHidden = cursorType === 'project' || cursorType === 'image' || cursorType === 'drag' || cursorType === 'hidden' || cursorType === 'disabled';
   const isText = cursorType === 'text';
   const isButton = cursorType === 'button';
+  const isLink = cursorType === 'link' || cursorType === 'external';
 
   // Theme-aware accent colors
   const getAccentColor = () => {
@@ -35,7 +36,7 @@ export const CursorCore: React.FC<CursorCoreProps> = ({
         return 'bg-indigo-300 shadow-[0_0_8px_rgba(129,140,248,0.9)]';
       case 'cyan':
       default:
-        return 'bg-cyan-400 shadow-[0_0_10px_#06b6d4]';
+        return 'bg-white shadow-[0_0_10px_#06b6d4,0_0_4px_#22d3ee]';
     }
   };
 
@@ -53,13 +54,15 @@ export const CursorCore: React.FC<CursorCoreProps> = ({
           : isPointerDown
           ? 1.25
           : isText
-          ? 0.75
+          ? 0.7
           : isButton
           ? 1.2
+          : isLink
+          ? 1.35
           : isIdle && !prefersReducedMotion
           ? [1, 1.15, 1]
           : 1,
-        opacity: isHidden ? 0 : isText ? 0.4 : 1,
+        opacity: isHidden ? 0 : isText ? 0.35 : 1,
       }}
       transition={
         isIdle && !prefersReducedMotion

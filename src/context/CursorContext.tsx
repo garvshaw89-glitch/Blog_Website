@@ -2,14 +2,15 @@ import React, { createContext, useContext, useState, useCallback, useMemo } from
 
 export type CursorType =
   | 'default'
-  | 'pointer'
-  | 'button'
   | 'link'
-  | 'external'
+  | 'button'
   | 'project'
   | 'image'
   | 'drag'
   | 'text'
+  | 'hidden'
+  | 'pointer'
+  | 'external'
   | 'disabled';
 
 export type CursorTheme = 'default' | 'cyan' | 'light' | 'violet';

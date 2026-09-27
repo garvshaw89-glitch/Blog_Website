@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { MotionValue, useMotionValue, useSpring } from 'motion/react';
 import { useCursor, CursorType, CursorTheme } from '../../context/CursorContext';
 import { useReducedMotion } from '../../hooks/cursor/useReducedMotion';
+import { applyMagneticAttraction, resetMagneticElement } from '../../hooks/cursor/useCursor';
 import { TrailPoint } from './CursorTrail';
+import { MicroParticle } from './CursorMicroParticles';
 import { RippleEvent } from './CursorRipple';
 
 interface InteractionManagerRenderProps {
@@ -16,17 +18,25 @@ interface InteractionManagerRenderProps {
   velocityScaleY: MotionValue<number>;
   velocityAngle: MotionValue<number>;
   trailPoints: TrailPoint[];
+  microParticles: MicroParticle[];
   ripples: RippleEvent[];
   currentSpeed: number;
+  scrollSpeed: number;
+  entranceScale: number;
+  entranceOpacity: number;
   onRippleComplete: (id: number) => void;
   prefersReducedMotion: boolean;
 }
 
 interface CursorInteractionManagerProps {
+  magneticStrength?: number;
   children: (props: InteractionManagerRenderProps) => React.ReactNode;
 }
 
-export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> = ({ children }) => {
+export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> = ({
+  magneticStrength = 0.22,
+  children,
+}) => {
   const {
     cursorType,
     cursorLabel,
@@ -50,13 +60,13 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
   const mouseX = useMotionValue(-100);
   const mouseY = useMotionValue(-100);
 
-  // Outer ring spring: agile, controlled, no floaty lag
-  const ringSpringConfig = { damping: 26, stiffness: 350, mass: 0.5 };
+  // Outer ring spring: agile, physical, controlled
+  const ringSpringConfig = { damping: 28, stiffness: 360, mass: 0.45 };
   const smoothX = useSpring(mouseX, ringSpringConfig);
   const smoothY = useSpring(mouseY, ringSpringConfig);
 
-  // Ambient glow spring: soft, delayed atmospheric follow
-  const glowSpringConfig = { damping: 32, stiffness: 180, mass: 0.8 };
+  // Ambient glow spring: soft volumetric delayed follow
+  const glowSpringConfig = { damping: 34, stiffness: 160, mass: 0.85 };
   const glowX = useSpring(mouseX, glowSpringConfig);
   const glowY = useSpring(mouseY, glowSpringConfig);
 
@@ -65,10 +75,18 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
   const velocityScaleY = useMotionValue(1);
   const velocityAngle = useMotionValue(0);
 
-  // Subtle Trail buffer
+  // Entrance animation state (0.6 -> 1 over 650ms on mount)
+  const [entranceScale, setEntranceScale] = useState(0.6);
+  const [entranceOpacity, setEntranceOpacity] = useState(0);
+
+  // Subtle Trail buffer (up to 8 points)
   const [trailPoints, setTrailPoints] = useState<TrailPoint[]>([]);
   const trailIdRef = useRef(0);
   const lastTrailSampleRef = useRef(0);
+
+  // Micro Particles pool for high-velocity bursts
+  const [microParticles, setMicroParticles] = useState<MicroParticle[]>([]);
+  const particleIdRef = useRef(0);
 
   // Click ripple queue
   const [ripples, setRipples] = useState<RippleEvent[]>([]);
@@ -77,6 +95,10 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
   // Velocity state
   const prevPosRef = useRef({ x: -100, y: -100, time: 0 });
   const [currentSpeed, setCurrentSpeed] = useState(0);
+
+  // Scroll reaction state
+  const lastScrollYRef = useRef(0);
+  const [scrollSpeed, setScrollSpeed] = useState(0);
 
   // Idle timer ref
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -97,22 +119,32 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
     }
     idleTimerRef.current = setTimeout(() => {
       setIsIdle(true);
-    }, 2400);
+    }, 2500);
   }, [setIsIdle]);
 
   // Release currently displaced magnetic element
   const releaseMagneticElement = useCallback(() => {
     if (activeMagneticElRef.current) {
-      activeMagneticElRef.current.style.transform = 'translate3d(0, 0, 0)';
-      activeMagneticElRef.current.style.transition = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)';
+      resetMagneticElement(activeMagneticElRef.current);
       activeMagneticElRef.current = null;
     }
   }, []);
 
+  // Page Load Entrance Effect
   useEffect(() => {
-    // Only enable custom cursor on fine pointer devices (desktops/laptops with mouse/trackpad)
+    const entranceTimer = setTimeout(() => {
+      setEntranceScale(1);
+      setEntranceOpacity(1);
+    }, 120);
+
+    return () => clearTimeout(entranceTimer);
+  }, []);
+
+  // Main Pointer & Interaction Event Loop
+  useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    // Detect touch-only / coarse pointer devices
     const isTouch = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
     if (isTouch) {
       setIsTouchDevice(true);
@@ -142,12 +174,13 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
       const speed = (dist / dt) * 16;
       setCurrentSpeed(speed);
 
+      // Velocity stretching
       if (dist > 1 && !prefersReducedMotion) {
         const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-        const stretch = Math.min(speed * 0.05, 0.28);
+        const stretch = Math.min(speed * 0.045, 0.32);
         velocityAngle.set(angle);
         velocityScaleX.set(1 + stretch);
-        velocityScaleY.set(Math.max(0.85, 1 - stretch * 0.4));
+        velocityScaleY.set(Math.max(0.82, 1 - stretch * 0.35));
       } else {
         velocityScaleX.set(1);
         velocityScaleY.set(1);
@@ -155,42 +188,58 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
 
       prevPosRef.current = { x: clientX, y: clientY, time: now };
 
-      // Sample trail point if moving with notable speed
-      if (speed > 2.8 && !prefersReducedMotion && now - lastTrailSampleRef.current > 35) {
+      // 1. Trail sampling: sample up to 8 points on brisk movement
+      if (speed > 2.0 && !prefersReducedMotion && now - lastTrailSampleRef.current > 28) {
         lastTrailSampleRef.current = now;
         trailIdRef.current += 1;
         setTrailPoints((prevPts) => [
           { x: clientX, y: clientY, id: trailIdRef.current },
-          ...prevPts.slice(0, 3),
+          ...prevPts.slice(0, 7),
         ]);
-      } else if (speed < 1.5 && trailPoints.length > 0) {
+      } else if (speed < 1.2 && trailPoints.length > 0) {
         setTrailPoints([]);
       }
 
-      // Check element under cursor for semantic cursor states
+      // 2. Micro-particles burst on quick flick (speed > 4.5)
+      if (speed > 4.5 && !prefersReducedMotion && Math.random() > 0.45) {
+        particleIdRef.current += 1;
+        const randomAngle = Math.random() * Math.PI * 2;
+        const randomDist = 3 + Math.random() * 8;
+        const newParticle: MicroParticle = {
+          id: particleIdRef.current,
+          x: clientX + Math.cos(randomAngle) * randomDist,
+          y: clientY + Math.sin(randomAngle) * randomDist,
+          vx: Math.cos(randomAngle) * (1.2 + Math.random()),
+          vy: Math.sin(randomAngle) * (1.2 + Math.random()),
+          size: 2 + Math.random() * 2,
+          opacity: 0.75,
+        };
+
+        setMicroParticles((prev) => [...prev.slice(-8), newParticle]);
+      }
+
+      // 3. Inspect DOM target for semantic cursor & magnetic behavior
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      // 1. Magnetic element check
-      const magneticEl = target.closest('[data-magnetic]') as HTMLElement | null;
-      if (magneticEl && !prefersReducedMotion) {
-        activeMagneticElRef.current = magneticEl;
-        const rect = magneticEl.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const deltaX = clientX - centerX;
-        const deltaY = clientY - centerY;
-        const maxOffset = 8;
-        const moveX = Math.max(-maxOffset, Math.min(maxOffset, deltaX * 0.22));
-        const moveY = Math.max(-maxOffset, Math.min(maxOffset, deltaY * 0.22));
+      // Magnetic Attraction Handling (spring-based magnetic attraction vectors)
+      const magneticEl = (target.closest('[data-magnetic]') ||
+        target.closest('button, [role="button"]')) as HTMLElement | null;
 
-        magneticEl.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
-        magneticEl.style.transition = 'transform 0.12s cubic-bezier(0.2, 0, 0.2, 1)';
+      if (magneticEl && !prefersReducedMotion) {
+        if (activeMagneticElRef.current && activeMagneticElRef.current !== magneticEl) {
+          resetMagneticElement(activeMagneticElRef.current);
+        }
+        activeMagneticElRef.current = magneticEl;
+        applyMagneticAttraction(magneticEl, clientX, clientY, {
+          strength: magneticStrength,
+          maxDisplacement: 8,
+        });
       } else {
         releaseMagneticElement();
       }
 
-      // 2. Section Theme check
+      // Section Theme detection
       const themedSection = target.closest('[data-cursor-theme]') as HTMLElement | null;
       if (themedSection) {
         const themeAttr = themedSection.getAttribute('data-cursor-theme') as CursorTheme;
@@ -201,29 +250,43 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
         setCursorTheme('default');
       }
 
-      // 3. Semantic hover states
+      // Semantic Hover States & dynamic text mapping
       const customCursorAttr = target.closest('[data-cursor]') as HTMLElement | null;
       const customLabelAttr = target.closest('[data-cursor-label]') as HTMLElement | null;
-      const externalLink = target.closest('a[target="_blank"]') || target.closest('[data-cursor="external"]');
-      const standardLink = target.closest('a');
-      const interactiveBtn = target.closest('button, [role="button"], [data-cursor="button"]');
-      const textElement = target.closest('p, h1, h2, h3, h4, h5, h6, input, textarea, code, pre, [data-cursor="text"]');
+      const declaredVal = customCursorAttr?.getAttribute('data-cursor');
+      const declaredLabel = customLabelAttr?.getAttribute('data-cursor-label');
 
-      if (customCursorAttr) {
-        const declaredType = customCursorAttr.getAttribute('data-cursor') as CursorType;
-        const declaredLabel = customLabelAttr?.getAttribute('data-cursor-label') || '';
-        setCursorType(declaredType);
-        setCursorLabel(declaredLabel);
-      } else if (externalLink) {
-        setCursorType('external');
-        setCursorLabel('OPEN');
-      } else if (interactiveBtn) {
-        setCursorType('button');
-        setCursorLabel('');
-      } else if (standardLink) {
+      const isExternalLink = target.closest('a[target="_blank"]') || target.closest('[data-cursor="external"]');
+      const isStandardLink = target.closest('a');
+      const isBtn = target.closest('button, [role="button"], [data-cursor="button"]');
+      const isTextInput = target.closest('input, textarea, [contenteditable="true"]');
+      const isSelectableText = target.closest('p, h1, h2, h3, h4, h5, h6, code, pre, span:not(button span)');
+
+      if (declaredVal === 'view' || declaredVal === 'project') {
+        setCursorType('project');
+        setCursorLabel(declaredLabel || 'VIEW');
+      } else if (declaredVal === 'explore' || declaredVal === 'image') {
+        setCursorType('image');
+        setCursorLabel(declaredLabel || 'EXPLORE');
+      } else if (declaredVal === 'open' || declaredVal === 'link' || isExternalLink) {
         setCursorType('link');
-        setCursorLabel('OPEN');
-      } else if (textElement && !target.closest('button, a')) {
+        setCursorLabel(declaredLabel || 'OPEN');
+      } else if (declaredVal === 'click' || declaredVal === 'button' || isBtn) {
+        setCursorType('button');
+        setCursorLabel(declaredLabel || '');
+      } else if (declaredVal === 'drag') {
+        setCursorType('drag');
+        setCursorLabel(declaredLabel || 'DRAG');
+      } else if (declaredVal === 'hidden') {
+        setCursorType('hidden');
+        setCursorLabel('');
+      } else if (isTextInput) {
+        setCursorType('text');
+        setCursorLabel('');
+      } else if (isStandardLink) {
+        setCursorType('link');
+        setCursorLabel(declaredLabel || 'OPEN');
+      } else if (isSelectableText && !target.closest('button, a, [role="button"]')) {
         setCursorType('text');
         setCursorLabel('');
       } else {
@@ -232,7 +295,22 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
       }
     };
 
-    const handlePointerDown = (e: MouseEvent) => {
+    // Scroll reaction listener
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      const delta = Math.abs(currentY - lastScrollYRef.current);
+      lastScrollYRef.current = currentY;
+      const speed = Math.min(delta, 35);
+      setScrollSpeed(speed);
+
+      // Slightly stretch the ring on fast vertical scrolls
+      if (speed > 4 && !prefersReducedMotion) {
+        const scrollStretch = Math.min(speed * 0.02, 0.25);
+        velocityScaleY.set(1 + scrollStretch);
+      }
+    };
+
+    const handlePointerDown = () => {
       setIsPointerDown(true);
     };
 
@@ -253,6 +331,7 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
       setIsVisible(false);
       releaseMagneticElement();
       setTrailPoints([]);
+      setMicroParticles([]);
     };
 
     const handleMouseEnter = () => {
@@ -260,6 +339,7 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
     };
 
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('mousedown', handlePointerDown);
     window.addEventListener('mouseup', handlePointerUp);
     document.addEventListener('mouseleave', handleMouseLeave);
@@ -267,6 +347,7 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('mousedown', handlePointerDown);
       window.removeEventListener('mouseup', handlePointerUp);
       document.removeEventListener('mouseleave', handleMouseLeave);
@@ -292,7 +373,39 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
     setIsVisible,
     setIsTouchDevice,
     trailPoints.length,
+    magneticStrength,
   ]);
+
+  // Micro-particles decay animation frame loop
+  useEffect(() => {
+    if (microParticles.length === 0) return;
+
+    const frameId = requestAnimationFrame(() => {
+      setMicroParticles((prev) =>
+        prev
+          .map((p) => ({
+            ...p,
+            x: p.x + p.vx,
+            y: p.y + p.vy,
+            opacity: p.opacity - 0.045,
+          }))
+          .filter((p) => p.opacity > 0.05)
+      );
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [microParticles]);
+
+  // Scroll speed decay loop
+  useEffect(() => {
+    if (scrollSpeed <= 0.1) return;
+
+    const decayTimer = setTimeout(() => {
+      setScrollSpeed((prev) => Math.max(0, prev * 0.7));
+    }, 40);
+
+    return () => clearTimeout(decayTimer);
+  }, [scrollSpeed]);
 
   return (
     <>
@@ -307,8 +420,12 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
         velocityScaleY,
         velocityAngle,
         trailPoints,
+        microParticles,
         ripples,
         currentSpeed,
+        scrollSpeed,
+        entranceScale,
+        entranceOpacity,
         onRippleComplete: handleRippleComplete,
         prefersReducedMotion,
       })}

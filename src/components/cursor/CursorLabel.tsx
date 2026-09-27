@@ -22,7 +22,7 @@ export const CursorLabel: React.FC<CursorLabelProps> = ({
     if (cursorType === 'project') {
       labelText = 'VIEW';
     } else if (cursorType === 'image') {
-      labelText = 'VIEW PROJECT';
+      labelText = 'EXPLORE';
     } else if (cursorType === 'external') {
       labelText = 'OPEN';
       showExternalArrow = true;

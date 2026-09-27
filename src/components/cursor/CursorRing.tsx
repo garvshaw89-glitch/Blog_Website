@@ -40,6 +40,8 @@ export const CursorRing: React.FC<CursorRingProps> = ({
   const isText = cursorType === 'text';
   const isButton = cursorType === 'button';
   const isLink = cursorType === 'link' || cursorType === 'external';
+  const isHidden = cursorType === 'hidden' || cursorType === 'disabled';
+  const isProject = cursorType === 'project';
 
   // Base theme classes
   const getThemeBorderAndGlow = () => {
@@ -65,12 +67,16 @@ export const CursorRing: React.FC<CursorRingProps> = ({
         return isLabelActive
           ? 'bg-[#070D18]/92 border-cyan-400/70 shadow-[0_0_30px_rgba(6,182,212,0.35)]'
           : isButton
-          ? 'bg-cyan-500/10 border-cyan-400/60 shadow-[0_0_20px_rgba(6,182,212,0.3)]'
+          ? 'bg-cyan-500/10 border-cyan-400/70 shadow-[0_0_22px_rgba(6,182,212,0.35)]'
           : isLink
           ? 'bg-cyan-500/5 border-cyan-400/40 shadow-[0_0_14px_rgba(6,182,212,0.2)]'
           : 'bg-white/[0.02] border-cyan-400/25';
     }
   };
+
+  if (isHidden) {
+    return null;
+  }
 
   return (
     <motion.div
@@ -87,7 +93,7 @@ export const CursorRing: React.FC<CursorRingProps> = ({
         scale: isPointerDown
           ? 0.82
           : isText
-          ? 0.5
+          ? 0.45
           : isIdle && !prefersReducedMotion
           ? [1, 1.06, 1]
           : 1,
@@ -101,16 +107,23 @@ export const CursorRing: React.FC<CursorRingProps> = ({
       className="absolute top-0 left-0 pointer-events-none z-20 flex items-center justify-center will-change-transform"
     >
       <div
-        className={`flex items-center justify-center border backdrop-blur-[2px] transition-all duration-200 select-none ${
-          isLabelActive
-            ? 'px-3.5 py-1.5 rounded-full'
+        className={`relative flex items-center justify-center border backdrop-blur-[3px] transition-all duration-200 select-none ${
+          isProject
+            ? 'w-20 h-20 rounded-full rotate-[-4deg]'
+            : isLabelActive
+            ? 'px-4 py-2 rounded-full'
             : isButton
-            ? 'w-11 h-11 rounded-full'
+            ? 'w-12 h-12 rounded-full border-[1.5px]'
             : isLink
-            ? 'w-9 h-9 rounded-full'
-            : 'w-8 h-8 rounded-full'
+            ? 'w-10 h-10 rounded-full border-[1.2px]'
+            : 'w-8 h-8 rounded-full border-[1px]'
         } ${getThemeBorderAndGlow()}`}
       >
+        {/* Subtle Rotating Accent for Button Hover State */}
+        {isButton && !prefersReducedMotion && (
+          <div className="cursor-ring-button-accent" />
+        )}
+
         <CursorLabel
           cursorType={cursorType}
           cursorLabel={cursorLabel}

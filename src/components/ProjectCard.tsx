@@ -161,7 +161,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         <div
           onClick={() => onSelectProject(project)}
           data-cursor="image"
-          data-cursor-label="VIEW PROJECT"
+          data-cursor-label="EXPLORE"
           className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4 cursor-pointer group"
           title="Click to inspect detailed engineering case study"
         >
