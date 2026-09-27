@@ -124,7 +124,7 @@ export const PROJECTS: ProjectItem[] = [
     col1BottomImage: stockmentorLearningPathImg,
     col2Image: financialDashboardImg,
     githubUrl: 'https://github.com/garvshaw89-glitch/StockMentor',
-    liveUrl: 'https://stock-mentortutor.vercel.app/',
+    liveUrl: 'https://stock-mentor-virid.vercel.app/',
   },
   {
     id: 'microskill',
@@ -153,7 +153,7 @@ export const PROJECTS: ProjectItem[] = [
     col1BottomImage: typingTestHistoryImg,
     col2Image: typingTestHeatmapImg,
     githubUrl: 'https://github.com/garvshaw89-glitch/Typing-Speed-Checker-',
-    liveUrl: 'https://typing-speed-checker-liard.vercel.app/',
+    liveUrl: 'https://typing-speed-testing-kappa.vercel.app/',
   },
   {
     id: 'salaryos',
