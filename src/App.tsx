@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
 import { CustomCursor } from './components/ui/CustomCursor';
+import { InteractiveBackgroundIllusion } from './components/InteractiveBackgroundIllusion';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { SectionProgressHUD } from './components/ui/SectionProgressHUD';
 import { EasterEggToast } from './components/ui/EasterEggToast';
@@ -85,13 +86,8 @@ export default function App() {
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         />
 
-        {/* Atmospheric Ambient Glow Backdrops */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-          <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] bg-blue-900/15 rounded-full blur-[140px]" />
-          <div className="absolute top-[30%] right-[-5%] w-[40%] h-[40%] bg-cyan-500/10 rounded-full blur-[160px]" />
-          <div className="absolute bottom-[20%] left-[-10%] w-[45%] h-[45%] bg-indigo-900/15 rounded-full blur-[150px]" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-950/20 rounded-full blur-[150px]" />
-        </div>
+        {/* Atmospheric Ambient Glow & Digital Illusion Canvas (Layered Parallax, Warping Grid, Light Field) */}
+        <InteractiveBackgroundIllusion />
 
         <div className="relative z-10 flex flex-col">
           {/* 00 // HERO EXPERIENCE */}
