@@ -79,6 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Brand / Logo */}
         <a
           href="#hero-section"
+          data-magnetic="true"
           onClick={(e) => scrollToSection(e, 'hero-section')}
           className="flex items-center gap-2 group cursor-pointer"
         >
@@ -105,6 +106,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               <a
                 key={link.target}
                 href={`#${link.target}`}
+                data-magnetic="true"
+                data-cursor="link"
+                data-cursor-label="NAV"
                 onClick={(e) => scrollToSection(e, link.target)}
                 className={`relative px-4 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
                   isActive
@@ -131,6 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             id="cmd-palette-trigger"
             type="button"
+            data-magnetic="true"
             onClick={onOpenCommandPalette}
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-500/50 hover:bg-cyan-500/10 text-slate-300 hover:text-white transition-all text-xs font-mono cursor-pointer"
             title="Search Garv's portfolio (Cmd + K)"
@@ -144,6 +149,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <a
             href="#contact"
+            data-magnetic="true"
             onClick={(e) => scrollToSection(e, 'contact')}
             className="hidden sm:inline-flex items-center justify-center px-4 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider font-semibold bg-cyan-500 text-black hover:bg-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.5)] hover:shadow-[0_0_30px_rgba(6,182,212,0.8)] transition-all cursor-pointer"
           >

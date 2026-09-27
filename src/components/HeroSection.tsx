@@ -39,6 +39,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   return (
     <section
       id={id}
+      data-cursor-theme="cyan"
       className="relative w-full h-screen min-h-[660px] flex flex-col justify-between bg-transparent overflow-hidden select-none"
     >
       {/* Ambient background light */}
@@ -57,6 +58,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             key={item.target}
             id={`nav-link-${item.target}`}
             href={`#${item.target}`}
+            data-magnetic="true"
+            data-cursor="link"
+            data-cursor-label="NAV"
             onClick={(e) => handleNavClick(e, item.target)}
             className="text-[#D7E2EA] font-medium uppercase tracking-wider text-sm md:text-lg lg:text-[1.4rem] hover:text-cyan-400 hover:drop-shadow-[0_0_12px_rgba(6,182,212,0.8)] transition-all duration-200 cursor-pointer"
           >

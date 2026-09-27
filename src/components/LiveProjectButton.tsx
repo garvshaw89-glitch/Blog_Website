@@ -29,6 +29,7 @@ export const LiveProjectButton: React.FC<LiveProjectButtonProps> = ({
   return (
     <motion.button
       id={id}
+      data-magnetic="true"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}

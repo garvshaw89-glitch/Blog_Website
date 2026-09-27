@@ -37,8 +37,8 @@ export const MARQUEE_ITEMS = [
     id: 'arogyaseva',
     title: 'ArogyaSeva',
     category: 'Healthcare Intelligence',
-    badge: 'Now Building',
-    status: 'Building',
+    badge: 'Live Demo',
+    status: 'Live',
     image: apiDev3dScreenImg,
     tech: ['FastAPI', 'WebRTC', 'AI Triage', 'Cloud Run'],
   },
@@ -383,13 +383,13 @@ export const PROJECTS: ProjectItem[] = [
     category: 'Healthcare AI Platform',
     description: 'Intelligent clinical triage system with encrypted realtime tele-consultation and edge routing.',
     type: 'Healthcare System',
-    status: 'Building',
+    status: 'Live',
     tags: ['AI Triage', 'FastAPI', 'WebRTC', 'Cloud Run', 'PostgreSQL'],
     col1TopImage: apiDev3dScreenImg,
     col1BottomImage: apiFlow3dScreenImg,
     col2Image: apiBackendImg,
     githubUrl: 'https://github.com/garvshaw89-glitch',
-    liveUrl: 'https://portfoliowebsite-7tvxld4nh-garvshaw.vercel.app/',
+    liveUrl: 'https://arogyaseva-six.vercel.app/',
     caseStudy: {
       overview:
         'ArogyaSeva is a modern healthcare access platform designed to streamline patient intake, automate preliminary clinical triage with LLMs, and connect patients to doctors over low-latency WebRTC channels.',
@@ -420,7 +420,7 @@ export const PROJECTS: ProjectItem[] = [
         'High-visibility triage status badges enabling triage nurses to identify emergencies in under 2 seconds.',
       ],
       result:
-        'Currently in active engineering and internal testing with prototype validation completed across clinical test scripts.',
+        'Delivered a high-performance clinical triage platform deployed live at arogyaseva-six.vercel.app with WebRTC signaling and multi-lingual symptom intake.',
     },
   },
   {

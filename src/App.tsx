@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
 import { CustomCursor } from './components/ui/CustomCursor';
 import { CommandPalette } from './components/ui/CommandPalette';
@@ -54,89 +55,91 @@ export default function App() {
   };
 
   return (
-    <main
-      id="garv-shaw-portfolio"
-      className="relative w-full bg-[#05070A] text-[#D7E2EA] overflow-x-clip min-h-screen selection:bg-cyan-500 selection:text-black"
-    >
-      {/* 1. Thin Animated Cyan Scroll Tracker */}
-      <ScrollProgressBar />
+    <CursorProvider>
+      <main
+        id="garv-shaw-portfolio"
+        className="relative w-full bg-[#05070A] text-[#D7E2EA] overflow-x-clip min-h-screen selection:bg-cyan-500 selection:text-black"
+      >
+        {/* 1. Thin Animated Cyan Scroll Tracker */}
+        <ScrollProgressBar />
 
-      {/* 2. Desktop Custom Cursor */}
-      <CustomCursor />
+        {/* 2. Desktop Custom Cursor */}
+        <CustomCursor />
 
-      {/* 3. Global Command Palette (Cmd + K) */}
-      <CommandPalette
-        isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
-        onOpenProjectModal={handleOpenProjectById}
-      />
-
-      {/* 4. Section Navigation Timeline HUD */}
-      <SectionProgressHUD />
-
-      {/* 5. Easter Egg Toast */}
-      <EasterEggToast />
-
-      {/* 6. Floating Navigation Header */}
-      <Navbar
-        onContactClick={handleScrollToContact}
-        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-      />
-
-      {/* Atmospheric Ambient Glow Backdrops */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] bg-blue-900/15 rounded-full blur-[140px]" />
-        <div className="absolute top-[30%] right-[-5%] w-[40%] h-[40%] bg-cyan-500/10 rounded-full blur-[160px]" />
-        <div className="absolute bottom-[20%] left-[-10%] w-[45%] h-[45%] bg-indigo-900/15 rounded-full blur-[150px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-950/20 rounded-full blur-[150px]" />
-      </div>
-
-      <div className="relative z-10 flex flex-col">
-        {/* 00 // HERO EXPERIENCE */}
-        <HeroSection
-          onContactClick={handleScrollToContact}
-          onExploreClick={handleScrollToProjects}
+        {/* 3. Global Command Palette (Cmd + K) */}
+        <CommandPalette
+          isOpen={isCommandPaletteOpen}
+          onClose={() => setIsCommandPaletteOpen(false)}
+          onOpenProjectModal={handleOpenProjectById}
         />
 
-        {/* DUAL-DIRECTION INFINITE MARQUEE */}
-        <MarqueeSection />
+        {/* 4. Section Navigation Timeline HUD */}
+        <SectionProgressHUD />
 
-        {/* 01 // ABOUT & ENGINEERING PROFILE */}
-        <AboutSection onContactClick={handleScrollToContact} />
+        {/* 5. Easter Egg Toast */}
+        <EasterEggToast />
 
-        {/* 02 // ENGINEERING MAP & SKILLS MATRIX */}
-        <ServicesSection id="skills" />
+        {/* 6. Floating Navigation Header */}
+        <Navbar
+          onContactClick={handleScrollToContact}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+        />
 
-        {/* 03 // TECHNOLOGY CONSTELLATION GRAPH */}
-        <TechnologyConstellation id="constellation" />
+        {/* Atmospheric Ambient Glow Backdrops */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] bg-blue-900/15 rounded-full blur-[140px]" />
+          <div className="absolute top-[30%] right-[-5%] w-[40%] h-[40%] bg-cyan-500/10 rounded-full blur-[160px]" />
+          <div className="absolute bottom-[20%] left-[-10%] w-[45%] h-[45%] bg-indigo-900/15 rounded-full blur-[150px]" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-950/20 rounded-full blur-[150px]" />
+        </div>
 
-        {/* 04 // SELECTED WORK & STICKY PROJECT CARDS */}
-        <ProjectsSection onSelectProject={handleSelectProject} />
+        <div className="relative z-10 flex flex-col">
+          {/* 00 // HERO EXPERIENCE */}
+          <HeroSection
+            onContactClick={handleScrollToContact}
+            onExploreClick={handleScrollToProjects}
+          />
 
-        {/* 05 // SYSTEM ARCHITECTURE & DATA FLOW */}
-        <InteractiveArchitecture id="architecture" />
+          {/* DUAL-DIRECTION INFINITE MARQUEE */}
+          <MarqueeSection />
 
-        {/* 06 // AI ENGINEERING LAB & ASSISTANT */}
-        <AiLabSection id="ai-lab" />
+          {/* 01 // ABOUT & ENGINEERING PROFILE */}
+          <AboutSection onContactClick={handleScrollToContact} />
 
-        {/* 07 // ENGINEERING BUILD LOG */}
-        <EngineeringLogSection id="build-log" />
+          {/* 02 // ENGINEERING MAP & SKILLS MATRIX */}
+          <ServicesSection id="skills" />
 
-        {/* NOW BUILDING & SYSTEM TELEMETRY */}
-        <NowBuildingSection id="telemetry-status" />
+          {/* 03 // TECHNOLOGY CONSTELLATION GRAPH */}
+          <TechnologyConstellation id="constellation" />
 
-        {/* GITHUB REPOSITORIES & OPEN SOURCE TELEMETRY */}
-        <GitHubSection id="github-telemetry" />
+          {/* 04 // SELECTED WORK & STICKY PROJECT CARDS */}
+          <ProjectsSection onSelectProject={handleSelectProject} />
 
-        {/* 08 // DIRECT TRANSMISSION / CONTACT */}
-        <ContactSection id="contact" />
+          {/* 05 // SYSTEM ARCHITECTURE & DATA FLOW */}
+          <InteractiveArchitecture id="architecture" />
 
-        {/* CLOSING SCENE & FOOTER */}
-        <FooterSection id="footer-scene" onContactClick={handleScrollToContact} />
-      </div>
+          {/* 06 // AI ENGINEERING LAB & ASSISTANT */}
+          <AiLabSection id="ai-lab" />
 
-      {/* Deep Engineering Case Study Modal */}
-      <ProjectModal project={selectedProject} onClose={handleCloseProject} />
-    </main>
+          {/* 07 // ENGINEERING BUILD LOG */}
+          <EngineeringLogSection id="build-log" />
+
+          {/* NOW BUILDING & SYSTEM TELEMETRY */}
+          <NowBuildingSection id="telemetry-status" />
+
+          {/* GITHUB REPOSITORIES & OPEN SOURCE TELEMETRY */}
+          <GitHubSection id="github-telemetry" />
+
+          {/* 08 // DIRECT TRANSMISSION / CONTACT */}
+          <ContactSection id="contact" />
+
+          {/* CLOSING SCENE & FOOTER */}
+          <FooterSection id="footer-scene" onContactClick={handleScrollToContact} />
+        </div>
+
+        {/* Deep Engineering Case Study Modal */}
+        <ProjectModal project={selectedProject} onClose={handleCloseProject} />
+      </main>
+    </CursorProvider>
   );
 }

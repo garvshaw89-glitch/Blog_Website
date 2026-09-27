@@ -43,6 +43,26 @@
     min-height: 100vh;
   }
 
+  /* Precision Custom Cursor for fine-pointer desktop environments */
+  @media (hover: hover) and (pointer: fine) {
+    body {
+      cursor: none;
+    }
+    a, button, [role="button"], [data-magnetic] {
+      cursor: none;
+    }
+    input, textarea, [contenteditable="true"] {
+      cursor: text !important;
+    }
+  }
+
+  /* Touch / coarse pointer fallback */
+  @media (pointer: coarse) {
+    body, a, button, input, textarea {
+      cursor: auto !important;
+    }
+  }
+
   /* Headings & Displays use Kanit display font */
   h1, h2, h3, .font-display {
     font-family: 'Kanit', sans-serif;

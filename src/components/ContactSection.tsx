@@ -230,6 +230,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ id = 'contact' }
                 {/* Submit CTA */}
                 <button
                   type="submit"
+                  data-magnetic="true"
                   disabled={formStatus === 'sending'}
                   className="w-full py-3.5 rounded-xl bg-cyan-500 text-black font-mono font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-cyan-400 transition-all shadow-[0_0_25px_rgba(6,182,212,0.4)] disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                 >

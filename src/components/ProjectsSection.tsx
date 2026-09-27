@@ -28,6 +28,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
   return (
     <section
       id={id}
+      data-cursor-theme="default"
       className="relative w-full bg-transparent rounded-t-[40px] sm:rounded-t-[50px] md:rounded-t-[60px] -mt-10 sm:-mt-12 md:-mt-14 z-10 px-4 sm:px-6 md:px-12 pt-20 sm:pt-24 md:pt-32 pb-24"
     >
       <div className="max-w-7xl mx-auto flex flex-col">
@@ -53,6 +54,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
             {(['All', 'AI', 'FinTech', 'Realtime'] as const).map((filter) => (
               <button
                 key={filter}
+                data-magnetic="true"
                 onClick={() => setSelectedFilter(filter)}
                 className={`px-4 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
                   selectedFilter === filter
