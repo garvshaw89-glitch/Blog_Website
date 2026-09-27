@@ -1,21 +1,30 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { useReducedMotion } from './useReducedMotion';
-import { applyMagneticAttraction, resetMagneticElement } from './useCursor';
+import { applyMagneticAttraction, resetMagneticElement, stopMagneticSpring } from './useCursor';
 
 interface UseMagneticOptions {
   maxDisplacement?: number; // Maximum offset in px (default 6)
-  damping?: number;         // Spring responsiveness (default 0.22, range 0.15 - 0.30)
+  strength?: number;        // Magnetic pull coefficient (default 0.22, range 0.15 - 0.30)
+  damping?: number;         // Spring damping (default 22)
+  stiffness?: number;       // Spring stiffness (default 220)
   disabled?: boolean;
 }
 
 /**
  * Reusable hook for adding magnetic physics to interactive elements.
- * Pulls the element slightly toward the cursor within controlled bounds (4–8px).
+ * Pulls the element slightly toward the cursor within controlled bounds (4–8px)
+ * using real-time spring physics for smooth, non-snapping fluid motion.
  */
 export function useMagneticElement<T extends HTMLElement = HTMLElement>(
   options: UseMagneticOptions = {}
 ) {
-  const { maxDisplacement = 6, damping = 0.22, disabled = false } = options;
+  const {
+    maxDisplacement = 6,
+    strength = 0.22,
+    damping = 22,
+    stiffness = 220,
+    disabled = false,
+  } = options;
   const elementRef = useRef<T | null>(null);
   const prefersReduced = useReducedMotion();
 
@@ -24,21 +33,23 @@ export function useMagneticElement<T extends HTMLElement = HTMLElement>(
       if (disabled || prefersReduced || !elementRef.current) return;
 
       const vector = applyMagneticAttraction(elementRef.current, e.clientX, e.clientY, {
-        strength: damping,
+        strength,
         maxDisplacement,
+        damping,
+        stiffness,
       });
 
       if (!vector.isWithinThreshold) {
-        resetMagneticElement(elementRef.current);
+        resetMagneticElement(elementRef.current, { damping, stiffness });
       }
     },
-    [disabled, prefersReduced, maxDisplacement, damping]
+    [disabled, prefersReduced, maxDisplacement, strength, damping, stiffness]
   );
 
   const handleMouseLeave = useCallback(() => {
     if (!elementRef.current) return;
-    resetMagneticElement(elementRef.current);
-  }, []);
+    resetMagneticElement(elementRef.current, { damping, stiffness });
+  }, [damping, stiffness]);
 
   useEffect(() => {
     const el = elementRef.current;
@@ -50,6 +61,7 @@ export function useMagneticElement<T extends HTMLElement = HTMLElement>(
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       el.removeEventListener('mouseleave', handleMouseLeave);
+      stopMagneticSpring(el);
       el.style.transform = '';
       el.style.transition = '';
     };
