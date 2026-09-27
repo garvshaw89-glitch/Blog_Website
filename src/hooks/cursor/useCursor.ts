@@ -1,5 +1,11 @@
 export { useCursor } from '../../context/CursorContext';
-export type { CursorType, CursorTheme, CursorState, CursorContextValue } from '../../context/CursorContext';
+export type {
+  CursorType,
+  CursorTheme,
+  CursorState,
+  CursorContextValue,
+  GravitationalCoordinates,
+} from '../../context/CursorContext';
 export { useCursorInterpolation } from './useCursorInterpolation';
 export type { CursorInterpolationConfig, UseCursorInterpolationReturn } from './useCursorInterpolation';
 
