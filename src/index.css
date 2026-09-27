@@ -45,13 +45,17 @@
 
   /* Precision Custom Cursor for fine-pointer desktop environments */
   @media (hover: hover) and (pointer: fine) {
-    body {
-      cursor: none;
+    html.custom-cursor-enabled,
+    html.custom-cursor-enabled body,
+    html.custom-cursor-enabled a,
+    html.custom-cursor-enabled button,
+    html.custom-cursor-enabled [role="button"],
+    html.custom-cursor-enabled [data-magnetic] {
+      cursor: none !important;
     }
-    a, button, [role="button"], [data-magnetic] {
-      cursor: none;
-    }
-    input, textarea, [contenteditable="true"] {
+    html.custom-cursor-enabled input,
+    html.custom-cursor-enabled textarea,
+    html.custom-cursor-enabled [contenteditable="true"] {
       cursor: text !important;
     }
   }
