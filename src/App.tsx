@@ -3,7 +3,7 @@ import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
 import { CustomCursor } from './components/ui/CustomCursor';
 import { LoadingScreen } from './components/ui/LoadingScreen';
-import { InteractiveBackgroundIllusion } from './components/InteractiveBackgroundIllusion';
+import { LivingMatterBackground } from './components/matter/LivingMatterBackground';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { SectionProgressHUD } from './components/ui/SectionProgressHUD';
 import { EasterEggToast } from './components/ui/EasterEggToast';
@@ -90,8 +90,8 @@ export default function App() {
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         />
 
-        {/* 7. Layered 3D WebGL Living Space (Three.js + UnrealBloomPass + 200px Gravitational Warping) */}
-        <InteractiveBackgroundIllusion />
+        {/* 7. High-End Living Digital Matter Particle World (Watery Flow, Cursor Repulsion, 3D Globe, Asteroid Rock & Ripples) */}
+        <LivingMatterBackground />
 
         <div className="relative z-10 flex flex-col">
           {/* 1. HERO / LANDING PAGE with Identity Core */}
