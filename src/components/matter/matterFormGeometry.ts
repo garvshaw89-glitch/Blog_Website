@@ -194,6 +194,116 @@ export function generateArchitecturePosition(
 }
 
 /**
+ * Procedural Geometric Sphere for entry sequence (Form 01)
+ */
+export function generateSpherePosition(
+  i: number,
+  total: number,
+  radius = 4.8
+): THREE.Vector3 {
+  const phi = Math.acos(1 - 2 * ((i + 0.5) / total));
+  const goldenRatio = (1 + Math.sqrt(5)) / 2;
+  const theta = 2 * Math.PI * i * goldenRatio;
+
+  const x = radius * Math.sin(phi) * Math.cos(theta);
+  const y = radius * Math.sin(phi) * Math.sin(theta);
+  const z = radius * Math.cos(phi) - 2.0;
+
+  return new THREE.Vector3(x, y, z);
+}
+
+/**
+ * Procedural 3D Circular Ring for entry sequence (Form 02)
+ */
+export function generateRingPosition(
+  i: number,
+  total: number,
+  time = 0
+): THREE.Vector3 {
+  const angle = (i / total) * Math.PI * 2;
+  const radius = 5.2 + Math.sin(i * 3.7) * 0.35;
+  const tilt = 0.55;
+
+  const rx = Math.cos(angle) * radius;
+  const ry = Math.sin(angle) * radius * Math.cos(tilt);
+  const rz = Math.sin(angle) * radius * Math.sin(tilt) - 2.0;
+
+  return new THREE.Vector3(rx, ry, rz);
+}
+
+/**
+ * Procedural Multi-Orbit system (Form 04)
+ */
+export function generateOrbitPosition(
+  i: number,
+  total: number,
+  time = 0
+): THREE.Vector3 {
+  // 3 distinct orbital tracks
+  const track = i % 3;
+  const baseRadius = track === 0 ? 3.0 : track === 1 ? 5.0 : 7.2;
+  const speed = track === 0 ? 2.5 : track === 1 ? 1.5 : 0.8;
+  const angle = (i / total) * Math.PI * 6 + time * speed;
+  const tilt = (track * Math.PI) / 3;
+
+  const x = Math.cos(angle) * baseRadius;
+  const y = Math.sin(angle) * baseRadius * Math.cos(tilt);
+  const z = Math.sin(angle) * baseRadius * Math.sin(tilt) - 2.5;
+
+  return new THREE.Vector3(x, y, z);
+}
+
+/**
+ * Procedural Blueprint / Digital Architecture Wireframe Grid (Form 07)
+ */
+export function generateBlueprintPosition(
+  i: number,
+  total: number
+): THREE.Vector3 {
+  // Triangular pyramid / architectural truss lattice
+  const t = i / total;
+  if (t < 0.25) {
+    // Ground foundation square
+    const side = (t / 0.25) * 4;
+    const leg = Math.floor(side);
+    const frac = (side % 1) * 8 - 4;
+    let x = 0;
+    let y = -3.5;
+    let z = -2.0;
+    if (leg === 0) { x = frac; z = -6.0; }
+    else if (leg === 1) { x = 4; z = frac - 2.0; }
+    else if (leg === 2) { x = -frac; z = 2.0; }
+    else { x = -4; z = -frac - 2.0; }
+    return new THREE.Vector3(x, y, z);
+  } else if (t < 0.6) {
+    // 4 ascending struts towards apex
+    const strutIndex = (i % 4);
+    const h = ((t - 0.25) / 0.35); // 0 to 1
+    const apexX = 0;
+    const apexY = 4.2;
+    const apexZ = -2.0;
+    const baseCorners = [
+      [-4, -3.5, -6],
+      [4, -3.5, -6],
+      [4, -3.5, 2],
+      [-4, -3.5, 2],
+    ];
+    const corner = baseCorners[strutIndex];
+    const x = corner[0] * (1 - h) + apexX * h;
+    const y = corner[1] * (1 - h) + apexY * h;
+    const z = corner[2] * (1 - h) + apexZ * h;
+    return new THREE.Vector3(x, y, z);
+  } else {
+    // Internal floor grids & cross braces
+    const level = ((i % 5) - 2) * 1.5;
+    const span = Math.max(0.5, 3.5 - Math.abs(level) * 0.7);
+    const u = ((i * 1.618) % 1) * 2 - 1;
+    const v = ((i * 2.718) % 1) * 2 - 1;
+    return new THREE.Vector3(u * span, level, v * span - 2.0);
+  }
+}
+
+/**
  * Section-Aware Form: Concentric Convergence for Contact Section
  */
 export function generateConvergencePosition(

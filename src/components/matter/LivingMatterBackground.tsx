@@ -13,6 +13,10 @@ import {
   generateWavePosition,
   generateArchitecturePosition,
   generateConvergencePosition,
+  generateSpherePosition,
+  generateRingPosition,
+  generateOrbitPosition,
+  generateBlueprintPosition,
 } from './matterFormGeometry';
 import {
   generateRocketPosition,
@@ -25,6 +29,10 @@ import {
   rocketCinematicManager,
   CinematicStage,
 } from './rocketCinematicManager';
+import {
+  entrySequenceManager,
+  EntryStage,
+} from './entrySequenceManager';
 
 /**
  * HIGH-END LIVING DIGITAL MATTER SYSTEM WITH CONTINUOUS CYCLIC SEQUENCING:
