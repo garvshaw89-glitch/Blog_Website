@@ -67,9 +67,13 @@
     }
   }
 
-  /* Headings & Displays use Kanit display font */
+  /* Headings & Displays use Space Grotesk / Syne editorial font */
   h1, h2, h3, .font-display {
-    font-family: 'Kanit', sans-serif;
+    font-family: 'Space Grotesk', 'Kanit', sans-serif;
+  }
+
+  .font-editorial {
+    font-family: 'Syne', 'Space Grotesk', sans-serif;
   }
 
   /* Code, Metadata, Status, Labels use JetBrains Mono */

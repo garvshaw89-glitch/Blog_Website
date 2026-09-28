@@ -14,6 +14,14 @@ import '../cursor/cursor.css';
  * 5. Orbiting Energy Particles: 4 micro-sparkles dynamically circling the cursor
  * 6. Multi-Layer Energy Trail: Velocity-driven trailing nodes creating light streaks
  * 7. Concentric Shockwave Pulse on Click
+ * 8. Dynamic Morphing Cursor Label:
+ *    - DEFAULT: ◉
+ *    - BUTTON: VIEW ↗
+ *    - PROJECT: OPEN
+ *    - IMAGE: EXPLORE
+ *    - LINK: VISIT ↗
+ *    - DRAG: ← DRAG →
+ *    - READ: READ ↗
  *
  * Guaranteed 100% visibility:
  * - Fixed z-index: 2147483647
@@ -39,7 +47,6 @@ export interface CustomCursorProps {
 }
 
 export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0.24 }) => {
-  // DOM element refs for 60-120fps direct GPU transform updates
   const coreRef = useRef<HTMLDivElement | null>(null);
   const innerRingRef = useRef<HTMLDivElement | null>(null);
   const outerRingRef = useRef<HTMLDivElement | null>(null);
@@ -47,33 +54,26 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
   const orbit2Ref = useRef<HTMLDivElement | null>(null);
   const labelRef = useRef<HTMLSpanElement | null>(null);
 
-  // Sparkle DOM refs
   const sparklesRef = useRef<(HTMLDivElement | null)[]>([]);
-
-  // Trail DOM refs
   const trailRefs = useRef<(HTMLDivElement | null)[]>([]);
   const trailPoints = useRef<TrailPoint[]>(
     Array.from({ length: 7 }, () => ({ x: -100, y: -100, alpha: 0, size: 6 }))
   );
 
-  // Active coordinates
   const targetPos = useRef({ x: -100, y: -100 });
   const innerRingPos = useRef({ x: -100, y: -100 });
   const outerRingPos = useRef({ x: -100, y: -100 });
   const orbitAngle = useRef(0);
 
-  // Shockwaves
   const [shockwaves, setShockwaves] = useState<ShockwaveItem[]>([]);
   const shockwaveIdRef = useRef(0);
 
-  // Active magnetic target
   const activeMagneticRef = useRef<HTMLElement | null>(null);
   const [isSupported, setIsSupported] = useState<boolean>(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Check fine pointer capability
     const finePointerQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
     if (!finePointerQuery.matches) {
       setIsSupported(false);
@@ -82,7 +82,6 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
 
     document.documentElement.classList.add('custom-cursor-enabled');
 
-    // Initialize to viewport center
     const initX = window.innerWidth / 2;
     const initY = window.innerHeight / 2;
     targetPos.current = { x: initX, y: initY };
@@ -94,7 +93,6 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
       trailPoints.current[i].y = initY;
     }
 
-    // Subscribe to centralized interaction engine
     const unsubscribe = interactionEngine.subscribe((state) => {
       targetPos.current.x = state.clientX;
       targetPos.current.y = state.clientY;
@@ -106,7 +104,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         }
         activeMagneticRef.current = state.magneticTarget;
         applyMagneticAttraction(state.magneticTarget, state.clientX, state.clientY, {
-          strength: 0.24,
+          strength: magneticStrength,
           maxDisplacement: 8,
         });
       } else if (activeMagneticRef.current) {
@@ -114,35 +112,61 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         activeMagneticRef.current = null;
       }
 
-      // Contextual element morphing
+      // Contextual morphing inspection
       const outerEl = outerRingRef.current;
       const coreEl = coreRef.current;
       const labelEl = labelRef.current;
 
-      if (outerEl && coreEl) {
+      if (outerEl && coreEl && labelEl) {
         outerEl.classList.remove('is-button', 'is-link', 'is-project', 'is-text');
         coreEl.classList.remove('is-button', 'is-text');
 
-        if (state.hoverType === 'project') {
-          outerEl.classList.add('is-project');
-          if (labelEl) labelEl.style.display = 'block';
-        } else {
-          if (labelEl) labelEl.style.display = 'none';
+        // Look for custom data-cursor-label attribute on hover target
+        const targetEl = document.elementFromPoint(state.clientX, state.clientY) as HTMLElement | null;
+        const customCursor = targetEl?.closest('[data-cursor]')?.getAttribute('data-cursor');
+        const customLabel = targetEl?.closest('[data-cursor-label]')?.getAttribute('data-cursor-label');
 
-          if (state.hoverType === 'button') {
-            outerEl.classList.add('is-button');
-            coreEl.classList.add('is-button');
-          } else if (state.hoverType === 'link') {
-            outerEl.classList.add('is-link');
-          } else if (state.hoverType === 'text') {
-            outerEl.classList.add('is-text');
-            coreEl.classList.add('is-text');
+        if (customCursor === 'project' || state.hoverType === 'project') {
+          outerEl.classList.add('is-project');
+          labelEl.textContent = customLabel || 'OPEN';
+          labelEl.style.display = 'block';
+        } else if (customCursor === 'image') {
+          outerEl.classList.add('is-project');
+          labelEl.textContent = customLabel || 'EXPLORE';
+          labelEl.style.display = 'block';
+        } else if (customCursor === 'drag') {
+          outerEl.classList.add('is-button');
+          labelEl.textContent = '← DRAG →';
+          labelEl.style.display = 'block';
+        } else if (customCursor === 'button' || state.hoverType === 'button') {
+          outerEl.classList.add('is-button');
+          coreEl.classList.add('is-button');
+          if (customLabel) {
+            labelEl.textContent = customLabel;
+            labelEl.style.display = 'block';
+          } else {
+            labelEl.textContent = 'VIEW ↗';
+            labelEl.style.display = 'block';
           }
+        } else if (customCursor === 'link' || state.hoverType === 'link') {
+          outerEl.classList.add('is-link');
+          if (customLabel) {
+            labelEl.textContent = customLabel;
+            labelEl.style.display = 'block';
+          } else {
+            labelEl.textContent = 'VISIT ↗';
+            labelEl.style.display = 'block';
+          }
+        } else if (state.hoverType === 'text') {
+          outerEl.classList.add('is-text');
+          coreEl.classList.add('is-text');
+          labelEl.style.display = 'none';
+        } else {
+          labelEl.style.display = 'none';
         }
       }
     });
 
-    // Handle click shockwaves
     const handlePointerDown = (e: PointerEvent) => {
       shockwaveIdRef.current += 1;
       const newShockwave: ShockwaveItem = {
@@ -157,7 +181,6 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
 
     let rafId: number;
 
-    // Single unified 60-120fps render tick for cursor & orbit rings
     const tick = () => {
       interactionEngine.step();
 
@@ -165,26 +188,22 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
       const ty = targetPos.current.y;
       const energy = interactionEngine.state.normalizedEnergy;
 
-      // 1. Core locked centered at mouse
       if (coreRef.current) {
         coreRef.current.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
       }
 
-      // 2. Inner Ring with snappy 0.45 follow
       innerRingPos.current.x += (tx - innerRingPos.current.x) * 0.45;
       innerRingPos.current.y += (ty - innerRingPos.current.y) * 0.45;
       if (innerRingRef.current) {
         innerRingRef.current.style.transform = `translate3d(${innerRingPos.current.x}px, ${innerRingPos.current.y}px, 0)`;
       }
 
-      // 3. Outer Ring with luxurious 0.22 trailing follow
       outerRingPos.current.x += (tx - outerRingPos.current.x) * 0.22;
       outerRingPos.current.y += (ty - outerRingPos.current.y) * 0.22;
       if (outerRingRef.current) {
         outerRingRef.current.style.transform = `translate3d(${outerRingPos.current.x}px, ${outerRingPos.current.y}px, 0)`;
       }
 
-      // 4. Planetary Gyroscope Orbit Rings rotation
       orbitAngle.current += 0.025 + energy * 0.05;
       const angle1 = orbitAngle.current;
       const angle2 = -orbitAngle.current * 0.7;
@@ -196,7 +215,6 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         orbit2Ref.current.style.transform = `translate3d(${outerRingPos.current.x}px, ${outerRingPos.current.y}px, 0) rotate(${angle2}rad) scale(${1 + energy * 0.2})`;
       }
 
-      // 5. Orbiting Energy Particles (4 micro sparkles)
       const sparkleRadius = 22 + energy * 8;
       for (let i = 0; i < 4; i++) {
         const sparkleEl = sparklesRef.current[i];
@@ -209,8 +227,6 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         }
       }
 
-      // 6. Multi-Layer Energy Trail
-      // First trail point follows cursor; subsequent points follow previous with dampening
       trailPoints.current[0].x = tx;
       trailPoints.current[0].y = ty;
 
@@ -246,7 +262,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         resetMagneticElement(activeMagneticRef.current);
       }
     };
-  }, []);
+  }, [magneticStrength]);
 
   if (!isSupported) {
     return null;
@@ -293,7 +309,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
           className="cursor-view-label"
           style={{ display: 'none' }}
         >
-          VIEW
+          VIEW ↗
         </span>
       </div>
 

@@ -40,16 +40,22 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
     >
       <div className="max-w-7xl mx-auto">
         {/* Section Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono uppercase tracking-widest mb-3">
-            <Compass className="w-3.5 h-3.5 text-cyan-400" />
-            <span>03 // SYSTEM TOPOLOGY</span>
+        <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-16">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-cyan-400 font-semibold text-xs">07 //</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-neutral-400">
+              TOPOLOGY // ARCHITECTURAL GRAPH
+            </span>
           </div>
-          <h2 className="hero-heading font-display font-black uppercase text-3xl sm:text-5xl md:text-6xl tracking-tight mb-3">
+          <span className="font-mono text-xs text-neutral-400">TECHNOLOGY CONSTELLATION</span>
+        </div>
+
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <h2 className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-white mb-4">
             TECHNOLOGY CONSTELLATION
           </h2>
-          <p className="text-slate-300 font-sans text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-            Interactive topology showing how my AI orchestration, backend services, real-time protocols, and multi-cloud infrastructure interlink.
+          <p className="font-sans text-neutral-400 text-sm sm:text-base leading-relaxed font-light">
+            Interactive topology showing how my AI orchestration, backend services, real-time protocols, and multi-cloud infrastructure interlink around production systems.
           </p>
         </div>
 

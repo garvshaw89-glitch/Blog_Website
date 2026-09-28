@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Command, Menu, X, Sparkles } from 'lucide-react';
+import { Command, Menu, X, ArrowUpRight } from 'lucide-react';
 
 interface NavbarProps {
   onContactClick?: () => void;
@@ -13,30 +13,42 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCommandPalette,
   id = 'main-navbar',
 }) => {
-  const [activeSection, setActiveSection] = useState('hero-section');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState('hero-section');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { label: 'About', target: 'about' },
-    { label: 'Work', target: 'projects' },
-    { label: 'Lab', target: 'ai-lab', isLab: true },
-    { label: 'Architecture', target: 'architecture' },
-    { label: 'Log', target: 'build-log' },
-    { label: 'Contact', target: 'contact' },
+    { label: 'WORK', target: 'projects' },
+    { label: 'ABOUT', target: 'about' },
+    { label: 'CAPABILITIES', target: 'capabilities' },
+    { label: 'DNA', target: 'digital-dna' },
+    { label: 'ENGINEERING', target: 'github-telemetry' },
+    { label: 'WRITING', target: 'writing' },
+    { label: 'CONTACT', target: 'contact' },
   ];
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 40);
+      setIsScrolled(window.scrollY > 80);
 
-      // Section intersection detection
-      const sectionIds = ['hero-section', 'about', 'skills', 'constellation', 'projects', 'architecture', 'ai-lab', 'build-log', 'contact'];
+      const sectionIds = [
+        'hero-section',
+        'about',
+        'capabilities',
+        'digital-dna',
+        'projects',
+        'github-telemetry',
+        'journey',
+        'constellation',
+        'writing',
+        'contact',
+      ];
+
       for (const sectionId of sectionIds) {
         const el = document.getElementById(sectionId);
         if (el) {
           const rect = el.getBoundingClientRect();
-          if (rect.top <= 200 && rect.bottom >= 200) {
+          if (rect.top <= 240 && rect.bottom >= 200) {
             setActiveSection(sectionId);
             break;
           }
@@ -48,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
+  const handleNavClick = (e: React.MouseEvent, targetId: string) => {
     e.preventDefault();
     setIsMobileMenuOpen(false);
 
@@ -57,158 +69,141 @@ export const Navbar: React.FC<NavbarProps> = ({
       return;
     }
 
-    const element = document.getElementById(targetId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+    const el = document.getElementById(targetId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   return (
-    <motion.header
-      id={id}
-      initial={{ opacity: 0, y: -20 }}
-      animate={{
-        opacity: isScrolled ? 1 : 0,
-        y: isScrolled ? 0 : -20,
-        pointerEvents: isScrolled ? 'auto' : 'none',
-      }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="fixed top-0 left-0 right-0 z-40 py-3 bg-[#05070A]/90 backdrop-blur-xl border-b border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)]"
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 flex items-center justify-between">
-        {/* Brand / Logo */}
-        <a
-          href="#hero-section"
-          data-magnetic="true"
-          onClick={(e) => scrollToSection(e, 'hero-section')}
-          className="flex items-center gap-2 group cursor-pointer"
+    <>
+      {/* 
+        Transforming Navbar:
+        - When at top (isScrolled === false): blends cleanly into hero layout with full-width luxury editorial header.
+        - When scrolled (isScrolled === true): morphs smoothly into a floating, compact frosted glass pill.
+      */}
+      <header
+        id={id}
+        className="fixed top-0 left-0 right-0 z-40 pointer-events-none transition-all duration-300 flex justify-center p-4 sm:p-6"
+      >
+        <motion.div
+          layout
+          transition={{ type: 'spring', stiffness: 260, damping: 25 }}
+          className={`pointer-events-auto flex items-center justify-between transition-all duration-300 ${
+            isScrolled
+              ? 'w-auto max-w-4xl px-4 sm:px-6 py-2.5 rounded-full bg-[#08090B]/85 border border-white/10 shadow-[0_15px_35px_rgba(0,0,0,0.8)] backdrop-blur-xl'
+              : 'w-full max-w-7xl px-2 sm:px-6 py-3 bg-transparent border-transparent'
+          }`}
         >
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 p-[1px] shadow-[0_0_15px_rgba(6,182,212,0.4)] group-hover:shadow-[0_0_25px_rgba(6,182,212,0.8)] transition-all">
-            <div className="w-full h-full bg-[#05070a] rounded-[7px] flex items-center justify-center font-display font-black text-xs text-cyan-300">
-              GS
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-display font-black text-sm tracking-wider uppercase text-white group-hover:text-cyan-300 transition-colors">
-              GARV
-            </span>
-            <span className="font-mono text-[9px] uppercase tracking-widest text-cyan-400/80 -mt-1 hidden sm:inline">
-              AI + Cloud
-            </span>
-          </div>
-        </a>
-
-        {/* Desktop Nav Items */}
-        <nav className="hidden lg:flex items-center gap-1 p-1 rounded-full bg-[#0E1524]/60 border border-white/10 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
-          {navLinks.map((link) => {
-            const isActive = activeSection === link.target;
-            return (
-              <a
-                key={link.target}
-                href={`#${link.target}`}
-                data-magnetic="true"
-                data-cursor="link"
-                data-cursor-label="NAV"
-                onClick={(e) => scrollToSection(e, link.target)}
-                className={`relative px-4 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
-                  isActive
-                    ? 'text-cyan-300 font-semibold shadow-[0_0_15px_rgba(6,182,212,0.3)]'
-                    : 'text-slate-300 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="active-nav-pill"
-                    className="absolute inset-0 rounded-full bg-cyan-500/20 border border-cyan-400/40"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-                {link.isLab && <Sparkles className="w-3 h-3 text-cyan-400" />}
-                <span className="relative z-10">{link.label}</span>
-              </a>
-            );
-          })}
-        </nav>
-
-        {/* Right Action: Command Palette Trigger + Contact */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            id="cmd-palette-trigger"
-            type="button"
-            data-magnetic="true"
-            onClick={onOpenCommandPalette}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-500/50 hover:bg-cyan-500/10 text-slate-300 hover:text-white transition-all text-xs font-mono cursor-pointer"
-            title="Search Garv's portfolio (Cmd + K)"
-          >
-            <Command className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Search</span>
-            <kbd className="hidden sm:inline-flex px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-slate-400 border border-white/10">
-              ⌘K
-            </kbd>
-          </button>
-
+          {/* Brand Mark */}
           <a
-            href="#contact"
-            data-magnetic="true"
-            onClick={(e) => scrollToSection(e, 'contact')}
-            className="hidden sm:inline-flex items-center justify-center px-4 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider font-semibold bg-cyan-500 text-black hover:bg-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.5)] hover:shadow-[0_0_30px_rgba(6,182,212,0.8)] transition-all cursor-pointer"
+            href="#hero-section"
+            data-cursor="link"
+            data-cursor-label="HOME"
+            onClick={(e) => handleNavClick(e, 'hero-section')}
+            className="flex items-center gap-3 group cursor-pointer"
           >
-            Connect
+            <div className="w-8 h-8 rounded-lg bg-neutral-900 border border-white/15 flex items-center justify-center font-display font-black text-xs text-white group-hover:border-cyan-400 group-hover:text-cyan-300 transition-colors">
+              G
+            </div>
+            {!isScrolled && (
+              <div className="hidden sm:flex flex-col">
+                <span className="font-editorial text-sm font-bold tracking-tight text-white uppercase group-hover:text-cyan-300 transition-colors">
+                  GARV SHAW
+                </span>
+                <span className="font-mono text-[9px] tracking-widest text-neutral-400 uppercase -mt-0.5">
+                  DIGITAL ARCHITECT
+                </span>
+              </div>
+            )}
           </a>
 
-          {/* Mobile Hamburger Button */}
-          <button
-            type="button"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:text-white cursor-pointer"
-            aria-label="Toggle mobile menu"
-          >
-            {isMobileMenuOpen ? <X className="w-5 h-5 text-cyan-400" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
+          {/* Center Navigation Links (Desktop) */}
+          <nav className="hidden md:flex items-center gap-1 sm:gap-2">
+            {navLinks.map((item) => {
+              const isActive = activeSection === item.target;
+              return (
+                <a
+                  key={item.target}
+                  href={`#${item.target}`}
+                  data-cursor="link"
+                  data-cursor-label={item.label}
+                  onClick={(e) => handleNavClick(e, item.target)}
+                  className={`px-3 py-1 rounded-full text-xs font-mono tracking-wider transition-all duration-200 cursor-pointer ${
+                    isActive
+                      ? 'text-cyan-300 bg-white/5 font-semibold'
+                      : 'text-neutral-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {item.label}
+                </a>
+              );
+            })}
+          </nav>
 
-      {/* Mobile Drawer */}
+          {/* Right Action Controls: Cmd+K + Let's Talk CTA */}
+          <div className="flex items-center gap-2">
+            {onOpenCommandPalette && (
+              <button
+                type="button"
+                onClick={onOpenCommandPalette}
+                data-cursor="button"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-mono text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                title="Search command palette (Cmd+K)"
+              >
+                <Command className="w-3 h-3" />
+                <span className="text-[10px]">K</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onContactClick}
+              data-cursor="button"
+              className="px-3.5 py-1.5 rounded-full bg-white hover:bg-cyan-300 text-black text-xs font-mono font-semibold tracking-wider transition-all flex items-center gap-1 cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:shadow-[0_0_25px_rgba(34,211,238,0.4)]"
+            >
+              <span>CONNECT</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Mobile Hamburger toggle */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white cursor-pointer ml-1"
+              aria-label="Toggle navigation menu"
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        </motion.div>
+      </header>
+
+      {/* Mobile Drawer Menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-[#070D18]/95 border-b border-white/10 backdrop-blur-2xl px-6 py-6 overflow-hidden"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-x-4 top-20 z-40 p-6 rounded-3xl bg-[#08090B]/98 border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.9)] backdrop-blur-2xl md:hidden"
           >
             <div className="flex flex-col gap-3">
-              {navLinks.map((link) => (
+              {navLinks.map((item) => (
                 <a
-                  key={link.target}
-                  href={`#${link.target}`}
-                  onClick={(e) => scrollToSection(e, link.target)}
-                  className="flex items-center justify-between py-2 text-sm font-mono uppercase tracking-wider text-slate-200 hover:text-cyan-300 border-b border-white/5"
+                  key={item.target}
+                  href={`#${item.target}`}
+                  onClick={(e) => handleNavClick(e, item.target)}
+                  className="px-4 py-2.5 rounded-xl text-sm font-mono tracking-wider text-neutral-300 hover:text-cyan-300 hover:bg-white/5 transition-colors"
                 >
-                  <span className="flex items-center gap-2">
-                    {link.isLab && <Sparkles className="w-4 h-4 text-cyan-400" />}
-                    {link.label}
-                  </span>
-                  <span className="text-slate-500 text-xs">→</span>
+                  {item.label}
                 </a>
               ))}
-              <div className="pt-2 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileMenuOpen(false);
-                    onOpenCommandPalette?.();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-xs font-mono"
-                >
-                  <Command className="w-4 h-4 text-cyan-400" />
-                  <span>Open Command Palette (⌘K)</span>
-                </button>
-              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.header>
+    </>
   );
 };

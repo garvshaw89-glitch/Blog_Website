@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
 import { CustomCursor } from './components/ui/CustomCursor';
+import { LoadingScreen } from './components/ui/LoadingScreen';
 import { InteractiveBackgroundIllusion } from './components/InteractiveBackgroundIllusion';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { SectionProgressHUD } from './components/ui/SectionProgressHUD';
@@ -10,14 +11,13 @@ import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { MarqueeSection } from './components/MarqueeSection';
 import { AboutSection } from './components/AboutSection';
-import { ServicesSection } from './components/ServicesSection';
-import { TechnologyConstellation } from './components/TechnologyConstellation';
+import { CapabilitiesSection } from './components/CapabilitiesSection';
+import { DigitalDnaSection } from './components/DigitalDnaSection';
 import { ProjectsSection } from './components/ProjectsSection';
-import { InteractiveArchitecture } from './components/InteractiveArchitecture';
-import { AiLabSection } from './components/AiLabSection';
-import { EngineeringLogSection } from './components/EngineeringLogSection';
-import { NowBuildingSection } from './components/NowBuildingSection';
 import { GitHubSection } from './components/GitHubSection';
+import { JourneySection } from './components/JourneySection';
+import { TechnologyConstellation } from './components/TechnologyConstellation';
+import { WritingSection } from './components/WritingSection';
 import { ContactSection } from './components/ContactSection';
 import { FooterSection } from './components/FooterSection';
 import { ProjectModal } from './components/ProjectModal';
@@ -25,6 +25,7 @@ import { PROJECTS } from './data/portfolioData';
 import { ProjectItem } from './types';
 
 export default function App() {
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
@@ -57,14 +58,17 @@ export default function App() {
 
   return (
     <CursorProvider>
+      {/* 0. Short Cinematic Loading Sequence */}
+      {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
+
       <main
         id="garv-shaw-portfolio"
-        className="relative w-full bg-[#05070A] text-[#D7E2EA] overflow-x-clip min-h-screen selection:bg-cyan-500 selection:text-black"
+        className="relative w-full bg-[#050505] text-[#F5F5F0] overflow-x-clip min-h-screen selection:bg-cyan-400 selection:text-black"
       >
-        {/* 1. Thin Animated Cyan Scroll Tracker */}
+        {/* 1. Thin Animated Scroll Tracker */}
         <ScrollProgressBar />
 
-        {/* 2. Desktop Custom Cursor */}
+        {/* 2. Desktop High-End Custom Cursor with Multi-State Labels */}
         <CustomCursor />
 
         {/* 3. Global Command Palette (Cmd + K) */}
@@ -80,17 +84,17 @@ export default function App() {
         {/* 5. Easter Egg Toast */}
         <EasterEggToast />
 
-        {/* 6. Floating Navigation Header */}
+        {/* 6. Transforming Floating Navbar */}
         <Navbar
           onContactClick={handleScrollToContact}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         />
 
-        {/* Atmospheric Ambient Glow & Digital Illusion Canvas (Layered Parallax, Warping Grid, Light Field) */}
+        {/* 7. Layered 3D WebGL Living Space (Three.js + UnrealBloomPass + 200px Gravitational Warping) */}
         <InteractiveBackgroundIllusion />
 
         <div className="relative z-10 flex flex-col">
-          {/* 00 // HERO EXPERIENCE */}
+          {/* 1. HERO / LANDING PAGE with Identity Core */}
           <HeroSection
             onContactClick={handleScrollToContact}
             onExploreClick={handleScrollToProjects}
@@ -99,41 +103,38 @@ export default function App() {
           {/* DUAL-DIRECTION INFINITE MARQUEE */}
           <MarqueeSection />
 
-          {/* 01 // ABOUT & ENGINEERING PROFILE */}
+          {/* 2. ABOUT / IDENTITY */}
           <AboutSection onContactClick={handleScrollToContact} />
 
-          {/* 02 // ENGINEERING MAP & SKILLS MATRIX */}
-          <ServicesSection id="skills" />
+          {/* 3. CAPABILITIES (Interactive Editorial Typography) */}
+          <CapabilitiesSection id="capabilities" />
 
-          {/* 03 // TECHNOLOGY CONSTELLATION GRAPH */}
-          <TechnologyConstellation id="constellation" />
+          {/* 4. DIGITAL DNA (Systemic Network Graph) */}
+          <DigitalDnaSection id="digital-dna" />
 
-          {/* 04 // SELECTED WORK & STICKY PROJECT CARDS */}
+          {/* 5. FEATURED PROJECTS (Large Immersive Case Studies) */}
           <ProjectsSection onSelectProject={handleSelectProject} />
 
-          {/* 05 // SYSTEM ARCHITECTURE & DATA FLOW */}
-          <InteractiveArchitecture id="architecture" />
-
-          {/* 06 // AI ENGINEERING LAB & ASSISTANT */}
-          <AiLabSection id="ai-lab" />
-
-          {/* 07 // ENGINEERING BUILD LOG */}
-          <EngineeringLogSection id="build-log" />
-
-          {/* NOW BUILDING & SYSTEM TELEMETRY */}
-          <NowBuildingSection id="telemetry-status" />
-
-          {/* GITHUB REPOSITORIES & OPEN SOURCE TELEMETRY */}
+          {/* 6. ENGINEERING / GITHUB TELEMETRY */}
           <GitHubSection id="github-telemetry" />
 
-          {/* 08 // DIRECT TRANSMISSION / CONTACT */}
+          {/* 7. EXPERIENCE / JOURNEY (Chronological Timeline) */}
+          <JourneySection id="journey" />
+
+          {/* 8. TECHNOLOGY CONSTELLATION GRAPH */}
+          <TechnologyConstellation id="constellation" />
+
+          {/* 9. WRITING / THOUGHTS */}
+          <WritingSection id="writing" />
+
+          {/* 10. CONTACT / DIRECT TRANSMISSION */}
           <ContactSection id="contact" />
 
-          {/* CLOSING SCENE & FOOTER */}
-          <FooterSection id="footer-scene" onContactClick={handleScrollToContact} />
+          {/* 11. FOOTER */}
+          <FooterSection id="footer" onContactClick={handleScrollToContact} />
         </div>
 
-        {/* Deep Engineering Case Study Modal */}
+        {/* Full-Screen Project Case Study Modal */}
         <ProjectModal project={selectedProject} onClose={handleCloseProject} />
       </main>
     </CursorProvider>

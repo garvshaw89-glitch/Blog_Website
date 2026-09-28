@@ -234,10 +234,13 @@ class InteractionEngine {
     const sections = [
       { id: 'hero-section', name: 'hero', primary: 0x06b6d4, secondary: 0x3b82f6, ambient: 0x081528 },
       { id: 'about', name: 'about', primary: 0x6366f1, secondary: 0x06b6d4, ambient: 0x0c1126 },
-      { id: 'skills', name: 'skills', primary: 0x0ea5e9, secondary: 0x2563eb, ambient: 0x081730 },
-      { id: 'constellation', name: 'constellation', primary: 0xa855f7, secondary: 0x06b6d4, ambient: 0x140d28 },
+      { id: 'capabilities', name: 'capabilities', primary: 0x0ea5e9, secondary: 0x2563eb, ambient: 0x081730 },
+      { id: 'digital-dna', name: 'digital-dna', primary: 0xa855f7, secondary: 0x06b6d4, ambient: 0x140d28 },
       { id: 'projects', name: 'projects', primary: 0x06b6d4, secondary: 0x38bdf8, ambient: 0x061424 },
-      { id: 'architecture', name: 'architecture', primary: 0x38bdf8, secondary: 0x6366f1, ambient: 0x0a1630 },
+      { id: 'github-telemetry', name: 'engineering', primary: 0x38bdf8, secondary: 0x6366f1, ambient: 0x0a1630 },
+      { id: 'journey', name: 'journey', primary: 0x10b981, secondary: 0x06b6d4, ambient: 0x061824 },
+      { id: 'constellation', name: 'constellation', primary: 0xa855f7, secondary: 0x06b6d4, ambient: 0x140d28 },
+      { id: 'writing', name: 'writing', primary: 0x38bdf8, secondary: 0x6366f1, ambient: 0x0a1630 },
       { id: 'contact', name: 'contact', primary: 0x14b8a6, secondary: 0x06b6d4, ambient: 0x061824 },
     ];
 
