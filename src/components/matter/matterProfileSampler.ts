@@ -13,7 +13,8 @@ export interface ProfileSamplePoint {
 
 /**
  * Loads and rasterizes the uploaded GitHub profile image onto a virtual particle grid.
- * Boosts luminance and contrast to ensure vivid, crystalline clarity in the dark void.
+ * Calibrated with balanced contrast and crisp natural exposure so the portrait is
+ * clearly visible and recognizable without blowing out into an over-bright white blur.
  */
 export async function sampleProfileImage(
   imageSrc: string = '/github_avatar.png',
@@ -25,7 +26,7 @@ export async function sampleProfileImage(
 
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const sampleRes = 84; // 84x84 candidate grid = 7056 points for dense portrait resolution
+      const sampleRes = 84; // 84x84 candidate grid for dense portrait definition
       canvas.width = sampleRes;
       canvas.height = sampleRes;
 
@@ -40,7 +41,7 @@ export async function sampleProfileImage(
       const data = imgData.data;
 
       const candidates: ProfileSamplePoint[] = [];
-      const worldScale = 12.0; // Scaled comfortably in 3D world space
+      const worldScale = 12.0;
 
       for (let y = 0; y < sampleRes; y++) {
         for (let x = 0; x < sampleRes; x++) {
@@ -54,22 +55,16 @@ export async function sampleProfileImage(
 
           // Normalize coordinates around center (0, 0)
           const nx = (x / sampleRes - 0.5) * 2;
-          const ny = (1 - y / sampleRes - 0.5) * 2; // Invert Y for WebGL world space
+          const ny = (1 - y / sampleRes - 0.5) * 2;
           const radiusFromCenter = Math.hypot(nx, ny);
 
-          // Only keep within circular avatar boundary
           if (radiusFromCenter > 0.985) continue;
 
           const wx = nx * (worldScale * 0.5);
           const wy = ny * (worldScale * 0.5);
-          const wz = -1.6 + (Math.random() - 0.5) * 0.35; // Closer to camera plane for greater pop
+          const wz = -1.6 + (Math.random() - 0.5) * 0.35;
 
           // Categorize progressive reconstruction phases:
-          // Phase 0: Outer border / background
-          // Phase 1: Hair (dark top pixels)
-          // Phase 2: Face skin tones
-          // Phase 3: Glasses / eyes / dark facial accents
-          // Phase 4: Torso / clothing
           let phase = 0;
           const rawLuminance = 0.299 * r + 0.587 * g + 0.114 * b;
 
@@ -85,29 +80,28 @@ export async function sampleProfileImage(
             phase = 0; // Outer / background
           }
 
-          // LUMINANCE BOOST & CONTRAST ENHANCEMENT:
-          // Increase color vibrance and floor brightness so dark regions (hair, glasses, suit)
-          // remain crisp and visible against the #050505 void while bright skin and speculars glow.
-          const gamma = 0.85; // Lighten midtones
-          r = Math.pow(r, gamma) * 1.35;
-          g = Math.pow(g, gamma) * 1.35;
-          b = Math.pow(b, gamma) * 1.45; // Subtle cyan-cool tint boost
-
-          // Ensure minimum baseline visibility for dark hair / glasses frames
-          const minLum = 0.24;
-          if (r < minLum && g < minLum && b < minLum) {
-            r = Math.max(r, 0.18);
-            g = Math.max(g, 0.22);
-            b = Math.max(b, 0.32); // Deep glowing navy/cyan for hair & glasses instead of pitch black
+          // NATURAL VIVID EXPOSURE (Well-balanced so face, glasses & hair are crisp):
+          // Avoid over-amplification that washes out the image into pure white glare.
+          // Gently lift dark regions so hair & glasses are clearly distinct from the black void.
+          const minDarkLum = 0.18;
+          if (r < minDarkLum && g < minDarkLum && b < minDarkLum) {
+            r = Math.max(r, 0.15);
+            g = Math.max(g, 0.18);
+            b = Math.max(b, 0.26); // Luminous deep cyan-slate for hair & glasses
           }
+
+          // Subtle natural contrast curve
+          r = Math.min(1.0, Math.pow(r, 0.95) * 1.08);
+          g = Math.min(1.0, Math.pow(g, 0.95) * 1.08);
+          b = Math.min(1.0, Math.pow(b, 0.95) * 1.12);
 
           candidates.push({
             x: wx,
             y: wy,
             z: wz,
-            r: Math.min(1.5, r), // Allow HDR values > 1.0 for UnrealBloom radiance
-            g: Math.min(1.5, g),
-            b: Math.min(1.6, b),
+            r,
+            g,
+            b,
             a,
             phase,
           });
@@ -119,14 +113,13 @@ export async function sampleProfileImage(
         return;
       }
 
-      // Re-sample candidates to populate full particle buffer
       const finalPoints: ProfileSamplePoint[] = [];
       for (let i = 0; i < targetSampleCount; i++) {
         const candidate = candidates[i % candidates.length];
         finalPoints.push({
-          x: candidate.x + (Math.random() - 0.5) * 0.1,
-          y: candidate.y + (Math.random() - 0.5) * 0.1,
-          z: candidate.z + (Math.random() - 0.5) * 0.15,
+          x: candidate.x + (Math.random() - 0.5) * 0.08,
+          y: candidate.y + (Math.random() - 0.5) * 0.08,
+          z: candidate.z + (Math.random() - 0.5) * 0.12,
           r: candidate.r,
           g: candidate.g,
           b: candidate.b,
@@ -146,9 +139,6 @@ export async function sampleProfileImage(
   });
 }
 
-/**
- * Fallback procedural silhouette generator if avatar image cannot be loaded
- */
 function generateFallbackProfile(count: number): ProfileSamplePoint[] {
   const points: ProfileSamplePoint[] = [];
   for (let i = 0; i < count; i++) {
@@ -158,9 +148,9 @@ function generateFallbackProfile(count: number): ProfileSamplePoint[] {
       x: Math.cos(angle) * r,
       y: Math.sin(angle) * r,
       z: -1.6,
-      r: 1.2,
-      g: 1.3,
-      b: 1.5,
+      r: 0.9,
+      g: 0.95,
+      b: 1.0,
       a: 1.0,
       phase: i % 5,
     });

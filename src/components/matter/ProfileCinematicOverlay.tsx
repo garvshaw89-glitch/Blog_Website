@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { rocketCinematicManager, CinematicState } from './rocketCinematicManager';
-import { Github, Sparkles, Rocket, Terminal, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Github, Rocket, ExternalLink } from 'lucide-react';
 
 export const ProfileCinematicOverlay: React.FC = () => {
   const [cinematicState, setCinematicState] = useState<CinematicState>(
@@ -14,9 +14,9 @@ export const ProfileCinematicOverlay: React.FC = () => {
     });
   }, []);
 
-  const isProfileVisible =
-    cinematicState.stage === 'PROFILE_STABILIZED' ||
-    (cinematicState.stage === 'PROFILE_RECONSTRUCT' && cinematicState.stageProgress > 0.7);
+  // Show identity card only AFTER the github profile reveal has completed and is dissolving/finished
+  const isPostProfileVisible =
+    cinematicState.stage === 'DISSOLUTION';
 
   return (
     <>
@@ -44,27 +44,27 @@ export const ProfileCinematicOverlay: React.FC = () => {
         </button>
       </div>
 
-      {/* 2. Cinematic Minimal Staggered Identity Card Reveal */}
+      {/* 2. Identity Card: Appears only AFTER the GitHub profile effect completes so the portrait is never blocked */}
       <AnimatePresence>
-        {isProfileVisible && (
+        {isPostProfileVisible && (
           <motion.div
-            initial={{ opacity: 0, y: 24, filter: 'blur(8px)' }}
+            initial={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -16, filter: 'blur(8px)' }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-x-0 bottom-16 sm:bottom-20 z-40 flex flex-col items-center pointer-events-none select-none px-4"
+            exit={{ opacity: 0, y: -12, filter: 'blur(6px)' }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-x-0 bottom-12 sm:bottom-16 z-40 flex flex-col items-center pointer-events-none select-none px-4"
           >
-            <div className="p-6 rounded-2xl bg-[#08090B]/92 border border-white/15 backdrop-blur-md max-w-sm w-full shadow-[0_15px_40px_rgba(0,0,0,0.85)] flex flex-col items-center text-center pointer-events-auto">
-              {/* Top Eyebrow Tag */}
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <div className="p-5 rounded-2xl bg-[#08090B]/90 border border-white/15 backdrop-blur-md max-w-xs w-full shadow-[0_15px_40px_rgba(0,0,0,0.85)] flex flex-col items-center text-center pointer-events-auto">
+              {/* Status Indicator */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
                 <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-300">
-                  RECONSTRUCTED PROFILE // IDENTITY MATRIX
+                  DEVELOPER PROFILE
                 </span>
               </div>
 
-              {/* Verified Name */}
-              <h3 className="font-editorial text-2xl sm:text-3xl font-bold uppercase tracking-tight text-white mb-1">
+              {/* Name */}
+              <h3 className="font-editorial text-xl sm:text-2xl font-bold uppercase tracking-tight text-white mb-1">
                 GARV SHAW
               </h3>
 
@@ -75,21 +75,12 @@ export const ProfileCinematicOverlay: React.FC = () => {
                 rel="noopener noreferrer"
                 data-cursor="link"
                 data-cursor-label="PROFILE"
-                className="flex items-center gap-1.5 text-xs font-mono text-cyan-400 hover:text-cyan-300 transition-colors mb-2"
+                className="flex items-center gap-1.5 text-xs font-mono text-cyan-400 hover:text-cyan-300 transition-colors"
               >
                 <Github className="w-3.5 h-3.5" />
                 <span>garvshaw89-glitch</span>
                 <ExternalLink className="w-3 h-3 text-neutral-500" />
               </a>
-
-              {/* Identity & Pronouns */}
-              <div className="flex items-center gap-2 font-mono text-[11px] text-neutral-400">
-                <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-neutral-300">
-                  he/him
-                </span>
-                <span>•</span>
-                <span>SYSTEMS ARCHITECT</span>
-              </div>
             </div>
           </motion.div>
         )}

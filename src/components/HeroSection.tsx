@@ -74,24 +74,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       data-cursor-theme="default"
       className="relative w-full min-h-screen flex flex-col justify-between pt-24 sm:pt-28 pb-10 px-4 sm:px-6 md:px-12 select-none overflow-hidden"
     >
-      {/* Top Editorial Eyebrow & Status Band */}
-      <div className="w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
-        <div className="flex items-center gap-3">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-mono text-xs uppercase tracking-widest text-neutral-300">
-            AVAILABLE FOR HIGH-IMPACT ARCHITECTURES // 2026
-          </span>
-        </div>
-
-        <div className="flex items-center gap-6 font-mono text-[11px] uppercase tracking-wider text-neutral-400">
-          <span>AI &amp; CLOUD LAB</span>
-          <span className="hidden md:inline">•</span>
-          <span className="hidden md:inline">SYSTEMS ENGINEERING</span>
-          <span className="hidden md:inline">•</span>
-          <span className="hidden md:inline">FINTECH &amp; PRODUCTS</span>
-        </div>
-      </div>
-
       {/* Main Center Editorial Composition with Fluid Typography Scaling */}
       <div className="w-full max-w-7xl mx-auto my-auto py-6 sm:py-10 flex flex-col items-center">
         {/* Dynamic Rotating Display Headline Box with Fixed Height Budget to prevent layout jumps */}

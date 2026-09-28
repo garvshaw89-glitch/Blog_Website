@@ -482,21 +482,21 @@ export const LivingMatterBackground: React.FC = () => {
             reconstructionPhase: Math.floor(reconstructionProgress * 4.99),
           });
 
-          // ENHANCED BRIGHTNESS: Ramp up spotlights and particle size
+          // BALANCED EXPOSURE: Gentle illumination and optimal particle size for clear portrait definition
           profileRadianceLight.intensity = THREE.MathUtils.lerp(
             profileRadianceLight.intensity,
-            4.2,
+            1.6,
             0.06
           );
           profileCyanFill.intensity = THREE.MathUtils.lerp(
             profileCyanFill.intensity,
-            2.8,
+            1.0,
             0.06
           );
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.50, 0.05);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.44, 0.05);
 
           if (bloomPass) {
-            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.75, 0.05);
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.48, 0.05);
           }
 
           if (cinematicStageTimer > 3.8) {
@@ -504,13 +504,13 @@ export const LivingMatterBackground: React.FC = () => {
             cinematicStageTimer = 0;
           }
         } else if (currentCinematicStage === 'PROFILE_STABILIZED') {
-          // High-radiance stabilized profile held for ~6.5 seconds
-          profileRadianceLight.intensity = 4.2;
-          profileCyanFill.intensity = 2.8;
-          particleMaterial.size = 0.52;
+          // Stabilized profile held with clean contrast
+          profileRadianceLight.intensity = 1.6;
+          profileCyanFill.intensity = 1.0;
+          particleMaterial.size = 0.44;
 
           if (bloomPass) {
-            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.78, 0.05);
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.48, 0.05);
           }
 
           if (cinematicStageTimer > 6.5) {
