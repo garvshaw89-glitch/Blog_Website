@@ -14,7 +14,9 @@ import {
   X,
   Compass,
   FileCode,
+  Rocket,
 } from 'lucide-react';
+import { rocketCinematicManager } from '../matter/rocketCinematicManager';
 
 interface CommandItem {
   id: string;
@@ -111,6 +113,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       category: 'System',
       icon: <Github className="w-4 h-4 text-slate-300" />,
       action: () => scrollTo('github-telemetry'),
+    },
+    {
+      id: 'action-rocket-reveal',
+      title: 'Launch Particle Rocket & Reveal GitHub Profile',
+      category: 'Lab',
+      shortcut: '⌘ R',
+      icon: <Rocket className="w-4 h-4 text-cyan-400" />,
+      action: () => {
+        rocketCinematicManager.triggerSequence();
+        onClose();
+      },
     },
     {
       id: 'action-contact',

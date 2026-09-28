@@ -45,11 +45,12 @@ export const MATTER_CONFIG = {
   },
 
   // Form Cycle Timing (seconds)
+  // Continuous recurring sequence: FREE_FLOW -> ROCK -> GLOBE -> WAVE -> ROCKET_LAUNCH_REVEAL -> repeat
   timing: {
-    freeFlowDuration: 18.0, // Long calm fluid flow
-    rockFormDuration: 11.0,  // Compressed crystalline asteroid/mineral
-    globeFormDuration: 14.0, // Earth-like continent sphere
-    waveFormDuration: 10.0,  // Oceanic transverse wave
-    morphTransitionSpeed: 0.024,
+    freeFlowDuration: 14.0,  // Fluid matter flow
+    rockFormDuration: 9.0,   // Floating asteroid formation
+    globeFormDuration: 11.0, // Earth-like continent sphere
+    waveFormDuration: 9.0,   // Oceanic wave
+    morphTransitionSpeed: 0.025,
   },
 };

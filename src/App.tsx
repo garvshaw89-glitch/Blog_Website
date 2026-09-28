@@ -4,6 +4,7 @@ import { ScrollProgressBar } from './components/ScrollProgressBar';
 import { CustomCursor } from './components/ui/CustomCursor';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { LivingMatterBackground } from './components/matter/LivingMatterBackground';
+import { ProfileCinematicOverlay } from './components/matter/ProfileCinematicOverlay';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { SectionProgressHUD } from './components/ui/SectionProgressHUD';
 import { EasterEggToast } from './components/ui/EasterEggToast';
@@ -92,6 +93,9 @@ export default function App() {
 
         {/* 7. High-End Living Digital Matter Particle World (Watery Flow, Cursor Repulsion, 3D Globe, Asteroid Rock & Ripples) */}
         <LivingMatterBackground />
+
+        {/* 8. Particle Rocket Launch & Profile Reveal Overlay */}
+        <ProfileCinematicOverlay />
 
         <div className="relative z-10 flex flex-col">
           {/* 1. HERO / LANDING PAGE with Identity Core */}

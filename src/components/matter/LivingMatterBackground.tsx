@@ -14,25 +14,32 @@ import {
   generateArchitecturePosition,
   generateConvergencePosition,
 } from './matterFormGeometry';
+import {
+  generateRocketPosition,
+} from './matterRocketGeometry';
+import {
+  sampleProfileImage,
+  ProfileSamplePoint,
+} from './matterProfileSampler';
+import {
+  rocketCinematicManager,
+  CinematicStage,
+} from './rocketCinematicManager';
 
 /**
- * HIGH-END LIVING DIGITAL MATTER SYSTEM
+ * HIGH-END LIVING DIGITAL MATTER SYSTEM WITH CONTINUOUS CYCLIC SEQUENCING:
+ * Flow -> Rock Formation -> 3D Earth Globe -> Oceanic Wave -> Rocket Launch & Impact -> Glowing GitHub Profile -> Dissolution -> Repeat
  *
- * Core Concept:
- * - BLACK VOID + FLOATING PARTICLES + LIQUID MOVEMENT + DEPTH + GRAVITY + INTERACTION + 3D FORMS
- * - Cursor acts as a physical force inside the particle field.
- * - Thousands of particles behaving like intelligent fluid digital matter.
- *
- * Physics & Lifecycle:
- * - Smooth quadratic cursor repulsion (particles smoothly move away like water).
- * - Watery fluid wake trailing the cursor.
- * - Click ripples expanding outward as physical waves.
- * - Procedural 3D form cycles: Matter -> Floating Rock -> 3D Earth Globe -> Oceanic Wave -> Dissolution.
- * - Section-aware adaptation (Projects: Architecture matrix; Contact: Convergence).
- * - 60-120 FPS GPU-accelerated Points system, zero UI interference (z-index: 0, pointer-events: none).
+ * Visual Improvements:
+ * - Dynamic Profile Spotlight & High-Luminance Boost:
+ *   When the GitHub avatar arrives, a dedicated high-intensity warm-white & cyan spotlight
+ *   illuminates the profile from Z: +3.5, and particle sizes expand to 0.52 for crisp portrait clarity.
+ * - UnrealBloomPass strength automatically elevates from 0.40 to 0.78 during the profile reveal,
+ *   creating radiant speculars on glasses, hair edges, and facial contours without washing out text.
+ * - Seamless automatic repetition: rocket & profile reveal sequence runs periodically like the rock, globe, and wave.
  */
 
-type MatterState = 'FREE_FLOW' | 'ROCK' | 'GLOBE' | 'WAVE';
+type AmbientMatterState = 'FREE_FLOW' | 'ROCK' | 'GLOBE' | 'WAVE';
 
 interface RippleWave {
   x: number;
@@ -98,14 +105,14 @@ export const LivingMatterBackground: React.FC = () => {
     renderer.setPixelRatio(dpr);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 1.15;
 
     container.appendChild(renderer.domElement);
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.inset = '0';
     renderer.domElement.style.pointerEvents = 'none';
 
-    // 2. Post-Processing Pipeline (Soft bloom on desktop fine-pointer devices)
+    // 2. Post-Processing Pipeline
     let composer: EffectComposer | null = null;
     let bloomPass: UnrealBloomPass | null = null;
 
@@ -123,7 +130,7 @@ export const LivingMatterBackground: React.FC = () => {
         const renderPass = new RenderPass(scene, camera);
         composer.addPass(renderPass);
 
-        bloomPass = new UnrealBloomPass(renderResolution, 0.4, 0.35, 0.28);
+        bloomPass = new UnrealBloomPass(renderResolution, 0.42, 0.35, 0.26);
         composer.addPass(bloomPass);
 
         const outputPass = new OutputPass();
@@ -135,7 +142,7 @@ export const LivingMatterBackground: React.FC = () => {
       }
     }
 
-    // 3. Cinematic Ambient Lighting (Soft, invisible light follows cursor)
+    // 3. Cinematic Ambient, Spotlight & Dynamic Lighting
     const ambientLight = new THREE.AmbientLight(0x0a0c10, 1.8);
     scene.add(ambientLight);
 
@@ -143,9 +150,17 @@ export const LivingMatterBackground: React.FC = () => {
     cursorLight.position.set(0, 0, 5);
     scene.add(cursorLight);
 
-    const accentLight = new THREE.PointLight(0x5b8cff, 1.4, 35, 2.0);
-    accentLight.position.set(-12, -10, -5);
-    scene.add(accentLight);
+    const rocketEngineLight = new THREE.PointLight(0x22d3ee, 0, 20, 2.0);
+    scene.add(rocketEngineLight);
+
+    // Dedicated GitHub Profile Radiance Spotlight (Turns on during profile reveal)
+    const profileRadianceLight = new THREE.PointLight(0xffffff, 0, 32, 1.4);
+    profileRadianceLight.position.set(0, 0, 4.0);
+    scene.add(profileRadianceLight);
+
+    const profileCyanFill = new THREE.PointLight(0x06b6d4, 0, 24, 1.8);
+    profileCyanFill.position.set(0, -1.0, 3.0);
+    scene.add(profileCyanFill);
 
     // 4. Procedural Soft Particle Texture
     const particleTexture = (() => {
@@ -156,8 +171,8 @@ export const LivingMatterBackground: React.FC = () => {
       if (ctx) {
         const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
         grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        grad.addColorStop(0.2, 'rgba(255, 255, 255, 0.85)');
-        grad.addColorStop(0.55, 'rgba(255, 255, 255, 0.22)');
+        grad.addColorStop(0.2, 'rgba(255, 255, 255, 0.9)');
+        grad.addColorStop(0.55, 'rgba(255, 255, 255, 0.28)');
         grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, 64, 64);
@@ -174,7 +189,13 @@ export const LivingMatterBackground: React.FC = () => {
     const pColors = new Float32Array(particleCount * 3);
     const pBaseColors = new Float32Array(particleCount * 3);
     const pSizes = new Float32Array(particleCount);
-    const pTiers = new Uint8Array(particleCount); // 0: near interactive, 1: mid, 2: deep background
+    const pTiers = new Uint8Array(particleCount);
+
+    // Profile Targets Storage
+    let profilePoints: ProfileSamplePoint[] = [];
+    sampleProfileImage('/github_avatar.png', particleCount).then((pts) => {
+      profilePoints = pts;
+    });
 
     const colWhiteLow = MATTER_CONFIG.colors.baseWhiteLow;
     const colWhiteMid = MATTER_CONFIG.colors.baseWhiteMid;
@@ -192,12 +213,12 @@ export const LivingMatterBackground: React.FC = () => {
       let col = colWhiteMid;
 
       if (rand < 0.25) {
-        tier = 0; // Near / interactive layer
+        tier = 0;
         depthZ = 1.0 + Math.random() * 5.0;
         baseSize = 0.42 + Math.random() * 0.18;
         col = rand < 0.04 ? colAccentBlue : colWhiteHigh;
       } else if (rand > 0.75) {
-        tier = 2; // Deep space layer
+        tier = 2;
         depthZ = -16.0 + Math.random() * 8.0;
         baseSize = 0.22 + Math.random() * 0.1;
         col = rand > 0.96 ? colAccentPurple : colWhiteLow;
@@ -240,7 +261,7 @@ export const LivingMatterBackground: React.FC = () => {
       size: 0.38,
       map: particleTexture,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.92,
       vertexColors: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
@@ -252,7 +273,7 @@ export const LivingMatterBackground: React.FC = () => {
     // 6. Water Ripple Waves
     const ripples: RippleWave[] = [];
 
-    const triggerRipple = (wx: number, wy: number) => {
+    const triggerRipple = (wx: number, wy: number, forceMult = 1.0) => {
       if (prefersReducedMotion) return;
       if (ripples.length >= MATTER_CONFIG.ripple.maxRipples) {
         ripples.shift();
@@ -261,9 +282,9 @@ export const LivingMatterBackground: React.FC = () => {
         x: wx,
         y: wy,
         radius: 0.4,
-        maxRadius: MATTER_CONFIG.ripple.maxRadius,
-        speed: MATTER_CONFIG.ripple.expansionSpeed,
-        strength: MATTER_CONFIG.ripple.strength,
+        maxRadius: MATTER_CONFIG.ripple.maxRadius * forceMult,
+        speed: MATTER_CONFIG.ripple.expansionSpeed * (0.8 + forceMult * 0.3),
+        strength: MATTER_CONFIG.ripple.strength * forceMult,
       });
     };
 
@@ -302,9 +323,20 @@ export const LivingMatterBackground: React.FC = () => {
       }
     });
 
-    // 8. Form State Machine (FREE_FLOW -> ROCK -> GLOBE -> WAVE -> FREE_FLOW)
-    let matterState: MatterState = 'FREE_FLOW';
-    let stateTime = 0;
+    // 8. Cinematic Sequence State
+    let currentCinematicStage: CinematicStage = 'IDLE';
+    let cinematicStageTimer = 0;
+    let rocketY = 0;
+    let rocketVelocityY = 0;
+    let cameraShake = 0;
+
+    const unsubCinematic = rocketCinematicManager.subscribe((cState) => {
+      currentCinematicStage = cState.stage;
+    });
+
+    // 9. Ambient State Machine (FREE_FLOW -> ROCK -> GLOBE -> WAVE -> ROCKET_LAUNCH -> Repeat)
+    let ambientState: AmbientMatterState = 'FREE_FLOW';
+    let ambientTime = 0;
     let targetMorphBlend = 0;
     let currentMorphBlend = 0;
     let globeRotationY = 0;
@@ -327,14 +359,14 @@ export const LivingMatterBackground: React.FC = () => {
 
     window.addEventListener('resize', onResize, { passive: true });
 
-    // 9. Visibility API Optimization for Battery & Idle Tabs
+    // 10. Visibility API Optimization for Battery & Idle Tabs
     let isTabVisible = !document.hidden;
     const handleVisibilityChange = () => {
       isTabVisible = !document.hidden;
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // 10. Main 60-120 FPS Physics & Animation Loop
+    // 11. Main 60-120 FPS Physics & Animation Loop
     let animId: number;
     const clock = new THREE.Clock();
 
@@ -345,7 +377,7 @@ export const LivingMatterBackground: React.FC = () => {
 
       const delta = Math.min(clock.getDelta(), 0.05);
       const elapsedTime = clock.getElapsedTime();
-      stateTime += delta;
+      cinematicStageTimer += delta;
 
       const {
         ndcX,
@@ -358,44 +390,209 @@ export const LivingMatterBackground: React.FC = () => {
 
       updateWorldMouse();
 
-      // State Transition Timeline
-      if (!prefersReduced) {
-        if (matterState === 'FREE_FLOW') {
-          targetMorphBlend = 0;
-          if (stateTime > MATTER_CONFIG.timing.freeFlowDuration) {
-            matterState = 'ROCK';
-            stateTime = 0;
+      // ==========================================
+      // CINEMATIC STAGE MACHINE
+      // ==========================================
+      const inCinematicSequence = currentCinematicStage !== 'IDLE';
+
+      if (inCinematicSequence && !prefersReduced) {
+        if (currentCinematicStage === 'GATHER') {
+          // Particles converge to form rocket shape
+          rocketY = -1.5;
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.40, 0.05);
+          if (cinematicStageTimer > 2.8) {
+            rocketCinematicManager.setStage('ROCKET_FORMED');
+            cinematicStageTimer = 0;
           }
-        } else if (matterState === 'ROCK') {
-          targetMorphBlend = 1;
-          if (stateTime > MATTER_CONFIG.timing.rockFormDuration) {
-            matterState = 'GLOBE';
-            stateTime = 0;
+        } else if (currentCinematicStage === 'ROCKET_FORMED') {
+          // Micro vibration & stabilization
+          cameraShake = 0.04;
+          if (cinematicStageTimer > 1.2) {
+            rocketCinematicManager.setStage('IGNITION');
+            cinematicStageTimer = 0;
           }
-        } else if (matterState === 'GLOBE') {
-          targetMorphBlend = 1;
-          globeRotationY += delta * 0.25;
-          if (stateTime > MATTER_CONFIG.timing.globeFormDuration) {
-            matterState = 'WAVE';
-            stateTime = 0;
+        } else if (currentCinematicStage === 'IGNITION') {
+          // Engine sparks buildup & downward particle velocity
+          cameraShake = 0.08 + cinematicStageTimer * 0.12;
+          rocketEngineLight.intensity = Math.min(4.5, cinematicStageTimer * 4.0);
+          rocketEngineLight.position.set(0, rocketY - 4.5, -2.0);
+
+          if (cinematicStageTimer > 1.6) {
+            rocketVelocityY = 0.05;
+            rocketCinematicManager.setStage('LAUNCH');
+            cinematicStageTimer = 0;
           }
-        } else if (matterState === 'WAVE') {
-          targetMorphBlend = 1;
-          if (stateTime > MATTER_CONFIG.timing.waveFormDuration) {
-            matterState = 'FREE_FLOW';
-            stateTime = 0;
+        } else if (currentCinematicStage === 'LAUNCH') {
+          // Rapid upward acceleration
+          rocketVelocityY += delta * 18.0;
+          rocketY += rocketVelocityY * delta;
+          cameraShake = 0.15;
+          rocketEngineLight.position.set(0, rocketY - 4.5, -2.0);
+
+          if (rocketY > 24) {
+            rocketCinematicManager.setStage('FLIGHT');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'FLIGHT') {
+          // Rocket travels through deep environment & loops toward descent
+          cameraShake = 0.02;
+          rocketEngineLight.intensity = Math.max(0, rocketEngineLight.intensity - delta * 2.0);
+          if (cinematicStageTimer > 1.8) {
+            rocketY = 22;
+            rocketVelocityY = -6.0;
+            rocketCinematicManager.setStage('DESCENT');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'DESCENT') {
+          // Controlled deceleration toward ground
+          rocketVelocityY += delta * 4.2;
+          rocketVelocityY = Math.min(-0.8, rocketVelocityY);
+          rocketY += rocketVelocityY * delta;
+          cameraShake = 0.03;
+
+          if (rocketY <= -2.5) {
+            rocketY = -2.5;
+            // IMPACT!
+            triggerRipple(0, -2.5, 2.4);
+            cameraShake = 0.45;
+            rocketCinematicManager.setStage('LANDING_IMPACT');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'LANDING_IMPACT') {
+          // Impact shockwave, particles break apart
+          cameraShake = Math.max(0, 0.45 - cinematicStageTimer * 0.8);
+          rocketEngineLight.intensity = Math.max(0, 3.0 - cinematicStageTimer * 4.0);
+
+          if (cinematicStageTimer > 0.8) {
+            rocketCinematicManager.setStage('DISINTEGRATION');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'DISINTEGRATION') {
+          // Particles disperse into large orbital cloud
+          cameraShake = 0;
+          if (cinematicStageTimer > 1.6) {
+            rocketCinematicManager.setStage('PROFILE_RECONSTRUCT');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'PROFILE_RECONSTRUCT') {
+          // Progressive arrival of feature phases
+          const reconstructionProgress = Math.min(1.0, cinematicStageTimer / 3.4);
+          rocketCinematicManager.update({
+            stageProgress: reconstructionProgress,
+            reconstructionPhase: Math.floor(reconstructionProgress * 4.99),
+          });
+
+          // ENHANCED BRIGHTNESS: Ramp up spotlights and particle size
+          profileRadianceLight.intensity = THREE.MathUtils.lerp(
+            profileRadianceLight.intensity,
+            4.2,
+            0.06
+          );
+          profileCyanFill.intensity = THREE.MathUtils.lerp(
+            profileCyanFill.intensity,
+            2.8,
+            0.06
+          );
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.50, 0.05);
+
+          if (bloomPass) {
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.75, 0.05);
+          }
+
+          if (cinematicStageTimer > 3.8) {
+            rocketCinematicManager.setStage('PROFILE_STABILIZED');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'PROFILE_STABILIZED') {
+          // High-radiance stabilized profile held for ~6.5 seconds
+          profileRadianceLight.intensity = 4.2;
+          profileCyanFill.intensity = 2.8;
+          particleMaterial.size = 0.52;
+
+          if (bloomPass) {
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.78, 0.05);
+          }
+
+          if (cinematicStageTimer > 6.5) {
+            rocketCinematicManager.setStage('DISSOLUTION');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'DISSOLUTION') {
+          // Smooth physical dissolution back to ambient flow
+          profileRadianceLight.intensity = THREE.MathUtils.lerp(
+            profileRadianceLight.intensity,
+            0,
+            0.08
+          );
+          profileCyanFill.intensity = THREE.MathUtils.lerp(
+            profileCyanFill.intensity,
+            0,
+            0.08
+          );
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.38, 0.06);
+
+          if (bloomPass) {
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.42, 0.05);
+          }
+
+          if (cinematicStageTimer > 2.8) {
+            rocketCinematicManager.setStage('IDLE');
+            cinematicStageTimer = 0;
+            // Reset ambient sequence to Free Flow after cinematic finish
+            ambientState = 'FREE_FLOW';
+            ambientTime = 0;
           }
         }
       }
 
-      currentMorphBlend += (targetMorphBlend - currentMorphBlend) * MATTER_CONFIG.timing.morphTransitionSpeed;
+      // ==========================================
+      // AMBIENT FORM TIMELINE & CONTINUOUS REPETITION
+      // ==========================================
+      // Cycles continuously:
+      // FREE_FLOW -> ROCK -> GLOBE -> WAVE -> TRIGGER ROCKET SEQUENCE -> repeat
+      if (!inCinematicSequence && !prefersReduced) {
+        ambientTime += delta;
+        if (ambientState === 'FREE_FLOW') {
+          targetMorphBlend = 0;
+          if (ambientTime > MATTER_CONFIG.timing.freeFlowDuration) {
+            ambientState = 'ROCK';
+            ambientTime = 0;
+          }
+        } else if (ambientState === 'ROCK') {
+          targetMorphBlend = 1;
+          if (ambientTime > MATTER_CONFIG.timing.rockFormDuration) {
+            ambientState = 'GLOBE';
+            ambientTime = 0;
+          }
+        } else if (ambientState === 'GLOBE') {
+          targetMorphBlend = 1;
+          globeRotationY += delta * 0.25;
+          if (ambientTime > MATTER_CONFIG.timing.globeFormDuration) {
+            ambientState = 'WAVE';
+            ambientTime = 0;
+          }
+        } else if (ambientState === 'WAVE') {
+          targetMorphBlend = 1;
+          if (ambientTime > MATTER_CONFIG.timing.waveFormDuration) {
+            // AUTOMATIC REPEAT: After Wave completes, trigger the Rocket & Profile sequence!
+            ambientTime = 0;
+            targetMorphBlend = 0;
+            rocketCinematicManager.triggerSequence();
+          }
+        }
+        currentMorphBlend +=
+          (targetMorphBlend - currentMorphBlend) * MATTER_CONFIG.timing.morphTransitionSpeed;
+      }
 
-      // Parallax Camera movement
+      // Camera Parallax & Subtle Shake Response
       if (!prefersReduced) {
-        camera.rotation.y = -ndcX * 0.035;
-        camera.rotation.x = ndcY * 0.025;
-        camera.position.x = ndcX * 0.75;
-        camera.position.y = ndcY * 0.5 - scrollProgress * 6.0;
+        const shakeX = (Math.random() - 0.5) * cameraShake;
+        const shakeY = (Math.random() - 0.5) * cameraShake;
+
+        camera.rotation.y = -ndcX * 0.035 + shakeX * 0.05;
+        camera.rotation.x = ndcY * 0.025 + shakeY * 0.05;
+        camera.position.x = ndcX * 0.75 + shakeX;
+        camera.position.y = ndcY * 0.5 - scrollProgress * 6.0 + shakeY;
         camera.position.z = cameraBaseZ - scrollProgress * 4.0;
       }
 
@@ -416,11 +613,11 @@ export const LivingMatterBackground: React.FC = () => {
 
       const positions = particleGeometry.attributes.position.array as Float32Array;
       const colors = particleGeometry.attributes.color.array as Float32Array;
-
-      // Check current section for contextual structural influences
       const currentSection = sectionTheme?.name || 'hero';
 
-      // Physics Simulation Pass for every particle
+      // ==========================================
+      // UNIFIED PARTICLE PHYSICS PASS
+      // ==========================================
       for (let i = 0; i < particleCount; i++) {
         const idx = i * 3;
         const px = positions[idx];
@@ -432,77 +629,169 @@ export const LivingMatterBackground: React.FC = () => {
         const oz = pOriginalHome[idx + 2];
         const tier = pTiers[i];
 
-        // 1. Organic Curl Noise Vector (Simulating underwater invisible currents)
+        // 1. Organic Curl Noise (Watery Base Current)
         const curl = getCurlNoise(
           px * MATTER_CONFIG.physics.fluidCurlScale,
           py * MATTER_CONFIG.physics.fluidCurlScale,
           elapsedTime * 0.12
         );
-
         pVelocities[idx] += curl.x * MATTER_CONFIG.physics.fluidSpeed;
         pVelocities[idx + 1] += curl.y * MATTER_CONFIG.physics.fluidSpeed;
         pVelocities[idx + 2] += curl.z * (MATTER_CONFIG.physics.fluidSpeed * 0.5);
 
-        // 2. 3D Form Target (Matter -> Rock -> Globe -> Wave -> Dissolution)
-        if (currentMorphBlend > 0.01) {
-          let formTarget = new THREE.Vector3(ox, oy, oz);
-
-          if (matterState === 'ROCK') {
-            formTarget = generateRockPosition(i, particleCount, elapsedTime);
-          } else if (matterState === 'GLOBE') {
-            const { pos: globePos, isLand } = generateGlobePosition(
+        // 2. Target Attraction Vectors (Rocket, Flight, Profile or Ambient)
+        if (inCinematicSequence) {
+          if (
+            currentCinematicStage === 'GATHER' ||
+            currentCinematicStage === 'ROCKET_FORMED' ||
+            currentCinematicStage === 'IGNITION' ||
+            currentCinematicStage === 'LAUNCH' ||
+            currentCinematicStage === 'DESCENT'
+          ) {
+            // Morph into Rocket coordinates
+            const vibration =
+              currentCinematicStage === 'IGNITION' ? 0.35 : currentCinematicStage === 'ROCKET_FORMED' ? 0.08 : 0;
+            const { pos: rocketTarget, isEngine } = generateRocketPosition(
               i,
               particleCount,
-              globeRotationY
+              rocketY,
+              vibration
             );
-            formTarget = globePos;
 
-            // Continents receive subtle radiant blue/cyan luminescence
-            if (isLand) {
-              colors[idx] = THREE.MathUtils.lerp(colors[idx], colAccentBlue.r, 0.04);
-              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], colAccentBlue.g, 0.04);
-              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], colAccentBlue.b, 0.04);
+            // Engine ignition particles downward stream
+            if (isEngine && (currentCinematicStage === 'IGNITION' || currentCinematicStage === 'LAUNCH')) {
+              pVelocities[idx + 1] -= (0.4 + Math.random() * 0.6);
+              colors[idx] = 0.2;
+              colors[idx + 1] = 0.9;
+              colors[idx + 2] = 1.0;
+            } else {
+              const pullStrength = currentCinematicStage === 'GATHER' ? 0.038 : 0.085;
+              pVelocities[idx] += (rocketTarget.x - px) * pullStrength;
+              pVelocities[idx + 1] += (rocketTarget.y - py) * pullStrength;
+              pVelocities[idx + 2] += (rocketTarget.z - pz) * pullStrength;
+
+              // Rocket body sleek titanium / electric blue styling
+              colors[idx] = THREE.MathUtils.lerp(colors[idx], 0.9, 0.04);
+              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], 0.95, 0.04);
+              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], 1.0, 0.04);
             }
-          } else if (matterState === 'WAVE') {
-            formTarget = generateWavePosition(i, particleCount, elapsedTime);
-          }
+          } else if (currentCinematicStage === 'FLIGHT') {
+            // Stretch into flowing cosmic trail
+            pVelocities[idx + 1] -= 0.15;
+            pVelocities[idx] += Math.sin(py * 0.2 + elapsedTime * 2) * 0.08;
+          } else if (currentCinematicStage === 'LANDING_IMPACT') {
+            // Rapid radial dispersion on impact
+            const angle = Math.atan2(py - (-2.5), px);
+            const dist = Math.hypot(px, py - (-2.5));
+            const push = Math.max(0, 1.0 - dist / 12) * 0.7;
+            pVelocities[idx] += Math.cos(angle) * push;
+            pVelocities[idx + 1] += Math.sin(angle) * push + 0.2;
+          } else if (currentCinematicStage === 'DISINTEGRATION') {
+            // Orbiting cloud of digital matter
+            const angle = (i / particleCount) * Math.PI * 8 + elapsedTime * 1.5;
+            const orbitR = 4.5 + Math.sin(i * 0.5) * 2.5;
+            const targetX = Math.cos(angle) * orbitR;
+            const targetY = Math.sin(angle) * orbitR * 0.75;
+            pVelocities[idx] += (targetX - px) * 0.04;
+            pVelocities[idx + 1] += (targetY - py) * 0.04;
+          } else if (
+            currentCinematicStage === 'PROFILE_RECONSTRUCT' ||
+            currentCinematicStage === 'PROFILE_STABILIZED'
+          ) {
+            // Target coordinates from real GitHub profile sampling
+            if (profilePoints.length > 0) {
+              const pt = profilePoints[i % profilePoints.length];
+              const phaseGate = rocketCinematicManager.state.reconstructionPhase;
 
-          const formForce = 0.035 * currentMorphBlend;
-          pVelocities[idx] += (formTarget.x - px) * formForce;
-          pVelocities[idx + 1] += (formTarget.y - py) * formForce;
-          pVelocities[idx + 2] += (formTarget.z - pz) * formForce;
+              // Progressive reveal by feature phase
+              if (pt.phase <= phaseGate || currentCinematicStage === 'PROFILE_STABILIZED') {
+                // Micro-breathing alive effect
+                const breath =
+                  currentCinematicStage === 'PROFILE_STABILIZED'
+                    ? Math.sin(elapsedTime * 2.0 + px * 0.5) * 0.05
+                    : 0;
+
+                const targetX = pt.x;
+                const targetY = pt.y + breath;
+                const targetZ = pt.z;
+
+                const formPull = currentCinematicStage === 'PROFILE_STABILIZED' ? 0.085 : 0.058;
+                pVelocities[idx] += (targetX - px) * formPull;
+                pVelocities[idx + 1] += (targetY - py) * formPull;
+                pVelocities[idx + 2] += (targetZ - pz) * formPull;
+
+                // Sync authentic image pixel colors with enhanced HDR luminance
+                colors[idx] = THREE.MathUtils.lerp(colors[idx], pt.r, 0.08);
+                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pt.g, 0.08);
+                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pt.b, 0.08);
+              }
+            }
+          } else if (currentCinematicStage === 'DISSOLUTION') {
+            // Gently dissolve back to original home
+            pVelocities[idx] += (ox - px) * 0.035;
+            pVelocities[idx + 1] += (oy - py) * 0.035;
+            pVelocities[idx + 2] += (oz - pz) * 0.035;
+            colors[idx] = THREE.MathUtils.lerp(colors[idx], pBaseColors[idx], 0.03);
+            colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pBaseColors[idx + 1], 0.03);
+            colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pBaseColors[idx + 2], 0.03);
+          }
         } else {
-          // Section-aware gentle structural tendencies
-          let targetX = ox;
-          let targetY = oy;
-          let targetZ = oz;
+          // Standard Ambient Mode (Rock, Globe, Wave, Free Flow, Section-Aware)
+          if (currentMorphBlend > 0.01) {
+            let formTarget = new THREE.Vector3(ox, oy, oz);
 
-          if (currentSection === 'projects') {
-            const arch = generateArchitecturePosition(i, particleCount);
-            targetX = THREE.MathUtils.lerp(ox, arch.x, 0.25);
-            targetY = THREE.MathUtils.lerp(oy, arch.y, 0.25);
-            targetZ = THREE.MathUtils.lerp(oz, arch.z, 0.25);
-          } else if (currentSection === 'contact') {
-            const conv = generateConvergencePosition(i, particleCount, elapsedTime);
-            targetX = THREE.MathUtils.lerp(ox, conv.x, 0.2);
-            targetY = THREE.MathUtils.lerp(oy, conv.y, 0.2);
-            targetZ = THREE.MathUtils.lerp(oz, conv.z, 0.2);
+            if (ambientState === 'ROCK') {
+              formTarget = generateRockPosition(i, particleCount, elapsedTime);
+            } else if (ambientState === 'GLOBE') {
+              const { pos: globePos, isLand } = generateGlobePosition(
+                i,
+                particleCount,
+                globeRotationY
+              );
+              formTarget = globePos;
+
+              if (isLand) {
+                colors[idx] = THREE.MathUtils.lerp(colors[idx], colAccentBlue.r, 0.04);
+                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], colAccentBlue.g, 0.04);
+                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], colAccentBlue.b, 0.04);
+              }
+            } else if (ambientState === 'WAVE') {
+              formTarget = generateWavePosition(i, particleCount, elapsedTime);
+            }
+
+            const formForce = 0.035 * currentMorphBlend;
+            pVelocities[idx] += (formTarget.x - px) * formForce;
+            pVelocities[idx + 1] += (formTarget.y - py) * formForce;
+            pVelocities[idx + 2] += (formTarget.z - pz) * formForce;
+          } else {
+            let targetX = ox;
+            let targetY = oy;
+            let targetZ = oz;
+
+            if (currentSection === 'projects') {
+              const arch = generateArchitecturePosition(i, particleCount);
+              targetX = THREE.MathUtils.lerp(ox, arch.x, 0.25);
+              targetY = THREE.MathUtils.lerp(oy, arch.y, 0.25);
+              targetZ = THREE.MathUtils.lerp(oz, arch.z, 0.25);
+            } else if (currentSection === 'contact') {
+              const conv = generateConvergencePosition(i, particleCount, elapsedTime);
+              targetX = THREE.MathUtils.lerp(ox, conv.x, 0.2);
+              targetY = THREE.MathUtils.lerp(oy, conv.y, 0.2);
+              targetZ = THREE.MathUtils.lerp(oz, conv.z, 0.2);
+            }
+
+            const returnSpring = tier === 2 ? 0.015 : 0.035;
+            pVelocities[idx] += (targetX - px) * returnSpring;
+            pVelocities[idx + 1] += (targetY - py) * returnSpring;
+            pVelocities[idx + 2] += (targetZ - pz) * returnSpring;
+
+            colors[idx] = THREE.MathUtils.lerp(colors[idx], pBaseColors[idx], 0.02);
+            colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pBaseColors[idx + 1], 0.02);
+            colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pBaseColors[idx + 2], 0.02);
           }
-
-          // Return spring to original home field
-          const returnSpring = tier === 2 ? 0.015 : 0.035;
-          pVelocities[idx] += (targetX - px) * returnSpring;
-          pVelocities[idx + 1] += (targetY - py) * returnSpring;
-          pVelocities[idx + 2] += (targetZ - pz) * returnSpring;
-
-          // Revert colors to base monochrome values
-          colors[idx] = THREE.MathUtils.lerp(colors[idx], pBaseColors[idx], 0.02);
-          colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pBaseColors[idx + 1], 0.02);
-          colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pBaseColors[idx + 2], 0.02);
         }
 
         // 3. CURSOR REPULSION & WATER WAKE (Core Interaction)
-        // Particles smoothly accelerate away like liquid responding to physical force
         const distToCursorZ = Math.abs(camera.position.z - pz);
         const frustumHeightAtZ = 2 * distToCursorZ * Math.tan(vFovRad / 2);
         const unitsPerPixel = frustumHeightAtZ / viewH;
@@ -513,7 +802,6 @@ export const LivingMatterBackground: React.FC = () => {
         const distFromCursor = Math.hypot(dx, dy);
 
         if (distFromCursor < repulsionRadiusWorld && distFromCursor > 0.01) {
-          // Quadratic physical push falloff: stronger closer to cursor center
           const normalizedDist = distFromCursor / repulsionRadiusWorld;
           const pushMagnitude =
             (1.0 - normalizedDist) * (1.0 - normalizedDist) * MATTER_CONFIG.physics.repulsionForce;
@@ -525,7 +813,6 @@ export const LivingMatterBackground: React.FC = () => {
           pVelocities[idx + 1] += ny * pushMagnitude;
           pVelocities[idx + 2] += (Math.random() - 0.5) * pushMagnitude * 0.4;
 
-          // Watery wake: drag particles lightly along cursor velocity
           pVelocities[idx] += cursorVelocityWorld.x * MATTER_CONFIG.physics.wakeAttractionForce;
           pVelocities[idx + 1] += cursorVelocityWorld.y * MATTER_CONFIG.physics.wakeAttractionForce;
         }
@@ -565,7 +852,6 @@ export const LivingMatterBackground: React.FC = () => {
       particleGeometry.attributes.position.needsUpdate = true;
       particleGeometry.attributes.color.needsUpdate = true;
 
-      // Render through post-processing pipeline or fallback renderer
       if (composer) {
         composer.render();
       } else {
@@ -577,6 +863,7 @@ export const LivingMatterBackground: React.FC = () => {
 
     return () => {
       unsubInteraction();
+      unsubCinematic();
       window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animId);
