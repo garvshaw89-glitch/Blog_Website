@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { IdentityCore } from './ui/IdentityCore';
 import { ArrowDown, ArrowUpRight, Sparkles, Terminal, Activity } from 'lucide-react';
+import { rocketCinematicManager, CinematicState } from './matter/rocketCinematicManager';
 
 interface HeroSectionProps {
   onContactClick?: () => void;
@@ -58,6 +59,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   id = 'hero-section',
 }) => {
   const [rotationIndex, setRotationIndex] = useState(0);
+  const [cinematicStage, setCinematicStage] = useState<CinematicState['stage']>(
+    rocketCinematicManager.state.stage
+  );
+
+  useEffect(() => {
+    return rocketCinematicManager.subscribe((state) => {
+      setCinematicStage(state.stage);
+    });
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -68,6 +78,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
   const currentRotation = HEADLINE_ROTATIONS[rotationIndex];
 
+  // During the entire particle reconstruction and profile hold sequence, hide hero text completely:
+  // Profile image has 100% uninterrupted focus.
+  const isProfileActive =
+    cinematicStage === 'PROFILE_FORMING' ||
+    cinematicStage === 'PROFILE_RECOGNIZABLE' ||
+    cinematicStage === 'PROFILE_LOCKING' ||
+    cinematicStage === 'PROFILE_COMPLETE' ||
+    cinematicStage === 'PROFILE_HOLD' ||
+    cinematicStage === 'TEXT_PREPARE' ||
+    cinematicStage === 'NAME_REVEAL' ||
+    cinematicStage === 'TAGLINE_REVEAL' ||
+    cinematicStage === 'IDENTITY_COMPLETE';
+
   return (
     <section
       id={id}
@@ -75,7 +98,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       className="relative w-full min-h-screen flex flex-col justify-between pt-24 sm:pt-28 pb-10 px-4 sm:px-6 md:px-12 select-none overflow-hidden"
     >
       {/* Main Center Editorial Composition with Fluid Typography Scaling */}
-      <div className="w-full max-w-7xl mx-auto my-auto py-6 sm:py-10 flex flex-col items-center">
+      <div
+        className={`w-full max-w-7xl mx-auto my-auto py-6 sm:py-10 flex flex-col items-center transition-opacity duration-700 ${
+          isProfileActive ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
+      >
         {/* Dynamic Rotating Display Headline Box with Fixed Height Budget to prevent layout jumps */}
         <div className="text-center w-full mb-6 max-w-5xl mx-auto">
           {/* Active sequence pill indicator */}

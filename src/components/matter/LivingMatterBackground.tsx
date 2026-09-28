@@ -464,47 +464,60 @@ export const LivingMatterBackground: React.FC = () => {
           rocketEngineLight.intensity = Math.max(0, 3.0 - cinematicStageTimer * 4.0);
 
           if (cinematicStageTimer > 0.8) {
-            rocketCinematicManager.setStage('DISINTEGRATION');
+            // Transition to PARTICLE_CLOUD at ~12.4s
+            rocketCinematicManager.setStage('PARTICLE_CLOUD');
             cinematicStageTimer = 0;
           }
-        } else if (currentCinematicStage === 'DISINTEGRATION') {
-          // Particles disperse into large orbital cloud
+        } else if (currentCinematicStage === 'PARTICLE_CLOUD') {
+          // 12.40s - 13.00s (0.6s): Rocket particles become a floating orbital cloud
           cameraShake = 0;
-          if (cinematicStageTimer > 1.6) {
-            rocketCinematicManager.setStage('PROFILE_RECONSTRUCT');
+          if (cinematicStageTimer > 0.6) {
+            // Transition to PROFILE_FORMING at 13.00s
+            rocketCinematicManager.setStage('PROFILE_FORMING');
             cinematicStageTimer = 0;
           }
-        } else if (currentCinematicStage === 'PROFILE_RECONSTRUCT') {
-          // Progressive arrival of feature phases
-          const reconstructionProgress = Math.min(1.0, cinematicStageTimer / 3.4);
+        } else if (currentCinematicStage === 'PROFILE_FORMING') {
+          // 13.00s - 14.20s (1.2s): Profile image begins forming (circular silhouette, hair, face)
+          const progress = Math.min(1.0, cinematicStageTimer / 1.2);
           rocketCinematicManager.update({
-            stageProgress: reconstructionProgress,
-            reconstructionPhase: Math.floor(reconstructionProgress * 4.99),
+            stageProgress: progress,
+            reconstructionPhase: Math.floor(progress * 2.99), // phases 0, 1, 2
           });
 
-          // BALANCED EXPOSURE: Gentle illumination and optimal particle size for clear portrait definition
-          profileRadianceLight.intensity = THREE.MathUtils.lerp(
-            profileRadianceLight.intensity,
-            1.6,
-            0.06
-          );
-          profileCyanFill.intensity = THREE.MathUtils.lerp(
-            profileCyanFill.intensity,
-            1.0,
-            0.06
-          );
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.44, 0.05);
+          profileRadianceLight.intensity = THREE.MathUtils.lerp(profileRadianceLight.intensity, 1.4, 0.05);
+          profileCyanFill.intensity = THREE.MathUtils.lerp(profileCyanFill.intensity, 0.8, 0.05);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.43, 0.05);
 
-          if (bloomPass) {
-            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.48, 0.05);
-          }
-
-          if (cinematicStageTimer > 3.8) {
-            rocketCinematicManager.setStage('PROFILE_STABILIZED');
+          if (cinematicStageTimer >= 1.2) {
+            // Transition to PROFILE_RECOGNIZABLE at 14.20s
+            rocketCinematicManager.setStage('PROFILE_RECOGNIZABLE');
             cinematicStageTimer = 0;
           }
-        } else if (currentCinematicStage === 'PROFILE_STABILIZED') {
-          // Stabilized profile held with clean contrast
+        } else if (currentCinematicStage === 'PROFILE_RECOGNIZABLE') {
+          // 14.20s - 15.40s (1.2s): Face, hair and glasses become recognizable
+          const progress = Math.min(1.0, cinematicStageTimer / 1.2);
+          rocketCinematicManager.update({
+            stageProgress: progress,
+            reconstructionPhase: 3 + Math.floor(progress * 1.99), // phases 3, 4
+          });
+
+          profileRadianceLight.intensity = THREE.MathUtils.lerp(profileRadianceLight.intensity, 1.6, 0.06);
+          profileCyanFill.intensity = THREE.MathUtils.lerp(profileCyanFill.intensity, 1.0, 0.06);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.44, 0.05);
+
+          if (cinematicStageTimer >= 1.2) {
+            // Transition to PROFILE_LOCKING at 15.40s
+            rocketCinematicManager.setStage('PROFILE_LOCKING');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'PROFILE_LOCKING') {
+          // 15.40s - 16.20s (0.8s): Fine image details stabilize, target attraction increases
+          const progress = Math.min(1.0, cinematicStageTimer / 0.8);
+          rocketCinematicManager.update({
+            stageProgress: progress,
+            reconstructionPhase: 5, // All phases active (0 through 5)
+          });
+
           profileRadianceLight.intensity = 1.6;
           profileCyanFill.intensity = 1.0;
           particleMaterial.size = 0.44;
@@ -513,23 +526,67 @@ export const LivingMatterBackground: React.FC = () => {
             bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.48, 0.05);
           }
 
-          if (cinematicStageTimer > 6.5) {
-            rocketCinematicManager.setStage('DISSOLUTION');
+          if (cinematicStageTimer >= 0.8) {
+            // Transition to PROFILE_COMPLETE at 16.20s
+            rocketCinematicManager.setStage('PROFILE_COMPLETE');
             cinematicStageTimer = 0;
           }
-        } else if (currentCinematicStage === 'DISSOLUTION') {
-          // Smooth physical dissolution back to ambient flow
+        } else if (currentCinematicStage === 'PROFILE_COMPLETE') {
+          // 16.20s: Instantaneous state marker that rolls into PROFILE_HOLD
+          rocketCinematicManager.setStage('PROFILE_HOLD');
+          cinematicStageTimer = 0;
+        } else if (currentCinematicStage === 'PROFILE_HOLD') {
+          // 16.20s - 17.50s (1.3s pause): PROFILE IMAGE ONLY — NO TEXT
+          profileRadianceLight.intensity = 1.6;
+          profileCyanFill.intensity = 1.0;
+          particleMaterial.size = 0.44;
+
+          if (cinematicStageTimer >= 1.3) {
+            // Transition to TEXT_PREPARE at 17.50s
+            rocketCinematicManager.setStage('TEXT_PREPARE');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'TEXT_PREPARE') {
+          // 17.50s - 17.70s (0.2s): Profile remains stable, prepare typography layer
+          if (cinematicStageTimer >= 0.2) {
+            // Transition to NAME_REVEAL at 17.70s
+            rocketCinematicManager.setStage('NAME_REVEAL');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'NAME_REVEAL') {
+          // 17.70s - 18.10s (0.4s): "Garv Shaw" begins appearing
+          if (cinematicStageTimer >= 0.4) {
+            // Transition to TAGLINE_REVEAL at 18.10s
+            rocketCinematicManager.setStage('TAGLINE_REVEAL');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'TAGLINE_REVEAL') {
+          // 18.10s - 18.70s (0.6s): "Turning AI Into Innovation" appears
+          if (cinematicStageTimer >= 0.6) {
+            // Transition to IDENTITY_COMPLETE at 18.70s
+            rocketCinematicManager.setStage('IDENTITY_COMPLETE');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'IDENTITY_COMPLETE') {
+          // 18.70s - 19.50s (0.8s): Full identity composition held together
+          if (cinematicStageTimer >= 0.8) {
+            // Transition to RETURN_TO_WORLD at 19.50s
+            rocketCinematicManager.setStage('RETURN_TO_WORLD');
+            cinematicStageTimer = 0;
+          }
+        } else if (currentCinematicStage === 'RETURN_TO_WORLD') {
+          // 19.50s+: Particles slowly return to ambient state
           profileRadianceLight.intensity = THREE.MathUtils.lerp(
             profileRadianceLight.intensity,
             0,
-            0.08
+            0.06
           );
           profileCyanFill.intensity = THREE.MathUtils.lerp(
             profileCyanFill.intensity,
             0,
-            0.08
+            0.06
           );
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.38, 0.06);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.38, 0.05);
 
           if (bloomPass) {
             bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.42, 0.05);
@@ -686,8 +743,8 @@ export const LivingMatterBackground: React.FC = () => {
             const push = Math.max(0, 1.0 - dist / 12) * 0.7;
             pVelocities[idx] += Math.cos(angle) * push;
             pVelocities[idx + 1] += Math.sin(angle) * push + 0.2;
-          } else if (currentCinematicStage === 'DISINTEGRATION') {
-            // Orbiting cloud of digital matter
+          } else if (currentCinematicStage === 'PARTICLE_CLOUD') {
+            // Orbiting floating cloud of digital matter (12.40s)
             const angle = (i / particleCount) * Math.PI * 8 + elapsedTime * 1.5;
             const orbitR = 4.5 + Math.sin(i * 0.5) * 2.5;
             const targetX = Math.cos(angle) * orbitR;
@@ -695,27 +752,45 @@ export const LivingMatterBackground: React.FC = () => {
             pVelocities[idx] += (targetX - px) * 0.04;
             pVelocities[idx + 1] += (targetY - py) * 0.04;
           } else if (
-            currentCinematicStage === 'PROFILE_RECONSTRUCT' ||
-            currentCinematicStage === 'PROFILE_STABILIZED'
+            currentCinematicStage === 'PROFILE_FORMING' ||
+            currentCinematicStage === 'PROFILE_RECOGNIZABLE' ||
+            currentCinematicStage === 'PROFILE_LOCKING' ||
+            currentCinematicStage === 'PROFILE_COMPLETE' ||
+            currentCinematicStage === 'PROFILE_HOLD' ||
+            currentCinematicStage === 'TEXT_PREPARE' ||
+            currentCinematicStage === 'NAME_REVEAL' ||
+            currentCinematicStage === 'TAGLINE_REVEAL' ||
+            currentCinematicStage === 'IDENTITY_COMPLETE'
           ) {
             // Target coordinates from real GitHub profile sampling
             if (profilePoints.length > 0) {
               const pt = profilePoints[i % profilePoints.length];
               const phaseGate = rocketCinematicManager.state.reconstructionPhase;
 
+              const isLockedOrHold =
+                currentCinematicStage === 'PROFILE_LOCKING' ||
+                currentCinematicStage === 'PROFILE_COMPLETE' ||
+                currentCinematicStage === 'PROFILE_HOLD' ||
+                currentCinematicStage === 'TEXT_PREPARE' ||
+                currentCinematicStage === 'NAME_REVEAL' ||
+                currentCinematicStage === 'TAGLINE_REVEAL' ||
+                currentCinematicStage === 'IDENTITY_COMPLETE';
+
               // Progressive reveal by feature phase
-              if (pt.phase <= phaseGate || currentCinematicStage === 'PROFILE_STABILIZED') {
-                // Micro-breathing alive effect
+              if (pt.phase <= phaseGate || isLockedOrHold) {
+                // Micro-breathing alive effect during hold & reveal
                 const breath =
-                  currentCinematicStage === 'PROFILE_STABILIZED'
-                    ? Math.sin(elapsedTime * 2.0 + px * 0.5) * 0.05
+                  currentCinematicStage === 'PROFILE_HOLD' ||
+                  currentCinematicStage === 'IDENTITY_COMPLETE'
+                    ? Math.sin(elapsedTime * 2.0 + px * 0.5) * 0.04
                     : 0;
 
                 const targetX = pt.x;
                 const targetY = pt.y + breath;
                 const targetZ = pt.z;
 
-                const formPull = currentCinematicStage === 'PROFILE_STABILIZED' ? 0.085 : 0.058;
+                // Stronger target attraction as profile locks into place
+                const formPull = isLockedOrHold ? 0.092 : 0.065;
                 pVelocities[idx] += (targetX - px) * formPull;
                 pVelocities[idx + 1] += (targetY - py) * formPull;
                 pVelocities[idx + 2] += (targetZ - pz) * formPull;
@@ -726,8 +801,8 @@ export const LivingMatterBackground: React.FC = () => {
                 colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pt.b, 0.08);
               }
             }
-          } else if (currentCinematicStage === 'DISSOLUTION') {
-            // Gently dissolve back to original home
+          } else if (currentCinematicStage === 'RETURN_TO_WORLD') {
+            // Gently dissolve back to original ambient home
             pVelocities[idx] += (ox - px) * 0.035;
             pVelocities[idx + 1] += (oy - py) * 0.035;
             pVelocities[idx + 2] += (oz - pz) * 0.035;

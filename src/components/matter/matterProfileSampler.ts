@@ -65,6 +65,13 @@ export async function sampleProfileImage(
           const wz = -1.6 + (Math.random() - 0.5) * 0.35;
 
           // Categorize progressive reconstruction phases:
+          // Formation order:
+          // 0: CIRCULAR SILHOUETTE
+          // 1: HAIR
+          // 2: FACE
+          // 3: GLASSES
+          // 4: CLOTHING
+          // 5: IMAGE DETAILS
           let phase = 0;
           const rawLuminance = 0.299 * r + 0.587 * g + 0.114 * b;
 
@@ -72,12 +79,14 @@ export async function sampleProfileImage(
             phase = 4; // Clothing
           } else if (ny > 0.2 && rawLuminance < 0.25) {
             phase = 1; // Hair
-          } else if (ny >= -0.2 && ny <= 0.25 && rawLuminance < 0.2) {
-            phase = 3; // Glasses / facial features
+          } else if (ny >= -0.2 && ny <= 0.25 && rawLuminance < 0.22) {
+            phase = 3; // Glasses
           } else if (ny >= -0.35 && ny <= 0.35) {
             phase = 2; // Face
+          } else if (radiusFromCenter > 0.85) {
+            phase = 0; // Circular silhouette
           } else {
-            phase = 0; // Outer / background
+            phase = 5; // Image details
           }
 
           // NATURAL VIVID EXPOSURE (Well-balanced so face, glasses & hair are crisp):

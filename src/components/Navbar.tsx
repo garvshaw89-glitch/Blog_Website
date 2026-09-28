@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Command, Menu, X, ArrowUpRight } from 'lucide-react';
+import { rocketCinematicManager, CinematicState } from './matter/rocketCinematicManager';
 
 interface NavbarProps {
   onContactClick?: () => void;
@@ -16,6 +17,27 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('hero-section');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [cinematicStage, setCinematicStage] = useState<CinematicState['stage']>(
+    rocketCinematicManager.state.stage
+  );
+
+  useEffect(() => {
+    return rocketCinematicManager.subscribe((state) => {
+      setCinematicStage(state.stage);
+    });
+  }, []);
+
+  // During the entire particle reconstruction and profile hold, fade out Navbar completely:
+  const isProfileActive =
+    cinematicStage === 'PROFILE_FORMING' ||
+    cinematicStage === 'PROFILE_RECOGNIZABLE' ||
+    cinematicStage === 'PROFILE_LOCKING' ||
+    cinematicStage === 'PROFILE_COMPLETE' ||
+    cinematicStage === 'PROFILE_HOLD' ||
+    cinematicStage === 'TEXT_PREPARE' ||
+    cinematicStage === 'NAME_REVEAL' ||
+    cinematicStage === 'TAGLINE_REVEAL' ||
+    cinematicStage === 'IDENTITY_COMPLETE';
 
   const navLinks = [
     { label: 'WORK', target: 'projects' },
@@ -84,7 +106,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       */}
       <header
         id={id}
-        className="fixed top-0 left-0 right-0 z-40 pointer-events-none transition-all duration-300 flex justify-center p-4 sm:p-6"
+        className={`fixed top-0 left-0 right-0 z-40 pointer-events-none transition-all duration-700 flex justify-center p-4 sm:p-6 ${
+          isProfileActive ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        }`}
       >
         <motion.div
           layout
