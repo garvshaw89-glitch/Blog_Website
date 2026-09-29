@@ -120,15 +120,16 @@ export const LivingMatterBackground: React.FC = () => {
     renderer.domElement.style.inset = '0';
     renderer.domElement.style.pointerEvents = 'none';
 
-    // 2. Post-Processing Pipeline
+    // 2. Post-Processing Pipeline (Bloom Effect via EffectComposer for Brightest Particles)
     let composer: EffectComposer | null = null;
     let bloomPass: UnrealBloomPass | null = null;
+    const renderScale = isMobile ? 0.5 : isTablet ? 0.75 : 1.0;
 
-    if (!isMobile && !prefersReducedMotion) {
+    if (!prefersReducedMotion) {
       try {
         const renderResolution = new THREE.Vector2(
-          window.innerWidth * (isTablet ? 0.75 : 1.0),
-          window.innerHeight * (isTablet ? 0.75 : 1.0)
+          Math.floor(window.innerWidth * renderScale),
+          Math.floor(window.innerHeight * renderScale)
         );
 
         composer = new EffectComposer(renderer);
@@ -138,7 +139,11 @@ export const LivingMatterBackground: React.FC = () => {
         const renderPass = new RenderPass(scene, camera);
         composer.addPass(renderPass);
 
-        bloomPass = new UnrealBloomPass(renderResolution, 0.42, 0.35, 0.26);
+        // UnrealBloomPass calibrated for luxury digital matter:
+        // - threshold: 0.70 (restricts bloom to only highest-luminance / tier 0 / collision-flashed particles)
+        // - strength: 0.55 (subtle, premium light-glow halo without hazing the deep background)
+        // - radius: 0.38 (tight optical dispersion)
+        bloomPass = new UnrealBloomPass(renderResolution, 0.55, 0.38, 0.70);
         composer.addPass(bloomPass);
 
         const outputPass = new OutputPass();
@@ -197,7 +202,15 @@ export const LivingMatterBackground: React.FC = () => {
     const pColors = new Float32Array(particleCount * 3);
     const pBaseColors = new Float32Array(particleCount * 3);
     const pSizes = new Float32Array(particleCount);
+    const pRadii = new Float32Array(particleCount); // Physical collision radius for each particle
     const pTiers = new Uint8Array(particleCount);
+
+    // Physics-Based Collision Spatial Partitioning Grid (O(N) zero-allocation lookup)
+    const COLLISION_CELL_SIZE = 0.85;
+    const INV_CELL_SIZE = 1.0 / COLLISION_CELL_SIZE;
+    const HASH_SIZE = 4096; // Power of two for fast bitwise masking
+    const gridHead = new Int32Array(HASH_SIZE);
+    const gridNext = new Int32Array(particleCount);
 
     // Profile Targets Storage
     let profilePoints: ProfileSamplePoint[] = [];
@@ -205,11 +218,16 @@ export const LivingMatterBackground: React.FC = () => {
       profilePoints = pts;
     });
 
-    const colWhiteLow = MATTER_CONFIG.colors.baseWhiteLow;
-    const colWhiteMid = MATTER_CONFIG.colors.baseWhiteMid;
-    const colWhiteHigh = MATTER_CONFIG.colors.baseWhiteHigh;
-    const colAccentBlue = MATTER_CONFIG.colors.accentBlue;
-    const colAccentPurple = MATTER_CONFIG.colors.accentPurple;
+    // Calibrated luminance tiers:
+    // - Low (Tier 2): 0.22-0.26 (deep ambient background, stays sharp and clean)
+    // - Mid (Tier 1): 0.48-0.54 (midground digital matter, sharp)
+    // - High (Tier 0): 0.95-1.10 (brightest foreground particles, triggers UnrealBloomPass!)
+    // - Accent Blue/Cyan: 1.25-1.45 (radiant specular highlight particles)
+    const colWhiteLow = { r: 0.22, g: 0.23, b: 0.26 };
+    const colWhiteMid = { r: 0.48, g: 0.50, b: 0.54 };
+    const colWhiteHigh = { r: 0.95, g: 0.98, b: 1.08 };
+    const colAccentBlue = { r: 0.42, g: 0.72, b: 1.45 };
+    const colAccentPurple = { r: 0.62, g: 0.45, b: 1.35 };
 
     for (let i = 0; i < particleCount; i++) {
       const idx = i * 3;
@@ -218,22 +236,26 @@ export const LivingMatterBackground: React.FC = () => {
       let tier = 1;
       let depthZ = -4.0 + Math.random() * 8.0;
       let baseSize = 0.32;
+      let collisionRadius = 0.22;
       let col = colWhiteMid;
 
       if (rand < 0.25) {
         tier = 0;
         depthZ = 1.0 + Math.random() * 5.0;
         baseSize = 0.42 + Math.random() * 0.18;
+        collisionRadius = 0.28 + Math.random() * 0.08;
         col = rand < 0.04 ? colAccentBlue : colWhiteHigh;
       } else if (rand > 0.75) {
         tier = 2;
         depthZ = -16.0 + Math.random() * 8.0;
         baseSize = 0.22 + Math.random() * 0.1;
+        collisionRadius = 0.15 + Math.random() * 0.04;
         col = rand > 0.96 ? colAccentPurple : colWhiteLow;
       }
 
       pTiers[i] = tier;
       pSizes[i] = baseSize;
+      pRadii[i] = collisionRadius;
 
       const spreadX = tier === 2 ? 46 : tier === 1 ? 34 : 26;
       const spreadY = tier === 2 ? 34 : tier === 1 ? 26 : 20;
@@ -342,6 +364,14 @@ export const LivingMatterBackground: React.FC = () => {
       currentCinematicStage = cState.stage;
     });
 
+    // 8b. Entry Sequence Coordination State
+    let currentEntryStage: EntryStage = 'INITIAL_VOID';
+    let isEntryActive = true;
+    const unsubEntry = entrySequenceManager.subscribe((eState) => {
+      currentEntryStage = eState.stage;
+      isEntryActive = eState.isActive;
+    });
+
     // 9. Ambient State Machine (FREE_FLOW -> ROCK -> GLOBE -> WAVE -> ROCKET_LAUNCH -> Repeat)
     let ambientState: AmbientMatterState = 'FREE_FLOW';
     let ambientTime = 0;
@@ -362,6 +392,9 @@ export const LivingMatterBackground: React.FC = () => {
       if (composer) {
         composer.setPixelRatio(newDpr);
         composer.setSize(w, h);
+        if (bloomPass) {
+          bloomPass.setSize(Math.floor(w * renderScale), Math.floor(h * renderScale));
+        }
       }
     };
 
@@ -818,6 +851,39 @@ export const LivingMatterBackground: React.FC = () => {
             colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pBaseColors[idx + 1], 0.03);
             colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pBaseColors[idx + 2], 0.03);
           }
+        } else if (isEntryActive && currentEntryStage !== 'COMPLETED') {
+          // Entry Sequence 3D Particle Choreography
+          let entryTarget: THREE.Vector3 | null = null;
+          let pullStrength = 0.048;
+
+          if (currentEntryStage === 'FORM_SPHERE') {
+            entryTarget = generateSpherePosition(i, particleCount, elapsedTime);
+          } else if (currentEntryStage === 'FORM_RING') {
+            entryTarget = generateRingPosition(i, particleCount, elapsedTime);
+          } else if (currentEntryStage === 'FORM_WAVE') {
+            entryTarget = generateWavePosition(i, particleCount, elapsedTime);
+          } else if (currentEntryStage === 'DIGITAL_GLOBE') {
+            const { pos: globePos, isLand } = generateGlobePosition(i, particleCount, globeRotationY);
+            entryTarget = globePos;
+            if (isLand) {
+              colors[idx] = THREE.MathUtils.lerp(colors[idx], colAccentBlue.r, 0.05);
+              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], colAccentBlue.g, 0.05);
+              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], colAccentBlue.b, 0.05);
+            }
+          } else if (currentEntryStage === 'ARCHITECTURE') {
+            entryTarget = generateArchitecturePosition(i, particleCount);
+          } else if (currentEntryStage === 'PARTICLES_EXPAND') {
+            // Outward particle expansion into portfolio
+            pVelocities[idx] += px * 0.04;
+            pVelocities[idx + 1] += py * 0.04;
+            pVelocities[idx + 2] += (Math.random() - 0.5) * 0.05;
+          }
+
+          if (entryTarget) {
+            pVelocities[idx] += (entryTarget.x - px) * pullStrength;
+            pVelocities[idx + 1] += (entryTarget.y - py) * pullStrength;
+            pVelocities[idx + 2] += (entryTarget.z - pz) * pullStrength;
+          }
         } else {
           // Standard Ambient Mode (Rock, Globe, Wave, Free Flow, Section-Aware)
           if (currentMorphBlend > 0.01) {
@@ -932,6 +998,140 @@ export const LivingMatterBackground: React.FC = () => {
         positions[idx + 2] += pVelocities[idx + 2];
       }
 
+      // ==========================================
+      // PHYSICS-BASED PARTICLE-PARTICLE COLLISION DETECTION & IMPULSE PASS
+      // O(N) Spatial Hash Grid - High Performance 60-120 FPS
+      // Particles react physically to each other with elastic momentum exchange, non-penetration separation,
+      // and kinetic energy flashes that feed directly into the UnrealBloomPass!
+      // ==========================================
+      if (!prefersReduced) {
+        gridHead.fill(-1);
+
+        // 1. Bin particles into 3D spatial hash grid
+        for (let i = 0; i < particleCount; i++) {
+          const i3 = i * 3;
+          const px = positions[i3];
+          const py = positions[i3 + 1];
+          const pz = positions[i3 + 2];
+
+          const cx = Math.floor(px * INV_CELL_SIZE);
+          const cy = Math.floor(py * INV_CELL_SIZE);
+          const cz = Math.floor(pz * INV_CELL_SIZE);
+
+          let h =
+            ((cx * 73856093) ^ (cy * 19349663) ^ (cz * 83492791)) &
+            (HASH_SIZE - 1);
+          if (h < 0) h = (h + HASH_SIZE) & (HASH_SIZE - 1);
+
+          gridNext[i] = gridHead[h];
+          gridHead[h] = i;
+        }
+
+        // 2. Collision Detection, Separation & Momentum Exchange
+        const restitution = 0.65; // Luxury fluid cushioning
+        const separationStiffness = 0.52; // Elastic non-penetration
+
+        for (let i = 0; i < particleCount; i++) {
+          const i3 = i * 3;
+          const px = positions[i3];
+          const py = positions[i3 + 1];
+          const pz = positions[i3 + 2];
+          const rA = pRadii[i];
+
+          const cx = Math.floor(px * INV_CELL_SIZE);
+          const cy = Math.floor(py * INV_CELL_SIZE);
+          const cz = Math.floor(pz * INV_CELL_SIZE);
+
+          // Check 3x3x3 neighborhood (27 cells)
+          for (let ox = -1; ox <= 1; ox++) {
+            for (let oy = -1; oy <= 1; oy++) {
+              for (let oz = -1; oz <= 1; oz++) {
+                let nh =
+                  (((cx + ox) * 73856093) ^
+                    ((cy + oy) * 19349663) ^
+                    ((cz + oz) * 83492791)) &
+                  (HASH_SIZE - 1);
+                if (nh < 0) nh = (nh + HASH_SIZE) & (HASH_SIZE - 1);
+
+                let j = gridHead[nh];
+                while (j !== -1) {
+                  if (j > i) {
+                    const j3 = j * 3;
+                    const dx = px - positions[j3];
+                    const dy = py - positions[j3 + 1];
+                    const dz = pz - positions[j3 + 2];
+                    const distSq = dx * dx + dy * dy + dz * dz;
+                    const rSum = rA + pRadii[j];
+
+                    if (distSq < rSum * rSum && distSq > 0.00001) {
+                      const dist = Math.sqrt(distSq);
+                      const overlap = rSum - dist;
+
+                      const nx = dx / dist;
+                      const ny = dy / dist;
+                      const nz = dz / dist;
+
+                      // Non-penetration positional push
+                      const sep = overlap * 0.5 * separationStiffness;
+                      positions[i3] += nx * sep;
+                      positions[i3 + 1] += ny * sep;
+                      positions[i3 + 2] += nz * sep;
+
+                      positions[j3] -= nx * sep;
+                      positions[j3 + 1] -= ny * sep;
+                      positions[j3 + 2] -= nz * sep;
+
+                      // Relative velocity and momentum impulse
+                      const rvx = pVelocities[i3] - pVelocities[j3];
+                      const rvy = pVelocities[i3 + 1] - pVelocities[j3 + 1];
+                      const rvz = pVelocities[i3 + 2] - pVelocities[j3 + 2];
+                      const vNorm = rvx * nx + rvy * ny + rvz * nz;
+
+                      if (vNorm < 0) {
+                        const impulse = -(1.0 + restitution) * vNorm * 0.5;
+
+                        pVelocities[i3] += nx * impulse;
+                        pVelocities[i3 + 1] += ny * impulse;
+                        pVelocities[i3 + 2] += nz * impulse;
+
+                        pVelocities[j3] -= nx * impulse;
+                        pVelocities[j3 + 1] -= ny * impulse;
+                        pVelocities[j3 + 2] -= nz * impulse;
+
+                        // Tangential micro-deflection
+                        const tx = rvx - nx * vNorm;
+                        const ty = rvy - ny * vNorm;
+                        const tz = rvz - nz * vNorm;
+                        pVelocities[i3] -= tx * 0.04;
+                        pVelocities[i3 + 1] -= ty * 0.04;
+                        pVelocities[i3 + 2] -= tz * 0.04;
+                        pVelocities[j3] += tx * 0.04;
+                        pVelocities[j3 + 1] += ty * 0.04;
+                        pVelocities[j3] += tz * 0.04;
+
+                        // Kinetic collision glow flash (exceeds bloom threshold 0.70 to trigger subtle light-glow)
+                        const impact = -vNorm;
+                        if (impact > 0.035) {
+                          const flash = Math.min(0.55, impact * 0.45);
+                          colors[i3] = Math.min(1.4, colors[i3] + flash);
+                          colors[i3 + 1] = Math.min(1.4, colors[i3 + 1] + flash);
+                          colors[i3 + 2] = Math.min(1.5, colors[i3 + 2] + flash * 1.2);
+
+                          colors[j3] = Math.min(1.4, colors[j3] + flash);
+                          colors[j3 + 1] = Math.min(1.4, colors[j3 + 1] + flash);
+                          colors[j3 + 2] = Math.min(1.5, colors[j3 + 2] + flash * 1.2);
+                        }
+                      }
+                    }
+                  }
+                  j = gridNext[j];
+                }
+              }
+            }
+          }
+        }
+      }
+
       particleGeometry.attributes.position.needsUpdate = true;
       particleGeometry.attributes.color.needsUpdate = true;
 
@@ -947,6 +1147,7 @@ export const LivingMatterBackground: React.FC = () => {
     return () => {
       unsubInteraction();
       unsubCinematic();
+      unsubEntry();
       window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animId);
