@@ -31,12 +31,14 @@ interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenProjectModal?: (projectId: string) => void;
+  onReplayIntro?: () => void;
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
   isOpen,
   onClose,
   onOpenProjectModal,
+  onReplayIntro,
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -152,6 +154,21 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       },
     },
+    ...(onReplayIntro
+      ? [
+          {
+            id: 'sys-portal',
+            title: 'Enter 3D Luxury Portal / Replay Intro',
+            category: 'System' as const,
+            shortcut: '↵ PORTAL',
+            icon: <Sparkles className="w-4 h-4 text-cyan-300" />,
+            action: () => {
+              onClose();
+              onReplayIntro();
+            },
+          },
+        ]
+      : []),
   ];
 
   const filtered = commands.filter((cmd) =>

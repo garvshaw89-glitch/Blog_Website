@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Command, Menu, X, ArrowUpRight } from 'lucide-react';
+import { Command, Menu, X, ArrowUpRight, Sparkles } from 'lucide-react';
 import { rocketCinematicManager, CinematicState } from './matter/rocketCinematicManager';
 
 interface NavbarProps {
   onContactClick?: () => void;
   onOpenCommandPalette?: () => void;
+  onReplayIntro?: () => void;
   id?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onContactClick,
   onOpenCommandPalette,
+  onReplayIntro,
   id = 'main-navbar',
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -165,8 +167,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
           </nav>
 
-          {/* Right Action Controls: Cmd+K + Let's Talk CTA */}
+          {/* Right Action Controls: Portal Replay + Cmd+K + Let's Talk CTA */}
           <div className="flex items-center gap-2">
+            {onReplayIntro && (
+              <button
+                type="button"
+                onClick={onReplayIntro}
+                data-cursor="button"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-mono text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                title="Enter 3D Luxury Portal Experience"
+              >
+                <Sparkles className="w-3 h-3 text-cyan-400" />
+                <span className="text-[10px] tracking-wider uppercase">PORTAL</span>
+              </button>
+            )}
+
             {onOpenCommandPalette && (
               <button
                 type="button"
