@@ -34,10 +34,10 @@ class EntrySequenceManager {
   private static instance: EntrySequenceManager;
 
   public state: EntryState = {
-    stage: 'INITIAL_VOID',
-    progress: 0,
+    stage: 'COMPLETED',
+    progress: 1,
     totalTime: 0,
-    isActive: true,
+    isActive: false,
     prefersReduced: false,
   };
 

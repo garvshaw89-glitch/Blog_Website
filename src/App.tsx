@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
 import { CustomCursor } from './components/ui/CustomCursor';
-import { LuxuryIntro } from './components/intro';
 import { LivingMatterBackground } from './components/matter/LivingMatterBackground';
 import { ProfileCinematicOverlay } from './components/matter/ProfileCinematicOverlay';
 import { CommandPalette } from './components/ui/CommandPalette';
@@ -26,13 +25,6 @@ import { PROJECTS } from './data/portfolioData';
 import { ProjectItem } from './types';
 
 export default function App() {
-  const [showIntro, setShowIntro] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('intro') === 'true') return true;
-    if (urlParams.get('intro') === 'false') return false;
-    return sessionStorage.getItem('intro_seen') !== 'true';
-  });
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
@@ -65,9 +57,6 @@ export default function App() {
 
   return (
     <CursorProvider>
-      {/* 0. Futuristic Luxury 3D Technology Portal Opening Sequence */}
-      {showIntro && <LuxuryIntro onComplete={() => setShowIntro(false)} />}
-
       <main
         id="garv-shaw-portfolio"
         className="relative w-full bg-[#050505] text-[#F5F5F0] overflow-x-clip min-h-screen selection:bg-cyan-400 selection:text-black"
@@ -83,7 +72,6 @@ export default function App() {
           isOpen={isCommandPaletteOpen}
           onClose={() => setIsCommandPaletteOpen(false)}
           onOpenProjectModal={handleOpenProjectById}
-          onReplayIntro={() => setShowIntro(true)}
         />
 
         {/* 4. Section Navigation Timeline HUD */}
@@ -96,7 +84,6 @@ export default function App() {
         <Navbar
           onContactClick={handleScrollToContact}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-          onReplayIntro={() => setShowIntro(true)}
         />
 
         {/* 7. High-End Living Digital Matter Particle World (Watery Flow, Cursor Repulsion, 3D Globe, Asteroid Rock & Ripples) */}

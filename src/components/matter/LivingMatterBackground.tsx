@@ -29,10 +29,6 @@ import {
   rocketCinematicManager,
   CinematicStage,
 } from './rocketCinematicManager';
-import {
-  entrySequenceManager,
-  EntryStage,
-} from './entrySequenceManager';
 
 /**
  * HIGH-END LIVING DIGITAL MATTER SYSTEM WITH CONTINUOUS CYCLIC SEQUENCING:
@@ -362,14 +358,6 @@ export const LivingMatterBackground: React.FC = () => {
 
     const unsubCinematic = rocketCinematicManager.subscribe((cState) => {
       currentCinematicStage = cState.stage;
-    });
-
-    // 8b. Entry Sequence Coordination State
-    let currentEntryStage: EntryStage = 'INITIAL_VOID';
-    let isEntryActive = true;
-    const unsubEntry = entrySequenceManager.subscribe((eState) => {
-      currentEntryStage = eState.stage;
-      isEntryActive = eState.isActive;
     });
 
     // 9. Ambient State Machine (FREE_FLOW -> ROCK -> GLOBE -> WAVE -> ROCKET_LAUNCH -> Repeat)
@@ -851,39 +839,6 @@ export const LivingMatterBackground: React.FC = () => {
             colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pBaseColors[idx + 1], 0.03);
             colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pBaseColors[idx + 2], 0.03);
           }
-        } else if (isEntryActive && currentEntryStage !== 'COMPLETED') {
-          // Entry Sequence 3D Particle Choreography
-          let entryTarget: THREE.Vector3 | null = null;
-          let pullStrength = 0.048;
-
-          if (currentEntryStage === 'FORM_SPHERE') {
-            entryTarget = generateSpherePosition(i, particleCount, elapsedTime);
-          } else if (currentEntryStage === 'FORM_RING') {
-            entryTarget = generateRingPosition(i, particleCount, elapsedTime);
-          } else if (currentEntryStage === 'FORM_WAVE') {
-            entryTarget = generateWavePosition(i, particleCount, elapsedTime);
-          } else if (currentEntryStage === 'DIGITAL_GLOBE') {
-            const { pos: globePos, isLand } = generateGlobePosition(i, particleCount, globeRotationY);
-            entryTarget = globePos;
-            if (isLand) {
-              colors[idx] = THREE.MathUtils.lerp(colors[idx], colAccentBlue.r, 0.05);
-              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], colAccentBlue.g, 0.05);
-              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], colAccentBlue.b, 0.05);
-            }
-          } else if (currentEntryStage === 'ARCHITECTURE') {
-            entryTarget = generateArchitecturePosition(i, particleCount);
-          } else if (currentEntryStage === 'PARTICLES_EXPAND') {
-            // Outward particle expansion into portfolio
-            pVelocities[idx] += px * 0.04;
-            pVelocities[idx + 1] += py * 0.04;
-            pVelocities[idx + 2] += (Math.random() - 0.5) * 0.05;
-          }
-
-          if (entryTarget) {
-            pVelocities[idx] += (entryTarget.x - px) * pullStrength;
-            pVelocities[idx + 1] += (entryTarget.y - py) * pullStrength;
-            pVelocities[idx + 2] += (entryTarget.z - pz) * pullStrength;
-          }
         } else {
           // Standard Ambient Mode (Rock, Globe, Wave, Free Flow, Section-Aware)
           if (currentMorphBlend > 0.01) {
@@ -1147,7 +1102,6 @@ export const LivingMatterBackground: React.FC = () => {
     return () => {
       unsubInteraction();
       unsubCinematic();
-      unsubEntry();
       window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animId);
