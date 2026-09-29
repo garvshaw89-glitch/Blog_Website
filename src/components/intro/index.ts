@@ -1,8 +1,7 @@
 export { LuxuryIntro } from './LuxuryIntro';
 export { IntroScene } from './IntroScene';
-export { CinematicParticleSystem } from './CinematicParticleSystem';
-export { MetropolisWireframe } from './MetropolisWireframe';
-export { CrossedOrbitalRings } from './CrossedOrbitalRings';
+export { DigitalCore } from './DigitalCore';
+export { ParticleField } from './ParticleField';
 export { IntroOverlay } from './IntroOverlay';
 export { WebGlFallback } from './WebGlFallback';
 export { introAudio } from './introAudio';

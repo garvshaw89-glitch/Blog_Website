@@ -1,43 +1,29 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { IntroStageId } from './types';
-import { CinematicParticleSystem } from './CinematicParticleSystem';
-import { MetropolisWireframe } from './MetropolisWireframe';
-import { CrossedOrbitalRings } from './CrossedOrbitalRings';
+import { DigitalCore } from './DigitalCore';
+import { ParticleField } from './ParticleField';
 
 interface IntroSceneProps {
-  currentStage: IntroStageId;
   elapsedTime: number;
   isTransitioning: boolean;
   onWebGLError: () => void;
 }
 
 export const IntroScene: React.FC<IntroSceneProps> = ({
-  currentStage,
   elapsedTime,
   isTransitioning,
   onWebGLError,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
-  const particleSysRef = useRef<CinematicParticleSystem | null>(null);
-  const metropolisRef = useRef<MetropolisWireframe | null>(null);
-  const ringsRef = useRef<CrossedOrbitalRings | null>(null);
+  const digitalCoreRef = useRef<DigitalCore | null>(null);
+  const particleFieldRef = useRef<ParticleField | null>(null);
+  const isTransitioningRef = useRef(isTransitioning);
+  const elapsedTimeRef = useRef(elapsedTime);
 
-  // When stage changes, update particle targets and wireframes
-  useEffect(() => {
-    if (particleSysRef.current) {
-      particleSysRef.current.setStage(currentStage, performance.now() / 1000);
-    }
-
-    if (metropolisRef.current) {
-      metropolisRef.current.setVisibleTarget(currentStage === 'METROPOLIS');
-    }
-
-    if (ringsRef.current) {
-      ringsRef.current.setVisibleTarget(currentStage === 'QUANTUM_ORB');
-    }
-  }, [currentStage]);
+  // Keep refs in sync for the animation loop
+  isTransitioningRef.current = isTransitioning;
+  elapsedTimeRef.current = elapsedTime;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -63,20 +49,25 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
 
     const isMobile = window.innerWidth < 768;
     const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
-    const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.0 : isTablet ? 1.4 : 1.75);
+    const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.0 : isTablet ? 1.4 : 1.6);
 
-    // 1. Scene, Camera, Renderer
+    // 1. Three.js Scene with deep luxury atmosphere fog
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x050505, 0.045);
 
+    // 2. Camera Setup (Perspective camera with luxury cinematic framing)
+    const baseZ = isMobile ? 7.8 : 6.2;
+    const startZ = isMobile ? 12.0 : 10.8;
+
     const camera = new THREE.PerspectiveCamera(
-      48,
+      46,
       window.innerWidth / window.innerHeight,
       0.1,
-      120
+      100
     );
-    camera.position.set(0, 0, 8.5);
+    camera.position.set(0, 0, startZ);
 
+    // 3. WebGL Renderer
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({
@@ -94,51 +85,51 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     renderer.setPixelRatio(dpr);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.12;
 
     container.appendChild(renderer.domElement);
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.inset = '0';
     renderer.domElement.style.pointerEvents = 'none';
 
-    // 2. Lighting Setup
-    const ambientLight = new THREE.AmbientLight(0x0c0f17, 0.9);
+    // 4. Lighting Rig
+    // A: Low-intensity environment ambient light
+    const ambientLight = new THREE.AmbientLight(0x0e1118, 0.1);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xfff5ea, 1.8);
-    keyLight.position.set(4.0, 6.0, 4.0);
+    // B: Soft key light (warm champagne tone)
+    const keyLight = new THREE.DirectionalLight(0xfff5ea, 0.05);
+    keyLight.position.set(3.8, 5.2, 4.0);
     scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0x7dd3fc, 1.2);
-    rimLight.position.set(-4.0, -2.0, -3.0);
+    // C: Subtle rim light (cool titanium highlight)
+    const rimLight = new THREE.DirectionalLight(0xa5b4fc, 0.05);
+    rimLight.position.set(-4.2, -2.8, -3.2);
     scene.add(rimLight);
 
-    // 3. 3D Elements
-    const particleSystem = new CinematicParticleSystem(isMobile);
-    particleSysRef.current = particleSystem;
-    scene.add(particleSystem.points);
+    // D: Delicate glint accent light from top-rear
+    const accentLight = new THREE.DirectionalLight(0x7dd3fc, 0.05);
+    accentLight.position.set(0, 3.5, -2.5);
+    scene.add(accentLight);
 
-    const metropolis = new MetropolisWireframe();
-    metropolisRef.current = metropolis;
-    scene.add(metropolis.group);
+    // 5. Digital Core & Ambient Particle Field
+    const digitalCore = new DigitalCore();
+    digitalCoreRef.current = digitalCore;
+    scene.add(digitalCore.group);
 
-    const rings = new CrossedOrbitalRings();
-    ringsRef.current = rings;
-    scene.add(rings.group);
+    const particleField = new ParticleField(isMobile);
+    particleFieldRef.current = particleField;
+    scene.add(particleField.points);
+    particleField.setOpacity(0);
 
-    // Initial stage setup
-    particleSystem.setStage(currentStage, 0);
-    metropolis.setVisibleTarget(currentStage === 'METROPOLIS');
-    rings.setVisibleTarget(currentStage === 'QUANTUM_ORB');
-
-    // 4. Mouse Tracking
+    // 6. Smooth Mouse Parallax Tracking
     const handleMouseMove = (e: MouseEvent) => {
       mouseRef.current.targetX = (e.clientX / window.innerWidth) * 2 - 1;
       mouseRef.current.targetY = -(e.clientY / window.innerHeight) * 2 + 1;
     };
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
 
-    // 5. Window Resize Handler
+    // 7. Window Resize
     const handleResize = () => {
       const w = window.innerWidth;
       const h = window.innerHeight;
@@ -148,16 +139,7 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     };
     window.addEventListener('resize', handleResize, { passive: true });
 
-    // 6. Camera Targets per Stage
-    const stageCameraMap: Record<IntroStageId, { y: number; z: number; rx: number }> = {
-      VOID: { y: 0, z: 8.5, rx: 0 },
-      TERRAIN: { y: 1.6, z: 8.8, rx: -0.15 },
-      METROPOLIS: { y: 1.2, z: 7.2, rx: -0.08 },
-      QUANTUM_ORB: { y: 0, z: 6.2, rx: 0 },
-      PORTAL: { y: 0, z: 0.6, rx: 0 },
-    };
-
-    // 7. Animation Loop
+    // 8. Animation & Timeline Progression Loop
     let animId: number;
     const clock = new THREE.Clock();
 
@@ -166,45 +148,87 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
 
       const delta = Math.min(clock.getDelta(), 0.05);
       const time = clock.getElapsedTime();
+      const t = elapsedTimeRef.current;
+      const isTrans = isTransitioningRef.current;
 
-      // Smooth mouse interpolation
-      mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.05;
-      mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.05;
+      // Mouse smoothing interpolation (damped luxury lerp)
+      mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.045;
+      mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.045;
 
-      // Smooth camera interpolation based on stage
-      const targetCam = stageCameraMap[currentStage] || stageCameraMap.VOID;
-      const camLerp = isTransitioning ? 0.09 : 0.045;
+      // ----------------------------------------------------
+      // CINEMATIC TIMELINE LIGHTING & CAMERA PROGRESSION
+      // ----------------------------------------------------
+      if (!isTrans) {
+        if (t < 1.5) {
+          // Stage 1 (0 – 1.5s): Deep darkness, faint silhouette, subtle ambient glow
+          const p = Math.max(0, (t - 0.2) / 1.3);
+          ambientLight.intensity = 0.1 + p * 0.1;
+          keyLight.intensity = 0.05 + p * 0.35;
+          rimLight.intensity = 0.05 + p * 0.25;
+          accentLight.intensity = 0.02 + p * 0.15;
+          camera.position.z = startZ - p * 0.8;
+          particleField.setOpacity(0);
+        } else if (t < 3.5) {
+          // Stage 2 (1.5 – 3.5s): Key light & rim light slowly increase, camera glides forward
+          const p = (t - 1.5) / 2.0;
+          // Smooth cosine easing for luxury reveal
+          const ease = 0.5 - 0.5 * Math.cos(p * Math.PI);
 
-      camera.position.y += (targetCam.y + mouseRef.current.y * 0.25 - camera.position.y) * camLerp;
-      camera.position.z += (targetCam.z - camera.position.z) * camLerp;
-      camera.position.x += (mouseRef.current.x * 0.35 - camera.position.x) * camLerp;
+          ambientLight.intensity = 0.2 + ease * 0.25;
+          keyLight.intensity = 0.4 + ease * 1.35;
+          rimLight.intensity = 0.3 + ease * 0.95;
+          accentLight.intensity = 0.17 + ease * 0.45;
 
-      camera.rotation.y = -mouseRef.current.x * 0.04;
-      camera.rotation.x += (targetCam.rx + mouseRef.current.y * 0.03 - camera.rotation.x) * camLerp;
+          const currentStartZ = startZ - 0.8;
+          camera.position.z = currentStartZ - ease * (currentStartZ - baseZ);
+          particleField.setOpacity(ease * 0.35);
+        } else if (t < 5.0) {
+          // Stage 3 (3.5 – 5.0s): Typography reveals, particle field gently fades into view
+          const p = (t - 3.5) / 1.5;
+          ambientLight.intensity = 0.45;
+          keyLight.intensity = 1.75;
+          rimLight.intensity = 1.25;
+          accentLight.intensity = 0.62;
+          camera.position.z = baseZ;
+          particleField.setOpacity(0.35 + p * 0.4);
+        } else {
+          // Stage 4 (5.0s onward): Interactive idle state, calibrated luxury lighting
+          ambientLight.intensity = 0.45;
+          keyLight.intensity = 1.75;
+          rimLight.intensity = 1.25;
+          accentLight.intensity = 0.62;
+          camera.position.z = baseZ;
+          particleField.setOpacity(0.75);
+        }
 
-      // Lighting modulation
-      if (currentStage === 'METROPOLIS') {
-        keyLight.color.setHex(0xfbbf24); // Warm gold
-        rimLight.color.setHex(0x67e8f9); // Cyan runway glow
-      } else if (currentStage === 'QUANTUM_ORB') {
-        keyLight.color.setHex(0xc084fc); // Radiant violet
-        rimLight.color.setHex(0x38bdf8); // Sky blue
+        // Camera subtle mouse parallax
+        const targetCamX = mouseRef.current.x * 0.35;
+        const targetCamY = mouseRef.current.y * 0.25;
+        camera.position.x += (targetCamX - camera.position.x) * 0.04;
+        camera.position.y += (targetCamY - camera.position.y) * 0.04;
+        camera.rotation.y = -mouseRef.current.x * 0.035;
+        camera.rotation.x = mouseRef.current.y * 0.025;
       } else {
-        keyLight.color.setHex(0xfff5ea);
-        rimLight.color.setHex(0x7dd3fc);
+        // Portal Transition: Rapid forward rush into the core
+        camera.position.z = Math.max(0.4, camera.position.z - delta * 15.0);
+        keyLight.intensity += delta * 6.0;
+        rimLight.intensity += delta * 4.0;
       }
 
       // Update 3D systems
-      particleSystem.update(
+      digitalCore.update(
         time,
         delta,
-        currentStage,
         mouseRef.current.x,
         mouseRef.current.y,
-        isTransitioning
+        isTrans
       );
-      metropolis.update(time, delta, isTransitioning);
-      rings.update(time, delta, isTransitioning);
+      particleField.update(
+        time,
+        mouseRef.current.x,
+        mouseRef.current.y,
+        isTrans
+      );
 
       renderer.render(scene, camera);
     };
@@ -216,16 +240,15 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
 
-      particleSystem.dispose();
-      metropolis.dispose();
-      rings.dispose();
+      digitalCore.dispose();
+      particleField.dispose();
       renderer.dispose();
 
       if (renderer.domElement && container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
     };
-  }, [onWebGLError, isTransitioning]);
+  }, [onWebGLError]);
 
   return (
     <div

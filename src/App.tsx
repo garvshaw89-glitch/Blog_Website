@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
 import { CustomCursor } from './components/ui/CustomCursor';
+import { LuxuryIntro } from './components/intro/LuxuryIntro';
 import { LivingMatterBackground } from './components/matter/LivingMatterBackground';
 import { ProfileCinematicOverlay } from './components/matter/ProfileCinematicOverlay';
 import { CommandPalette } from './components/ui/CommandPalette';
@@ -27,6 +29,29 @@ import { ProjectItem } from './types';
 export default function App() {
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [showIntro, setShowIntro] = useState<boolean>(() => {
+    try {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return false;
+      }
+      return !sessionStorage.getItem('garv_journal_intro_completed');
+    } catch {
+      return true;
+    }
+  });
+
+  const handleIntroComplete = () => {
+    try {
+      sessionStorage.setItem('garv_journal_intro_completed', 'true');
+    } catch {
+      // Ignore
+    }
+    setShowIntro(false);
+  };
+
+  const handleReplayIntro = () => {
+    setShowIntro(true);
+  };
 
   const handleScrollToContact = () => {
     const contactSection = document.getElementById('contact');
@@ -61,6 +86,11 @@ export default function App() {
         id="garv-shaw-portfolio"
         className="relative w-full bg-[#050505] text-[#F5F5F0] overflow-x-clip min-h-screen selection:bg-cyan-400 selection:text-black"
       >
+        {/* 0. Futuristic Luxury Opening Experience Portal */}
+        <AnimatePresence>
+          {showIntro && <LuxuryIntro onComplete={handleIntroComplete} />}
+        </AnimatePresence>
+
         {/* 1. Thin Animated Scroll Tracker */}
         <ScrollProgressBar />
 
@@ -84,6 +114,7 @@ export default function App() {
         <Navbar
           onContactClick={handleScrollToContact}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onReplayIntro={handleReplayIntro}
         />
 
         {/* 7. High-End Living Digital Matter Particle World (Watery Flow, Cursor Repulsion, 3D Globe, Asteroid Rock & Ripples) */}
@@ -130,7 +161,11 @@ export default function App() {
           <ContactSection id="contact" />
 
           {/* 11. FOOTER */}
-          <FooterSection id="footer" onContactClick={handleScrollToContact} />
+          <FooterSection
+            id="footer"
+            onContactClick={handleScrollToContact}
+            onReplayIntro={handleReplayIntro}
+          />
         </div>
 
         {/* Full-Screen Project Case Study Modal */}
