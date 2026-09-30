@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { rocketCinematicManager, CinematicState } from './rocketCinematicManager';
-import { Rocket, Globe, Sparkles, User, Radio } from 'lucide-react';
+import { Rocket, Globe, Sparkles, User, Radio, ExternalLink, ArrowUpRight, CheckCircle2, X } from 'lucide-react';
 
 export const ProfileCinematicOverlay: React.FC = () => {
   const [cinematicState, setCinematicState] = useState<CinematicState>(
@@ -39,18 +39,6 @@ export const ProfileCinematicOverlay: React.FC = () => {
 
   const isEarthActive = !isRocketActive && !isProfileActive && ambientState === 'GLOBE';
   const isFlowActive = !isRocketActive && !isProfileActive && ambientState === 'FREE_FLOW';
-
-  // Identity typography timing
-  const isNameVisible =
-    stage === 'NAME_REVEAL' ||
-    stage === 'TAGLINE_REVEAL' ||
-    stage === 'IDENTITY_COMPLETE';
-
-  const isTaglineVisible =
-    stage === 'TAGLINE_REVEAL' ||
-    stage === 'IDENTITY_COMPLETE';
-
-  const isContainerVisible = isNameVisible || isTaglineVisible;
 
   return (
     <>
@@ -219,40 +207,94 @@ export const ProfileCinematicOverlay: React.FC = () => {
       </AnimatePresence>
 
       {/* ============================================================ */}
-      {/* 3. POST-PROFILE IDENTITY TYPOGRAPHY                           */}
-      {/* Positioned below the centered 3D particle profile image.     */}
+      {/* 3. VIBRANT COLORFUL PROFILE SHOWCASE OVERLAY                 */}
+      {/* Rendered when Profile is active for 100% visible beauty      */}
       {/* ============================================================ */}
       <AnimatePresence>
-        {isContainerVisible && (
+        {isProfileActive && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, filter: 'blur(8px)', transition: { duration: 0.5 } }}
-            className="fixed inset-x-0 bottom-10 sm:bottom-14 md:bottom-16 z-40 flex flex-col items-center justify-center pointer-events-none select-none px-4 text-center"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95, transition: { duration: 0.4 } }}
+            className="fixed inset-x-0 bottom-12 sm:bottom-16 md:bottom-20 z-40 flex flex-col items-center justify-center pointer-events-auto px-4 text-center select-none"
           >
-            {/* NAME: GARV SHAW */}
-            {isNameVisible && (
-              <motion.h2
-                initial={{ opacity: 0, y: 12, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                className="font-editorial text-[clamp(28px,4.5vw,64px)] font-bold tracking-[-0.04em] text-[#F5F5F0] drop-shadow-[0_4px_24px_rgba(0,0,0,0.9)] uppercase leading-none"
-              >
-                GARV SHAW
-              </motion.h2>
-            )}
+            <div className="relative group max-w-md w-full p-6 sm:p-7 rounded-3xl bg-[#08090B]/92 border border-white/15 backdrop-blur-2xl shadow-[0_25px_60px_rgba(0,0,0,0.9)] hover:border-cyan-400/50 transition-all duration-500">
+              {/* Vibrant Animated Multi-Color Neon Aura */}
+              <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-cyan-400 via-purple-500 to-rose-400 opacity-60 group-hover:opacity-90 blur-xl transition-opacity duration-500 -z-10 animate-pulse" />
 
-            {/* TAGLINE: TURNING AI INTO INNOVATION */}
-            {isTaglineVisible && (
-              <motion.p
-                initial={{ opacity: 0, y: 10, filter: 'blur(6px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                className="font-mono text-[clamp(11px,1.4vw,18px)] font-medium tracking-[0.08em] text-[#A5A7AC] uppercase mt-2.5 sm:mt-3 drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]"
-              >
-                TURNING AI INTO INNOVATION
-              </motion.p>
-            )}
+              <div className="flex flex-col items-center">
+                {/* Authentic Avatar with Spinning Rainbow Halo */}
+                <div className="relative mb-4">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full p-[3.5px] bg-gradient-to-tr from-cyan-400 via-indigo-500 via-purple-500 to-rose-400 shadow-[0_0_35px_rgba(34,211,238,0.5)]">
+                    <img
+                      src="/github_avatar.png"
+                      alt="Garv Shaw Verified GitHub Avatar"
+                      className="w-full h-full object-cover rounded-full bg-[#050505]"
+                    />
+                  </div>
+                  <span
+                    className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-400 border-2 border-[#08090B] shadow-[0_0_10px_#34d399] flex items-center justify-center"
+                    title="Verified Active Architect"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-black" />
+                  </span>
+                </div>
+
+                {/* Name & Identity */}
+                <div className="flex items-center gap-2 text-cyan-400 font-mono text-[11px] tracking-widest uppercase mb-1">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                  <span>DIGITAL ARCHITECT & SYSTEMS ENGINEER</span>
+                </div>
+
+                <h2 className="font-editorial text-3xl sm:text-4xl font-extrabold uppercase tracking-tight text-white leading-none mt-1">
+                  GARV{' '}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-indigo-300 to-purple-400">
+                    SHAW
+                  </span>
+                </h2>
+
+                <p className="font-mono text-xs sm:text-sm text-neutral-300 uppercase tracking-widest mt-2">
+                  TURNING AI INTO INNOVATION
+                </p>
+
+                {/* Specialization Chips */}
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+                  <span className="px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-400/40 text-cyan-300 font-mono text-[10px] font-semibold tracking-wider">
+                    AI & AGENTS
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-indigo-950/60 border border-indigo-400/40 text-indigo-300 font-mono text-[10px] font-semibold tracking-wider">
+                    DISTRIBUTED CLOUD
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-400/40 text-emerald-300 font-mono text-[10px] font-semibold tracking-wider">
+                    FINTECH TERMINALS
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-purple-950/60 border border-purple-400/40 text-purple-300 font-mono text-[10px] font-semibold tracking-wider">
+                    6,000 PARTICLES
+                  </span>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-3 mt-6 w-full pt-4 border-t border-white/10">
+                  <a
+                    href="https://github.com/garvshaw89-glitch"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-white hover:bg-cyan-300 text-black font-mono text-xs font-semibold tracking-wider transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                  >
+                    <span>GITHUB PROFILE</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={() => rocketCinematicManager.triggerFlow()}
+                    className="px-4 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/15 text-neutral-300 hover:text-white font-mono text-xs tracking-wider transition-all"
+                  >
+                    CLOSE
+                  </button>
+                </div>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

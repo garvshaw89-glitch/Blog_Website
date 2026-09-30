@@ -160,8 +160,24 @@ export const IdentityCore: React.FC = () => {
           animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }}
           exit={{ opacity: 0, scale: 1.15, filter: 'blur(10px)', y: -12 }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-10 flex flex-col items-center text-center p-6 rounded-3xl bg-[#08090B]/90 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl max-w-sm w-full mx-4"
+          className="relative z-10 flex flex-col items-center text-center p-6 sm:p-7 rounded-3xl bg-[#08090B]/90 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl max-w-sm w-full mx-4"
         >
+          {/* Garv Shaw Profile Avatar with Colorful Animated Gradient Halo */}
+          <div className="relative mb-4 group cursor-pointer" title="Garv Shaw - Verified Digital Architect">
+            <div className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-cyan-400 via-purple-500 to-rose-500 opacity-80 blur-md group-hover:opacity-100 transition-opacity duration-500 animate-pulse" />
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full p-[2.5px] bg-gradient-to-tr from-cyan-400 via-indigo-500 to-rose-400 shadow-[0_0_25px_rgba(34,211,238,0.5)]">
+              <img
+                src="/github_avatar.png"
+                alt="Garv Shaw Profile Avatar"
+                className="w-full h-full object-cover rounded-full bg-[#050505]"
+              />
+              <span
+                className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#08090B] shadow-[0_0_8px_#34d399]"
+                title="Status: Verified Online"
+              />
+            </div>
+          </div>
+
           {/* Top category label & icon */}
           <div className="flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-white/5 border border-white/10">
             {current.icon}

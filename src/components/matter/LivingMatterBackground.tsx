@@ -592,38 +592,43 @@ export const LivingMatterBackground: React.FC = () => {
             cinematicStageTimer = 0;
           }
         } else if (currentCinematicStage === 'PROFILE_LOCKING') {
-          // 15.40s - 16.20s (0.8s): Fine image details stabilize, target attraction increases
+          // Fine image details stabilize, target attraction increases
           const progress = Math.min(1.0, cinematicStageTimer / 0.8);
           rocketCinematicManager.update({
             stageProgress: progress,
             reconstructionPhase: 5, // All phases active (0 through 5)
           });
 
-          profileRadianceLight.intensity = 1.6;
-          profileCyanFill.intensity = 1.0;
-          particleMaterial.size = 0.44;
+          profileRadianceLight.intensity = 2.2;
+          profileCyanFill.intensity = 1.4;
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.50, 0.08);
 
           if (bloomPass) {
-            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.48, 0.05);
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.65, 0.06);
           }
 
           if (cinematicStageTimer >= 0.8) {
-            // Transition to PROFILE_COMPLETE at 16.20s
+            // Transition to PROFILE_COMPLETE
             rocketCinematicManager.setStage('PROFILE_COMPLETE');
             cinematicStageTimer = 0;
           }
         } else if (currentCinematicStage === 'PROFILE_COMPLETE') {
-          // 16.20s: Instantaneous state marker that rolls into PROFILE_HOLD
+          // Instantaneous state marker that rolls into PROFILE_HOLD
           rocketCinematicManager.setStage('PROFILE_HOLD');
           cinematicStageTimer = 0;
         } else if (currentCinematicStage === 'PROFILE_HOLD') {
-          // 16.20s - 17.50s (1.3s pause): PROFILE IMAGE ONLY — NO TEXT
-          profileRadianceLight.intensity = 1.6;
-          profileCyanFill.intensity = 1.0;
-          particleMaterial.size = 0.44;
+          // Luminous colorful profile hold
+          profileRadianceLight.intensity = 2.4;
+          profileCyanFill.intensity = 1.5;
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.50, 0.08);
+          if (bloomPass) {
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.65, 0.06);
+          }
 
-          if (cinematicStageTimer >= 1.3) {
-            // Transition to TEXT_PREPARE at 17.50s
+          // If explicitly triggered by user via PROFILE button, hold continuously until user clicks something else!
+          const isUserExplicitProfile = rocketCinematicManager.state.isTriggeredByUser && rocketCinematicManager.state.rocketAltitudeMeters === 0;
+          if (!isUserExplicitProfile && cinematicStageTimer >= 6.0) {
+            // Transition to TEXT_PREPARE after 6s in automatic sequence
             rocketCinematicManager.setStage('TEXT_PREPARE');
             cinematicStageTimer = 0;
           }

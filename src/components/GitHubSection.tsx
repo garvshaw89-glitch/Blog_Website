@@ -138,11 +138,29 @@ export const GitHubSection: React.FC<GitHubSectionProps> = ({ id = 'github-telem
             rel="noopener noreferrer"
             data-cursor="link"
             data-cursor-label="GITHUB"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/15 text-xs font-mono text-neutral-300 hover:text-white transition-all cursor-pointer w-fit"
+            className="flex items-center gap-3.5 px-4 py-2.5 rounded-2xl bg-[#08090B]/90 hover:bg-[#0c1018] border border-white/15 hover:border-cyan-400/50 transition-all duration-300 shadow-xl group w-fit"
           >
-            <Github className="w-4 h-4 text-cyan-400" />
-            <span>@garvshaw89-glitch</span>
-            <ExternalLink className="w-3.5 h-3.5 text-neutral-500" />
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full p-[2px] bg-gradient-to-tr from-cyan-400 via-indigo-500 to-rose-400 group-hover:shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-shadow">
+                <img
+                  src="/github_avatar.png"
+                  alt="Garv Shaw GitHub Avatar"
+                  className="w-full h-full object-cover rounded-full bg-[#050505]"
+                />
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border border-[#08090B]" />
+            </div>
+
+            <div className="flex flex-col text-left">
+              <div className="flex items-center gap-1.5 text-xs font-mono font-medium text-white group-hover:text-cyan-300 transition-colors">
+                <Github className="w-3.5 h-3.5 text-cyan-400" />
+                <span>@garvshaw89-glitch</span>
+                <ExternalLink className="w-3 h-3 text-neutral-500 group-hover:text-cyan-400 transition-colors" />
+              </div>
+              <span className="text-[10px] font-mono text-neutral-400">
+                18+ Repositories • Active
+              </span>
+            </div>
           </a>
         </div>
 
