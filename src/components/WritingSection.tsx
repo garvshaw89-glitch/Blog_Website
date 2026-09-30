@@ -117,14 +117,12 @@ export const WritingSection: React.FC<WritingSectionProps> = ({ id = 'writing' }
                   {article.excerpt}
                 </p>
 
-                <div className="flex flex-wrap gap-1.5 mt-4">
-                  {article.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 font-mono text-[10px] text-neutral-400"
-                    >
-                      {tag}
-                    </span>
+                <div className="flex flex-wrap items-center gap-2 mt-4 font-mono text-[11px] text-[#A5A7AC]">
+                  {article.tags.map((tag, idx) => (
+                    <React.Fragment key={tag}>
+                      {idx > 0 && <span className="text-neutral-600" aria-hidden="true">·</span>}
+                      <span>{tag}</span>
+                    </React.Fragment>
                   ))}
                 </div>
               </div>

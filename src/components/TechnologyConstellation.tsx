@@ -15,13 +15,20 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
 
   const getNodeIcon = (category: string) => {
     switch (category) {
+      case 'Core':
+        return <Cpu className="w-3.5 h-3.5 text-[#5B8CFF]" />;
       case 'AI':
-        return <Sparkles className="w-3.5 h-3.5 text-cyan-400" />;
+        return <Sparkles className="w-3.5 h-3.5 text-[#4CC9F0]" />;
+      case 'Frontend':
+      case 'Graphics':
+        return <Cpu className="w-3.5 h-3.5 text-[#795CFF]" />;
       case 'Backend':
+      case 'APIs':
         return <Terminal className="w-3.5 h-3.5 text-blue-400" />;
       case 'Data':
         return <Database className="w-3.5 h-3.5 text-emerald-400" />;
       case 'Cloud':
+      case 'DevOps':
         return <Cloud className="w-3.5 h-3.5 text-indigo-400" />;
       default:
         return <Cpu className="w-3.5 h-3.5 text-slate-300" />;

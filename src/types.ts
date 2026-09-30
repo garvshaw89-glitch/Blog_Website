@@ -81,7 +81,7 @@ export interface SocialLink {
 export interface ConstellationNode {
   id: string;
   label: string;
-  category: 'AI' | 'Backend' | 'Cloud' | 'Data' | 'Frontend';
+  category: 'AI' | 'Backend' | 'Cloud' | 'Data' | 'Frontend' | 'Core' | 'Graphics' | 'DevOps';
   level: number;
   x: number;
   y: number;

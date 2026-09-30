@@ -4,6 +4,7 @@ import { IntroScene } from './IntroScene';
 import { IntroOverlay } from './IntroOverlay';
 import { WebGlFallback } from './WebGlFallback';
 import { introAudio } from './introAudio';
+import { entrySequenceManager } from '../matter/entrySequenceManager';
 
 interface LuxuryIntroProps {
   onComplete: () => void;
@@ -20,6 +21,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     try {
       const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (prefersReduced) {
+        entrySequenceManager.completeImmediately();
         sessionStorage.setItem('garv_journal_intro_completed', 'true');
         onComplete();
       }
@@ -37,6 +39,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       const now = performance.now();
       const t = (now - startTime) / 1000;
       setElapsed(t);
+      entrySequenceManager.tick(t);
       animId = requestAnimationFrame(loop);
     };
 
@@ -48,6 +51,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     introAudio.triggerWarp();
+    entrySequenceManager.completeImmediately();
 
     try {
       sessionStorage.setItem('garv_journal_intro_completed', 'true');
@@ -63,6 +67,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
 
   const handleSkip = useCallback(() => {
     introAudio.stop();
+    entrySequenceManager.completeImmediately();
     try {
       sessionStorage.setItem('garv_journal_intro_completed', 'true');
     } catch {

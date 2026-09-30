@@ -26,6 +26,11 @@ export type AnimatedTopDockProps = {
   rim?: number;
   drift?: number;
   className?: string;
+  standaloneBar?: boolean;
+  onNavigate?: (id: string) => void;
+  onResumeClick?: () => void;
+  onContactClick?: () => void;
+  onReplayIntro?: () => void;
 };
 
 export const ANIMATED_TOP_DOCK_DEFAULTS = {
@@ -60,11 +65,11 @@ const ITEMS: readonly DockItem[] = [
 ];
 
 const MODERN_ITEMS: readonly DockItem[] = [
-  { id: "product", label: "Product", icon: <><path d="M8 1.9 14.1 5v6L8 14.1 1.9 11V5z" /><path d="M1.9 5 8 8.1 14.1 5M8 8.1v6" /></> },
-  { id: "solutions", label: "Solutions", icon: <><path d="M8 1.9 14.4 5.6 8 9.3 1.6 5.6z" /><path d="m2.6 8 5.4 3.1L13.4 8M2.6 10.7 8 13.8l5.4-3.1" /></> },
-  { id: "docs", label: "Docs", icon: <><path d="M3.4 2.4h5.4l3.8 3.8v7.4H3.4z" /><path d="M8.8 2.4v3.8h3.8M5.9 9h4.2M5.9 11.2h3" /></> },
-  { id: "pricing", label: "Pricing", icon: <><path d="M8.6 2.2H13v4.4l-6.6 6.6a1.2 1.2 0 0 1-1.7 0L2.2 10.5a1.2 1.2 0 0 1 0-1.7z" /><circle cx="10.6" cy="4.6" r=".9" /></> },
-  { id: "changelog", label: "Changelog", icon: <><circle cx="8" cy="8" r="5.9" /><path d="M8 4.6V8l2.4 1.5" /></> },
+  { id: "work", label: "WORK", icon: <><rect x="2" y="3" width="12" height="10" rx="1.5" /><path d="M2 6h12M5 4.5h.01M7 4.5h.01" /></> },
+  { id: "about", label: "ABOUT", icon: <><circle cx="8" cy="5.5" r="2.8" /><path d="M3.2 13.8a4.8 4.8 0 0 1 9.6 0" /></> },
+  { id: "lab", label: "LAB", icon: <><path d="M6.4 2.2v4L3 12.1a1.3 1.3 0 0 0 1.1 2h7.8a1.3 1.3 0 0 0 1.1-2L9.6 6.2v-4" /><path d="M5.6 2.2h4.8M4.9 9.6h6.2" /></> },
+  { id: "writing", label: "WRITING", icon: <><path d="M3.4 2.4h5.4l3.8 3.8v7.4H3.4z" /><path d="M8.8 2.4v3.8h3.8M5.9 9h4.2M5.9 11.2h3" /></> },
+  { id: "contact", label: "CONTACT", icon: <><circle cx="5.2" cy="6.2" r="2.7" /><path d="m7.2 8.2 5.9 5.1M10.2 10.8l1.5-1.5M12 12.4l1.4-1.4" /></> },
 ];
 
 /* every retro glyph is drawn on a 7x7 lattice of whole units so the icons stay
@@ -219,6 +224,26 @@ export function AnimatedTopDock({ className = "", ...props }: AnimatedTopDockPro
     }));
   });
 
+  const handleItemClick = (item: DockItem) => {
+    setActive(item.id);
+    if (props.onNavigate) {
+      props.onNavigate(item.id);
+      return;
+    }
+    const targetMap: Record<string, string> = {
+      work: 'projects',
+      about: 'about',
+      lab: 'ai-lab',
+      writing: 'writing',
+      contact: 'contact',
+    };
+    const targetId = targetMap[item.id] || item.id;
+    const targetEl = document.getElementById(targetId);
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const dockItems = (itemClass: string, iconClass: string, viewBox: string) => items.map((item) => (
     <button
       key={item.id}
@@ -226,7 +251,7 @@ export function AnimatedTopDock({ className = "", ...props }: AnimatedTopDockPro
       data-dock-item
       type="button"
       aria-pressed={active === item.id}
-      onClick={() => setActive(item.id)}
+      onClick={() => handleItemClick(item)}
     >
       <span className={iconClass} aria-hidden="true"><svg viewBox={viewBox}>{item.icon}</svg></span>
       <span>{item.label}</span>
@@ -238,26 +263,77 @@ export function AnimatedTopDock({ className = "", ...props }: AnimatedTopDockPro
       <div className={`animated-top-dock-component atd-modern${className ? ` ${className}` : ""}`}>
         <div className="atd-modern__aurora" aria-hidden="true" />
         <header className="atd-modern__bar">
-          <a className="atd-modern__brand" href="#top-dock" onClick={(event) => event.preventDefault()}>
-            <span className="atd-modern__mark" aria-hidden="true">{BRAND_MARK}</span>
-            <span className="atd-modern__word">Lumina</span>
+          <a
+            className="atd-modern__brand cursor-pointer"
+            href="#hero-section"
+            onClick={(event) => {
+              event.preventDefault();
+              document.getElementById("hero-section")?.scrollIntoView({ behavior: "smooth" });
+            }}
+          >
+            <span className="atd-modern__mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="w-full h-full" aria-hidden="true">
+                <rect width="24" height="24" rx="4.5" fill="#14171F" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+                <path d="M7 6h10v2.6H10v5.8h7v2.6H7V6Z" fill="#5B8CFF" />
+              </svg>
+            </span>
+            <div className="flex flex-col text-left leading-tight">
+              <span className="atd-modern__word font-['Space_Grotesk',sans-serif] tracking-wider font-bold">GARV SHAW</span>
+              <span className="font-mono text-[9px] tracking-[0.2em] text-[#A5A7AC] -mt-0.5">DIGITAL ARCHITECT</span>
+            </div>
           </a>
           <nav ref={rootRef} className="atd-modern__dock" aria-label="Primary" data-dock-state="idle" data-dock-max="0.00">
             {dockItems("atd-modern__item", "atd-modern__icon", "0 0 16 16")}
           </nav>
           <div className="atd-modern__actions">
-            <button className="atd-modern__ghost" type="button">Sign in</button>
-            <button className="atd-modern__cta" type="button">
-              <span>Start building</span>
+            {props.onReplayIntro && (
+              <button
+                className="hidden xl:inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono tracking-widest text-[#A5A7AC] hover:text-white transition-colors cursor-pointer rounded-full border border-white/5 hover:border-white/20 bg-white/[0.03]"
+                type="button"
+                onClick={props.onReplayIntro}
+                title="Replay Cinematic Entrance Experience"
+              >
+                ✦ PORTAL
+              </button>
+            )}
+            <button
+              className="atd-modern__ghost cursor-pointer"
+              type="button"
+              onClick={() => {
+                if (props.onResumeClick) {
+                  props.onResumeClick();
+                } else {
+                  window.open("https://linkedin.com/in/garvshaw", "_blank", "noopener,noreferrer");
+                }
+              }}
+            >
+              Resume
+            </button>
+            <button
+              className="atd-modern__cta cursor-pointer"
+              type="button"
+              onClick={() => {
+                if (props.onContactClick) {
+                  props.onContactClick();
+                } else {
+                  document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+            >
+              <span>Let's Connect</span>
               <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8h9.1M8.6 4.3 12.4 8l-3.8 3.7" /></svg>
             </button>
           </div>
         </header>
-        <div className="atd-modern__stage" aria-hidden="true">
-          <p className="atd-modern__eyebrow">Interface systems</p>
-          <p className="atd-modern__headline">Everything above the fold</p>
-        </div>
-        <p className="animated-top-dock-component__caption">LOGO LEFT · DOCK CENTRE · ACTION RIGHT</p>
+        {!props.standaloneBar && (
+          <>
+            <div className="atd-modern__stage" aria-hidden="true">
+              <p className="atd-modern__eyebrow">Interface systems</p>
+              <p className="atd-modern__headline">Everything above the fold</p>
+            </div>
+            <p className="animated-top-dock-component__caption">LOGO LEFT · DOCK CENTRE · ACTION RIGHT</p>
+          </>
+        )}
       </div>
     );
   }

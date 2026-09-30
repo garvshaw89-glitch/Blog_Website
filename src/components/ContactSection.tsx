@@ -64,13 +64,15 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ id = 'contact' }
           {/* Left Column: Cinematic Headline & Details */}
           <div className="lg:col-span-6 flex flex-col justify-between">
             <div>
-              <h2 className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-white leading-[0.95] mb-8">
-                LET&apos;S BUILD
+              <h2 className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-white leading-[0.95] mb-4">
+                BUILD SOMETHING
                 <br />
-                <span className="text-neutral-500">SOMETHING</span>
-                <br />
-                SIGNIFICANT.
+                <span className="text-neutral-500">SIGNIFICANT.</span>
               </h2>
+
+              <p className="font-mono text-xs sm:text-sm tracking-[0.32em] text-[#5B8CFF] uppercase mb-8 font-medium">
+                Let&apos;s Connect
+              </p>
 
               <p className="font-sans text-neutral-300 text-base sm:text-lg leading-relaxed font-light mb-10 max-w-lg">
                 Have a technical vision, AI architecture to deploy, cloud infrastructure challenge, or digital product to build? Let&apos;s create something meaningful.

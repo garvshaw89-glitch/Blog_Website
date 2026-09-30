@@ -50,21 +50,21 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start mb-20">
           <div className="lg:col-span-8">
             <h2 className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-white leading-[0.95]">
-              DEVELOPER.
+              THE PERSON
               <br />
-              <span className="text-neutral-500">BUILDER.</span>
+              <span className="text-neutral-500">BEHIND THE</span>
               <br />
-              SYSTEMS THINKER.
+              SYSTEM.
             </h2>
           </div>
 
           <div className="lg:col-span-4 flex flex-col justify-between h-full pt-2">
             <p className="font-sans text-neutral-300 text-base sm:text-lg leading-relaxed font-light">
-              I am a software engineer focused on building robust digital products where machine intelligence, high-throughput cloud systems, and real-world financial logic converge.
+              I am Garv Shaw, a digital architect and software engineer designing intelligent platforms at the intersection of Artificial Intelligence, distributed cloud infrastructure, and financial systems.
             </p>
             <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between font-mono text-xs text-neutral-400">
               <span>SPECIALIZATION</span>
-              <span className="text-cyan-300">FULL-STACK & AI SYSTEMS</span>
+              <span className="text-[#5B8CFF]">AI &times; CLOUD &times; SOFTWARE</span>
             </div>
           </div>
         </div>

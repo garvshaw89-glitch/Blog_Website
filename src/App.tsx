@@ -20,6 +20,7 @@ import { GitHubSection } from './components/GitHubSection';
 import { JourneySection } from './components/JourneySection';
 import { TechnologyConstellation } from './components/TechnologyConstellation';
 import { WritingSection } from './components/WritingSection';
+import { AiLabSection } from './components/AiLabSection';
 import { ContactSection } from './components/ContactSection';
 import { FooterSection } from './components/FooterSection';
 import { ProjectModal } from './components/ProjectModal';
@@ -157,7 +158,10 @@ export default function App() {
           {/* 9. WRITING / THOUGHTS */}
           <WritingSection id="writing" />
 
-          {/* 10. CONTACT / DIRECT TRANSMISSION */}
+          {/* 10. LAB / RESEARCH EXPERIMENTS */}
+          <AiLabSection id="lab" />
+
+          {/* 11. CONTACT / DIRECT TRANSMISSION */}
           <ContactSection id="contact" />
 
           {/* 11. FOOTER */}
