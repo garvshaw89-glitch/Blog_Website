@@ -23,8 +23,10 @@ import {
 } from './matterRocketGeometry';
 import {
   sampleProfileImage,
+  getImmediateProfilePoints,
   ProfileSamplePoint,
 } from './matterProfileSampler';
+import { GITHUB_AVATAR_BASE64 } from './avatarBase64';
 import {
   rocketCinematicManager,
   CinematicStage,
@@ -208,10 +210,12 @@ export const LivingMatterBackground: React.FC = () => {
     const gridHead = new Int32Array(HASH_SIZE);
     const gridNext = new Int32Array(particleCount);
 
-    // Profile Targets Storage
-    let profilePoints: ProfileSamplePoint[] = [];
-    sampleProfileImage('/github_avatar.png', particleCount).then((pts) => {
-      profilePoints = pts;
+    // Profile Targets Storage - initialized immediately with fallback so never empty
+    let profilePoints: ProfileSamplePoint[] = getImmediateProfilePoints(particleCount);
+    sampleProfileImage(GITHUB_AVATAR_BASE64, particleCount).then((pts) => {
+      if (pts && pts.length > 0) {
+        profilePoints = pts;
+      }
     });
 
     // Calibrated luminance tiers:
@@ -874,15 +878,26 @@ export const LivingMatterBackground: React.FC = () => {
                 const targetZ = pt.z;
 
                 // Stronger target attraction as profile locks into place
-                const formPull = isLockedOrHold ? 0.092 : 0.065;
+                const formPull = isLockedOrHold ? 0.098 : 0.072;
                 pVelocities[idx] += (targetX - px) * formPull;
                 pVelocities[idx + 1] += (targetY - py) * formPull;
                 pVelocities[idx + 2] += (targetZ - pz) * formPull;
 
                 // Sync authentic image pixel colors with enhanced HDR luminance
-                colors[idx] = THREE.MathUtils.lerp(colors[idx], pt.r, 0.08);
-                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pt.g, 0.08);
-                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pt.b, 0.08);
+                colors[idx] = THREE.MathUtils.lerp(colors[idx], pt.r, 0.09);
+                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pt.g, 0.09);
+                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pt.b, 0.09);
+              } else {
+                // Particles awaiting phase activation converge into outer halo
+                const targetX = pt.x * 1.25;
+                const targetY = pt.y * 1.25;
+                const targetZ = pt.z;
+                pVelocities[idx] += (targetX - px) * 0.04;
+                pVelocities[idx + 1] += (targetY - py) * 0.04;
+                pVelocities[idx + 2] += (targetZ - pz) * 0.04;
+                colors[idx] = THREE.MathUtils.lerp(colors[idx], 0.35, 0.05);
+                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], 0.55, 0.05);
+                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], 0.85, 0.05);
               }
             }
           } else if (currentCinematicStage === 'RETURN_TO_WORLD') {

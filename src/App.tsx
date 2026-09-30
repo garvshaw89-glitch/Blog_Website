@@ -30,16 +30,7 @@ import { ProjectItem } from './types';
 export default function App() {
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [showIntro, setShowIntro] = useState<boolean>(() => {
-    try {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        return false;
-      }
-      return !sessionStorage.getItem('garv_journal_intro_completed');
-    } catch {
-      return true;
-    }
-  });
+  const [showIntro, setShowIntro] = useState<boolean>(false);
 
   const handleIntroComplete = () => {
     try {

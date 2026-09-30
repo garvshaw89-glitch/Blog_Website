@@ -96,6 +96,15 @@ class RocketCinematicManager {
   }
 
   /**
+   * Directly triggers the GitHub profile portrait formation on demand
+   */
+  public triggerProfile() {
+    this.state.isTriggeredByUser = true;
+    this.state.ambientRequest = 'NONE';
+    this.setStage('PROFILE_LOCKING');
+  }
+
+  /**
    * Directly returns to ambient fluid matter flow
    */
   public triggerFlow() {
