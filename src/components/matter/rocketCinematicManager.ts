@@ -33,6 +33,10 @@ export interface CinematicState {
   reconstructionPhase: number; // 0 to 4
   profileAlpha: number;
   isTriggeredByUser: boolean;
+  ambientState: 'FREE_FLOW' | 'ROCK' | 'GLOBE' | 'WAVE';
+  ambientRequest: 'NONE' | 'GLOBE' | 'FLOW' | 'ROCK' | 'WAVE';
+  rocketAltitudeMeters: number;
+  rocketVelocityKmh: number;
 }
 
 type Listener = (state: CinematicState) => void;
@@ -49,6 +53,10 @@ class RocketCinematicManager {
     reconstructionPhase: 0,
     profileAlpha: 0,
     isTriggeredByUser: false,
+    ambientState: 'FREE_FLOW',
+    ambientRequest: 'NONE',
+    rocketAltitudeMeters: 0,
+    rocketVelocityKmh: 0,
   };
 
   private listeners: Set<Listener> = new Set();
@@ -71,7 +79,38 @@ class RocketCinematicManager {
   public triggerSequence() {
     if (this.state.stage !== 'IDLE') return;
     this.state.isTriggeredByUser = true;
+    this.state.ambientRequest = 'NONE';
     this.setStage('GATHER');
+  }
+
+  /**
+   * Directly triggers the massive colorful Earth hologram on demand
+   */
+  public triggerEarth() {
+    if (this.state.stage !== 'IDLE') {
+      this.setStage('IDLE');
+    }
+    this.state.ambientRequest = 'GLOBE';
+    this.state.ambientState = 'GLOBE';
+    this.notify();
+  }
+
+  /**
+   * Directly returns to ambient fluid matter flow
+   */
+  public triggerFlow() {
+    if (this.state.stage !== 'IDLE') {
+      this.setStage('IDLE');
+    }
+    this.state.ambientRequest = 'FLOW';
+    this.state.ambientState = 'FREE_FLOW';
+    this.notify();
+  }
+
+  public consumeAmbientRequest(): 'NONE' | 'GLOBE' | 'FLOW' | 'ROCK' | 'WAVE' {
+    const req = this.state.ambientRequest;
+    this.state.ambientRequest = 'NONE';
+    return req;
   }
 
   public setStage(stage: CinematicStage) {

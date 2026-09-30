@@ -424,11 +424,28 @@ export const LivingMatterBackground: React.FC = () => {
       // ==========================================
       const inCinematicSequence = currentCinematicStage !== 'IDLE';
 
+      // Check for user manual ambient triggers (Earth / Flow)
+      const requestedAmbient = rocketCinematicManager.consumeAmbientRequest();
+      if (requestedAmbient === 'GLOBE') {
+        ambientState = 'GLOBE';
+        ambientTime = 0;
+        targetMorphBlend = 1;
+      } else if (requestedAmbient === 'FLOW') {
+        ambientState = 'FREE_FLOW';
+        ambientTime = 0;
+        targetMorphBlend = 0;
+      }
+
       if (inCinematicSequence && !prefersReduced) {
         if (currentCinematicStage === 'GATHER') {
-          // Particles converge to form rocket shape
+          // Particles converge to form realistic heavy aerospace rocket shape
           rocketY = -1.5;
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.40, 0.05);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.44, 0.05);
+          rocketCinematicManager.update({
+            rocketAltitudeMeters: 0,
+            rocketVelocityKmh: 0,
+            ambientState,
+          });
           if (cinematicStageTimer > 2.8) {
             rocketCinematicManager.setStage('ROCKET_FORMED');
             cinematicStageTimer = 0;
@@ -436,15 +453,30 @@ export const LivingMatterBackground: React.FC = () => {
         } else if (currentCinematicStage === 'ROCKET_FORMED') {
           // Micro vibration & stabilization
           cameraShake = 0.04;
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.44, 0.05);
+          rocketCinematicManager.update({
+            rocketAltitudeMeters: 12,
+            rocketVelocityKmh: 0,
+            ambientState,
+          });
           if (cinematicStageTimer > 1.2) {
             rocketCinematicManager.setStage('IGNITION');
             cinematicStageTimer = 0;
           }
         } else if (currentCinematicStage === 'IGNITION') {
-          // Engine sparks buildup & downward particle velocity
+          // Engine sparks buildup & supersonic downward particle velocity
           cameraShake = 0.08 + cinematicStageTimer * 0.12;
-          rocketEngineLight.intensity = Math.min(4.5, cinematicStageTimer * 4.0);
+          rocketEngineLight.intensity = Math.min(5.5, cinematicStageTimer * 4.5);
           rocketEngineLight.position.set(0, rocketY - 4.5, -2.0);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.48, 0.05);
+          if (bloomPass) {
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.62, 0.05);
+          }
+          rocketCinematicManager.update({
+            rocketAltitudeMeters: Math.round(cinematicStageTimer * 65),
+            rocketVelocityKmh: Math.round(cinematicStageTimer * 120),
+            ambientState,
+          });
 
           if (cinematicStageTimer > 1.6) {
             rocketVelocityY = 0.05;
@@ -452,11 +484,22 @@ export const LivingMatterBackground: React.FC = () => {
             cinematicStageTimer = 0;
           }
         } else if (currentCinematicStage === 'LAUNCH') {
-          // Rapid upward acceleration
+          // Rapid upward supersonic acceleration
           rocketVelocityY += delta * 18.0;
           rocketY += rocketVelocityY * delta;
           cameraShake = 0.15;
           rocketEngineLight.position.set(0, rocketY - 4.5, -2.0);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.48, 0.05);
+          if (bloomPass) {
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.65, 0.05);
+          }
+          const altM = Math.round(250 + Math.pow(Math.max(0, rocketY + 2.5), 2.2) * 95);
+          const velKmh = Math.round(rocketVelocityY * 580);
+          rocketCinematicManager.update({
+            rocketAltitudeMeters: altM,
+            rocketVelocityKmh: velKmh,
+            ambientState,
+          });
 
           if (rocketY > 24) {
             rocketCinematicManager.setStage('FLIGHT');
@@ -466,6 +509,11 @@ export const LivingMatterBackground: React.FC = () => {
           // Rocket travels through deep environment & loops toward descent
           cameraShake = 0.02;
           rocketEngineLight.intensity = Math.max(0, rocketEngineLight.intensity - delta * 2.0);
+          rocketCinematicManager.update({
+            rocketAltitudeMeters: 48000 + Math.round(cinematicStageTimer * 6500),
+            rocketVelocityKmh: 18500,
+            ambientState,
+          });
           if (cinematicStageTimer > 1.8) {
             rocketY = 22;
             rocketVelocityY = -6.0;
@@ -652,7 +700,11 @@ export const LivingMatterBackground: React.FC = () => {
           }
         } else if (ambientState === 'GLOBE') {
           targetMorphBlend = 1;
-          globeRotationY += delta * 0.25;
+          globeRotationY += delta * 0.20;
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.46, 0.04);
+          if (bloomPass) {
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.54, 0.04);
+          }
           if (ambientTime > MATTER_CONFIG.timing.globeFormDuration) {
             ambientState = 'WAVE';
             ambientTime = 0;
@@ -734,10 +786,10 @@ export const LivingMatterBackground: React.FC = () => {
             currentCinematicStage === 'LAUNCH' ||
             currentCinematicStage === 'DESCENT'
           ) {
-            // Morph into Rocket coordinates
+            // Morph into Real Heavy Aerospace Rocket coordinates
             const vibration =
               currentCinematicStage === 'IGNITION' ? 0.35 : currentCinematicStage === 'ROCKET_FORMED' ? 0.08 : 0;
-            const { pos: rocketTarget, isEngine } = generateRocketPosition(
+            const rocketData = generateRocketPosition(
               i,
               particleCount,
               rocketY,
@@ -745,21 +797,24 @@ export const LivingMatterBackground: React.FC = () => {
             );
 
             // Engine ignition particles downward stream
-            if (isEngine && (currentCinematicStage === 'IGNITION' || currentCinematicStage === 'LAUNCH')) {
-              pVelocities[idx + 1] -= (0.4 + Math.random() * 0.6);
-              colors[idx] = 0.2;
-              colors[idx + 1] = 0.9;
-              colors[idx + 2] = 1.0;
+            if (rocketData.isEngine && (currentCinematicStage === 'IGNITION' || currentCinematicStage === 'LAUNCH')) {
+              pVelocities[idx + 1] -= (0.45 + Math.random() * 0.7);
+              // Supersonic shock diamonds and hypergolic fiery exhaust
+              colors[idx] = rocketData.color.r;
+              colors[idx + 1] = rocketData.color.g;
+              colors[idx + 2] = rocketData.color.b;
             } else {
-              const pullStrength = currentCinematicStage === 'GATHER' ? 0.038 : 0.085;
-              pVelocities[idx] += (rocketTarget.x - px) * pullStrength;
-              pVelocities[idx + 1] += (rocketTarget.y - py) * pullStrength;
-              pVelocities[idx + 2] += (rocketTarget.z - pz) * pullStrength;
+              const pullStrength = currentCinematicStage === 'GATHER' ? 0.045 : 0.095;
+              pVelocities[idx] += (rocketData.pos.x - px) * pullStrength;
+              pVelocities[idx + 1] += (rocketData.pos.y - py) * pullStrength;
+              pVelocities[idx + 2] += (rocketData.pos.z - pz) * pullStrength;
 
-              // Rocket body sleek titanium / electric blue styling
-              colors[idx] = THREE.MathUtils.lerp(colors[idx], 0.9, 0.04);
-              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], 0.95, 0.04);
-              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], 1.0, 0.04);
+              // Authentic aerospace vehicle livery: aerospace white, carbon black belly,
+              // telemetry racing red & cobalt bands, scorched titanium grid fins,
+              // glowing copper engine bells, and navigation strobe lights!
+              colors[idx] = THREE.MathUtils.lerp(colors[idx], rocketData.color.r, 0.08);
+              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], rocketData.color.g, 0.08);
+              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], rocketData.color.b, 0.08);
             }
           } else if (currentCinematicStage === 'FLIGHT') {
             // Stretch into flowing cosmic trail
@@ -847,18 +902,20 @@ export const LivingMatterBackground: React.FC = () => {
             if (ambientState === 'ROCK') {
               formTarget = generateRockPosition(i, particleCount, elapsedTime);
             } else if (ambientState === 'GLOBE') {
-              const { pos: globePos, isLand } = generateGlobePosition(
+              const globeRes = generateGlobePosition(
                 i,
                 particleCount,
                 globeRotationY
               );
-              formTarget = globePos;
+              formTarget = globeRes.pos;
 
-              if (isLand) {
-                colors[idx] = THREE.MathUtils.lerp(colors[idx], colAccentBlue.r, 0.04);
-                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], colAccentBlue.g, 0.04);
-                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], colAccentBlue.b, 0.04);
-              }
+              // Smoothly transition every particle into its vibrant, authentic Earth planetary color:
+              // sapphire oceans, turquoise coral barrier reefs, lush emerald rainforests, golden desert sands,
+              // snow-capped mountain spines, crystalline polar ice caps, and pure white swirling cloud fronts!
+              const targetCol = globeRes.color;
+              colors[idx] = THREE.MathUtils.lerp(colors[idx], targetCol.r, 0.06);
+              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], targetCol.g, 0.06);
+              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], targetCol.b, 0.06);
             } else if (ambientState === 'WAVE') {
               formTarget = generateWavePosition(i, particleCount, elapsedTime);
             }
