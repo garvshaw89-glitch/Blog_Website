@@ -871,38 +871,38 @@ export const LivingMatterBackground: React.FC = () => {
 
               // Progressive reveal by feature phase
               if (pt.phase <= phaseGate || isLockedOrHold) {
-                // Micro-breathing alive effect during hold & reveal
+                // Gentle organic breathing alive effect during hold
                 const breath =
                   currentCinematicStage === 'PROFILE_HOLD' ||
                   currentCinematicStage === 'IDENTITY_COMPLETE'
-                    ? Math.sin(elapsedTime * 2.0 + px * 0.5) * 0.04
+                    ? Math.sin(elapsedTime * 1.5 + px * 0.25) * 0.025
                     : 0;
 
                 const targetX = pt.x;
                 const targetY = pt.y + breath;
                 const targetZ = pt.z;
 
-                // Stronger target attraction as profile locks into place
-                const formPull = isLockedOrHold ? 0.098 : 0.072;
+                // Strong target attraction so all 6,000 dots snap crisply into the authentic portrait
+                const formPull = isLockedOrHold ? 0.14 : 0.09;
                 pVelocities[idx] += (targetX - px) * formPull;
                 pVelocities[idx + 1] += (targetY - py) * formPull;
                 pVelocities[idx + 2] += (targetZ - pz) * formPull;
 
-                // Sync authentic image pixel colors with enhanced HDR luminance
-                colors[idx] = THREE.MathUtils.lerp(colors[idx], pt.r, 0.09);
-                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pt.g, 0.09);
-                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pt.b, 0.09);
+                // Sync authentic photographic RGB colors
+                colors[idx] = THREE.MathUtils.lerp(colors[idx], pt.r, 0.16);
+                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pt.g, 0.16);
+                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pt.b, 0.16);
               } else {
                 // Particles awaiting phase activation converge into outer halo
-                const targetX = pt.x * 1.25;
-                const targetY = pt.y * 1.25;
+                const targetX = pt.x * 1.15;
+                const targetY = pt.y * 1.15;
                 const targetZ = pt.z;
-                pVelocities[idx] += (targetX - px) * 0.04;
-                pVelocities[idx + 1] += (targetY - py) * 0.04;
-                pVelocities[idx + 2] += (targetZ - pz) * 0.04;
-                colors[idx] = THREE.MathUtils.lerp(colors[idx], 0.35, 0.05);
-                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], 0.55, 0.05);
-                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], 0.85, 0.05);
+                pVelocities[idx] += (targetX - px) * 0.05;
+                pVelocities[idx + 1] += (targetY - py) * 0.05;
+                pVelocities[idx + 2] += (targetZ - pz) * 0.05;
+                colors[idx] = THREE.MathUtils.lerp(colors[idx], pt.r * 0.7, 0.08);
+                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pt.g * 0.7, 0.08);
+                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pt.b * 0.7, 0.08);
               }
             }
           } else if (currentCinematicStage === 'RETURN_TO_WORLD') {
@@ -1036,7 +1036,14 @@ export const LivingMatterBackground: React.FC = () => {
       // Particles react physically to each other with elastic momentum exchange, non-penetration separation,
       // and kinetic energy flashes that feed directly into the UnrealBloomPass!
       // ==========================================
-      if (!prefersReduced) {
+      const isProfileFormingOrHeld =
+        currentCinematicStage === 'PROFILE_FORMING' ||
+        currentCinematicStage === 'PROFILE_RECOGNIZABLE' ||
+        currentCinematicStage === 'PROFILE_LOCKING' ||
+        currentCinematicStage === 'PROFILE_COMPLETE' ||
+        currentCinematicStage === 'PROFILE_HOLD';
+
+      if (!prefersReduced && !isProfileFormingOrHeld) {
         gridHead.fill(-1);
 
         // 1. Bin particles into 3D spatial hash grid

@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { GITHUB_AVATAR_BASE64 } from './avatarBase64';
 
 export interface ProfileSamplePoint {
@@ -9,111 +8,82 @@ export interface ProfileSamplePoint {
   g: number;
   b: number;
   a: number;
-  phase: number; // 0: outer silhouette, 1: hair, 2: face, 3: glasses/eyes, 4: clothes, 5: fine details
+  phase: number; // 0: core face, 1: eyes/glasses, 2: hair, 3: clothes, 4: ambient perimeter
 }
 
 /**
- * Helper to compute vibrant multi-colored rainbow halo colors
- */
-function getRainbowColor(angle: number): { r: number; g: number; b: number } {
-  const norm = (angle / (Math.PI * 2) + 1.0) % 1.0;
-  // 6-step vibrant rainbow: cyan -> blue -> violet -> magenta -> gold -> emerald
-  const h = norm * 6;
-  const i = Math.floor(h);
-  const f = h - i;
-  switch (i % 6) {
-    case 0: return { r: 0.1, g: 0.9, b: 1.0 }; // Electric cyan
-    case 1: return { r: 0.3, g: 0.4, b: 1.0 }; // Royal blue
-    case 2: return { r: 0.7, g: 0.25, b: 1.0 }; // Vivid violet
-    case 3: return { r: 1.0, g: 0.25, b: 0.75 }; // Hot magenta
-    case 4: return { r: 1.0, g: 0.8, b: 0.15 }; // Solar gold
-    default: return { r: 0.15, g: 0.95, b: 0.55 }; // Radiant emerald
-  }
-}
-
-/**
- * Procedural initial fallback profile points so particles always have a recognizable,
- * vibrant, large, and colorful portrait target instantly.
+ * Immediate procedural portrait fallback with authentic human skin, hair, and clothing tones,
+ * ensuring particles never display artificial rainbow/neon colors.
  */
 export function getImmediateProfilePoints(targetCount: number = 6000): ProfileSamplePoint[] {
   const points: ProfileSamplePoint[] = [];
-  // Large scale (18.0) to match the majestic Earth globe!
-  const worldScale = 18.0;
+  const worldScale = 14.8;
 
   for (let i = 0; i < targetCount; i++) {
-    const angle = i * 2.39996;
-    const r = Math.sqrt((i + 1) / targetCount) * 0.94;
-    const nx = Math.cos(angle) * r;
-    const ny = Math.sin(angle) * r;
+    // Vogel spiral for uniform density distribution
+    const rNorm = Math.sqrt((i + 0.5) / targetCount) * 0.96;
+    const theta = i * 2.399963229728653; // Golden angle
+
+    const nx = Math.cos(theta) * rNorm;
+    const ny = Math.sin(theta) * rNorm;
 
     const wx = nx * (worldScale * 0.5);
     const wy = ny * (worldScale * 0.5);
-    // Positioned forward at z = 0.5 for immediate prominence
-    const wz = 0.5 + (Math.random() - 0.5) * 0.35;
 
     let phase = 0;
-    let red = 1.0;
-    let green = 1.0;
-    let blue = 1.0;
+    let r = 0.92;
+    let g = 0.76;
+    let b = 0.62;
+    let wz = 0.4;
 
-    // Outer perimeter: Vibrant rainbow halo ring
-    if (r > 0.82) {
+    // Face / skin tones (center)
+    if (ny < 0.22 && ny > -0.32 && Math.abs(nx) < 0.52) {
       phase = 0;
-      const rainbow = getRainbowColor(angle);
-      red = rainbow.r;
-      green = rainbow.g;
-      blue = rainbow.b;
+      r = 0.94;
+      g = 0.78;
+      b = 0.64; // Authentic warm skin
+      wz = 0.55;
     }
-    // Hair at top: Luminous royal sapphire with violet sheen
-    else if (ny > 0.22 && Math.abs(nx) < 0.68) {
+    // Eyes & facial features
+    else if (Math.abs(ny - 0.02) < 0.12 && Math.abs(nx) < 0.48) {
       phase = 1;
-      const isVioletStrand = (i % 2 === 0);
-      if (isVioletStrand) {
-        red = 0.75;
-        green = 0.35;
-        blue = 1.0; // Glowing violet
-      } else {
-        red = 0.25;
-        green = 0.65;
-        blue = 1.0; // Electric cyber-blue
-      }
+      r = 0.32;
+      g = 0.28;
+      b = 0.30; // Eyes / glasses
+      wz = 0.60;
     }
-    // Glasses / eyes line: Brilliant neon cyan & mint starlight
-    else if (Math.abs(ny - 0.04) < 0.14 && Math.abs(nx) < 0.55) {
-      phase = 3;
-      red = 0.10;
-      green = 0.95;
-      blue = 1.0; // Blinding starlight cyan
-    }
-    // Face & skin tone: Warm radiant peach, champagne & amber glow
-    else if (ny < 0.22 && ny > -0.34 && Math.abs(nx) < 0.58) {
+    // Hair at top
+    else if (ny >= 0.22 && Math.abs(nx) < 0.65) {
       phase = 2;
-      red = 1.0;
-      green = 0.84;
-      blue = 0.65; // Warm sunlit peach
+      r = 0.24;
+      g = 0.22;
+      b = 0.26; // Natural dark hair
+      wz = 0.40;
     }
-    // Clothing & shoulders: Rich royal indigo & magenta
-    else if (ny <= -0.34) {
-      phase = 4;
-      red = 0.35;
-      green = 0.45;
-      blue = 1.0; // Royal cobalt
+    // Clothing & shoulders at bottom
+    else if (ny <= -0.32) {
+      phase = 3;
+      r = 0.22;
+      g = 0.26;
+      b = 0.35; // Natural dark jacket / navy
+      wz = 0.30;
     }
-    // Face contours & cheekbones
+    // Perimeter background
     else {
-      phase = 5;
-      red = 0.95;
-      green = 0.75;
-      blue = 0.85; // Rose champagne
+      phase = 4;
+      r = 0.28;
+      g = 0.34;
+      b = 0.42; // Cool ambient background
+      wz = 0.20;
     }
 
     points.push({
       x: wx,
       y: wy,
       z: wz,
-      r: red,
-      g: green,
-      b: blue,
+      r,
+      g,
+      b,
       a: 1.0,
       phase,
     });
@@ -124,8 +94,9 @@ export function getImmediateProfilePoints(targetCount: number = 6000): ProfileSa
 
 /**
  * Loads and rasterizes the uploaded GitHub profile image onto a dense virtual particle grid.
- * Applies high-end digital color grading, saturation boost, and dynamic halo synthesis
- * so the portrait is exceptionally VISIBLE, VIBRANT, and COLORFUL.
+ * Uses the ACTUAL, AUTHENTIC RGB colors from Garv Shaw's GitHub avatar photo!
+ * Preserves true skin tones, real hair color, real clothing, and real background,
+ * enhanced with high-definition luminous contrast so each particle is a bright, clear dot.
  */
 export async function sampleProfileImage(
   imageSrc: string = GITHUB_AVATAR_BASE64,
@@ -146,7 +117,7 @@ export async function sampleProfileImage(
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        const sampleRes = 96; // 96x96 dense candidate grid
+        const sampleRes = 100; // 100x100 resolution for sharp sampling
         canvas.width = sampleRes;
         canvas.height = sampleRes;
 
@@ -160,107 +131,98 @@ export async function sampleProfileImage(
         const imgData = ctx.getImageData(0, 0, sampleRes, sampleRes);
         const data = imgData.data;
 
-        const candidates: ProfileSamplePoint[] = [];
-        const worldScale = 18.0; // Large, magnificent scale
+        const points: ProfileSamplePoint[] = [];
+        const worldScale = 14.8; // Calibrated for full viewport framing
 
-        for (let y = 0; y < sampleRes; y++) {
-          for (let x = 0; x < sampleRes; x++) {
-            const pixelIndex = (y * sampleRes + x) * 4;
-            let r = data[pixelIndex] / 255;
-            let g = data[pixelIndex + 1] / 255;
-            let b = data[pixelIndex + 2] / 255;
-            const a = data[pixelIndex + 3] / 255;
+        // Vogel golden-angle spiral distribution across the circular portrait
+        for (let i = 0; i < targetSampleCount; i++) {
+          const rNorm = Math.sqrt((i + 0.5) / targetSampleCount) * 0.96;
+          const theta = i * 2.399963229728653; // Golden angle
 
-            if (a < 0.08) continue;
+          const nx = Math.cos(theta) * rNorm;
+          const ny = Math.sin(theta) * rNorm;
 
-            // Normalized coordinates around center (0, 0)
-            const nx = (x / sampleRes - 0.5) * 2;
-            const ny = (1 - y / sampleRes - 0.5) * 2;
-            const radiusFromCenter = Math.hypot(nx, ny);
+          // Convert normalized coordinates (-1 to 1) to image UV coordinates (0 to 1)
+          const u = Math.max(0, Math.min(1, (nx + 1) * 0.5));
+          const v = Math.max(0, Math.min(1, (1 - ny) * 0.5)); // Y is inverted in canvas
 
-            if (radiusFromCenter > 0.985) continue;
+          const px = Math.floor(u * (sampleRes - 1));
+          const py = Math.floor(v * (sampleRes - 1));
+          const pixelIndex = (py * sampleRes + px) * 4;
 
-            const wx = nx * (worldScale * 0.5);
-            const wy = ny * (worldScale * 0.5);
-            const wz = 0.5 + (Math.random() - 0.5) * 0.35;
+          const rawR = (data[pixelIndex] || 0) / 255;
+          const rawG = (data[pixelIndex + 1] || 0) / 255;
+          const rawB = (data[pixelIndex + 2] || 0) / 255;
+          const rawA = (data[pixelIndex + 3] || 255) / 255;
 
-            let phase = 0;
-            const rawLuminance = 0.299 * r + 0.587 * g + 0.114 * b;
+          if (rawA < 0.08) continue;
 
-            // Outer perimeter: Vibrant rainbow halo ring
-            if (radiusFromCenter > 0.85) {
-              phase = 0;
-              const angle = Math.atan2(ny, nx);
-              const rainbow = getRainbowColor(angle);
-              r = rainbow.r;
-              g = rainbow.g;
-              b = rainbow.b;
-            } else if (ny < -0.36) {
-              phase = 4; // Clothing
-              // Boost clothing into vivid cobalt and violet
-              r = Math.max(r * 1.3, 0.25);
-              g = Math.max(g * 1.2, 0.35);
-              b = Math.max(b * 1.5, 0.85);
-            } else if (ny > 0.20 && rawLuminance < 0.35) {
-              phase = 1; // Hair
-              // Infuse dark hair with glowing electric cyan & violet sheen
-              const isSheen = (x + y) % 3 === 0;
-              if (isSheen) {
-                r = 0.65; g = 0.30; b = 1.0; // Violet highlights
-              } else {
-                r = 0.25; g = 0.65; b = 0.95; // Cyan cyber strands
-              }
-            } else if (ny >= -0.15 && ny <= 0.20 && rawLuminance < 0.30) {
-              phase = 3; // Glasses / eyes
-              // Electric cyan starlight glasses
-              r = 0.15; g = 0.95; b = 1.0;
-            } else if (ny >= -0.36 && ny <= 0.36) {
-              phase = 2; // Face
-              // Warm radiant skin tones with golden glow
-              r = Math.min(1.0, Math.max(r * 1.25, 0.92));
-              g = Math.min(1.0, Math.max(g * 1.15, 0.78));
-              b = Math.min(1.0, Math.max(b * 1.05, 0.58));
-            } else {
-              phase = 5; // Details
-              r = Math.min(1.0, r * 1.2 + 0.1);
-              g = Math.min(1.0, g * 1.2 + 0.1);
-              b = Math.min(1.0, b * 1.3 + 0.15);
-            }
+          // Preserve authentic photographic color with calibrated luminescence
+          const maxChannel = Math.max(rawR, rawG, rawB);
+          let r = rawR;
+          let g = rawG;
+          let b = rawB;
 
-            candidates.push({
-              x: wx,
-              y: wy,
-              z: wz,
-              r,
-              g,
-              b,
-              a: 1.0,
-              phase,
+          // Lift very dark pixels slightly so all 6,000 dots remain visible against dark background
+          if (maxChannel < 0.16) {
+            const lift = (0.16 - maxChannel) * 0.82;
+            r = Math.min(1.0, rawR + lift);
+            g = Math.min(1.0, rawG + lift);
+            b = Math.min(1.0, rawB + lift + 0.02);
+          } else {
+            // Slight contrast/vibrancy boost while strictly preserving true photographic chromaticity
+            r = Math.min(1.0, Math.pow(rawR, 0.94) * 1.12);
+            g = Math.min(1.0, Math.pow(rawG, 0.94) * 1.12);
+            b = Math.min(1.0, Math.pow(rawB, 0.94) * 1.12);
+          }
+
+          // Compute 3D holographic depth relief based on luminance
+          const luminance = 0.299 * rawR + 0.587 * rawG + 0.114 * rawB;
+          const wz = 0.35 + (luminance - 0.5) * 0.75;
+
+          const wx = nx * (worldScale * 0.5);
+          const wy = ny * (worldScale * 0.5);
+
+          // Assign feature phase for progressive reconstruction
+          let phase = 0;
+          if (rNorm < 0.30) {
+            phase = 0; // Inner facial core
+          } else if (rNorm < 0.52) {
+            phase = 1; // Facial contours & eyes
+          } else if (rNorm < 0.72) {
+            phase = 2; // Hair & head silhouette
+          } else if (rNorm < 0.88) {
+            phase = 3; // Shoulders & clothing
+          } else {
+            phase = 4; // Perimeter halo
+          }
+
+          points.push({
+            x: wx,
+            y: wy,
+            z: wz,
+            r,
+            g,
+            b,
+            a: 1.0,
+            phase,
+          });
+        }
+
+        if (points.length < targetSampleCount) {
+          // Fill any remainder
+          const existingCount = points.length;
+          for (let i = existingCount; i < targetSampleCount; i++) {
+            const srcPt = points[i % existingCount];
+            points.push({
+              ...srcPt,
+              x: srcPt.x + (Math.random() - 0.5) * 0.05,
+              y: srcPt.y + (Math.random() - 0.5) * 0.05,
             });
           }
         }
 
-        if (candidates.length === 0) {
-          resolve(getImmediateProfilePoints(targetSampleCount));
-          return;
-        }
-
-        const finalPoints: ProfileSamplePoint[] = [];
-        for (let i = 0; i < targetSampleCount; i++) {
-          const candidate = candidates[i % candidates.length];
-          finalPoints.push({
-            x: candidate.x + (Math.random() - 0.5) * 0.08,
-            y: candidate.y + (Math.random() - 0.5) * 0.08,
-            z: candidate.z + (Math.random() - 0.5) * 0.12,
-            r: candidate.r,
-            g: candidate.g,
-            b: candidate.b,
-            a: 1.0,
-            phase: candidate.phase,
-          });
-        }
-
-        resolve(finalPoints);
+        resolve(points);
       } catch (err) {
         console.warn('Canvas rasterization exception caught, using fallback points:', err);
         resolve(getImmediateProfilePoints(targetSampleCount));

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowUpRight, ShieldCheck, Terminal, Award, Compass, Cpu, Layers } from 'lucide-react';
+import { DotParticleAvatar } from './matter/DotParticleAvatar';
 
 interface AboutSectionProps {
   onContactClick?: () => void;
@@ -81,17 +82,11 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
               <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-rose-500 opacity-25 group-hover:opacity-60 blur-xl transition-opacity duration-500 -z-10" />
 
               <div className="flex items-center gap-5 mb-5">
-                {/* Avatar with colorful ring */}
+                {/* Avatar with authentic dot-matrix particle effect */}
                 <div className="relative shrink-0">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl p-[3px] bg-gradient-to-tr from-cyan-400 via-purple-500 to-rose-400 shadow-[0_0_25px_rgba(34,211,238,0.4)]">
-                    <img
-                      src="/github_avatar.png"
-                      alt="Garv Shaw - Digital Architect Profile"
-                      className="w-full h-full object-cover rounded-[13px] bg-[#050505]"
-                    />
-                  </div>
+                  <DotParticleAvatar size={88} gridResolution={28} interactive={true} />
                   <span
-                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#08090B] shadow-[0_0_8px_#34d399]"
+                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#08090B] shadow-[0_0_8px_#34d399] z-10"
                     title="Status: Online"
                   />
                 </div>
