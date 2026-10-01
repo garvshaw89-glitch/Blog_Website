@@ -238,7 +238,13 @@ export function AnimatedTopDock({ className = "", ...props }: AnimatedTopDockPro
       contact: 'contact',
     };
     const targetId = targetMap[item.id] || item.id;
-    const targetEl = document.getElementById(targetId);
+    let targetEl = document.getElementById(targetId);
+    if (!targetEl && item.id === 'lab') {
+      targetEl = document.getElementById('ai-lab') || document.getElementById('lab');
+    }
+    if (!targetEl && item.id === 'work') {
+      targetEl = document.getElementById('projects') || document.getElementById('work');
+    }
     if (targetEl) {
       targetEl.scrollIntoView({ behavior: 'smooth' });
     }

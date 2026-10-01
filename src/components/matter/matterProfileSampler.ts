@@ -15,7 +15,7 @@ export interface ProfileSamplePoint {
  * Immediate procedural portrait fallback with authentic human skin, hair, and clothing tones,
  * ensuring particles never display artificial rainbow/neon colors.
  */
-export function getImmediateProfilePoints(targetCount: number = 6000): ProfileSamplePoint[] {
+export function getImmediateProfilePoints(targetCount: number = 20000): ProfileSamplePoint[] {
   const points: ProfileSamplePoint[] = [];
   const worldScale = 14.8;
 
@@ -100,7 +100,7 @@ export function getImmediateProfilePoints(targetCount: number = 6000): ProfileSa
  */
 export async function sampleProfileImage(
   imageSrc: string = GITHUB_AVATAR_BASE64,
-  targetSampleCount: number = 6000
+  targetSampleCount: number = 20000
 ): Promise<ProfileSamplePoint[]> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || typeof document === 'undefined') {

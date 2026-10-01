@@ -98,13 +98,19 @@ export const LivingMatterBackground: React.FC = () => {
     const cameraBaseZ = 22;
     camera.position.set(0, 0, cameraBaseZ);
 
-    const renderer = new THREE.WebGLRenderer({
-      powerPreference: 'high-performance',
-      antialias: !isMobile,
-      alpha: true,
-      stencil: false,
-      depth: true,
-    });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        powerPreference: 'high-performance',
+        antialias: !isMobile,
+        alpha: true,
+        stencil: false,
+        depth: true,
+      });
+    } catch (err) {
+      console.warn('WebGL initialization failed, falling back to static visual foundation:', err);
+      return;
+    }
 
     const maxDpr = isMobile ? 1.0 : isTablet ? 1.3 : 1.75;
     const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
@@ -933,14 +939,19 @@ export const LivingMatterBackground: React.FC = () => {
               // sapphire oceans, turquoise coral barrier reefs, lush emerald rainforests, golden desert sands,
               // snow-capped mountain spines, crystalline polar ice caps, and pure white swirling cloud fronts!
               const targetCol = globeRes.color;
-              colors[idx] = THREE.MathUtils.lerp(colors[idx], targetCol.r, 0.06);
-              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], targetCol.g, 0.06);
-              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], targetCol.b, 0.06);
+              colors[idx] = THREE.MathUtils.lerp(colors[idx], targetCol.r, 0.09);
+              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], targetCol.g, 0.09);
+              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], targetCol.b, 0.09);
             } else if (ambientState === 'WAVE') {
               formTarget = generateWavePosition(i, particleCount, elapsedTime);
             }
 
-            const formForce = 0.035 * currentMorphBlend;
+            // Strong form attraction when in GLOBE mode so all 20,000 particles lock crisply onto the sphere
+            let formForce = 0.035 * currentMorphBlend;
+            if (ambientState === 'GLOBE') {
+              formForce = 0.095 * currentMorphBlend;
+            }
+
             pVelocities[idx] += (formTarget.x - px) * formForce;
             pVelocities[idx + 1] += (formTarget.y - py) * formForce;
             pVelocities[idx + 2] += (formTarget.z - pz) * formForce;
@@ -1014,16 +1025,17 @@ export const LivingMatterBackground: React.FC = () => {
           }
         }
 
-        // 5. Scroll Velocity Reaction
+        // 5. Scroll Velocity Reaction (Smoothly Clamped)
         if (Math.abs(scrollVelocity) > 0.01) {
-          const scrollPush = scrollVelocity * 0.003;
-          pVelocities[idx + 1] += scrollPush * (tier === 0 ? 1.5 : tier === 1 ? 0.9 : 0.4);
+          const scrollPush = Math.max(-0.12, Math.min(0.12, scrollVelocity * 0.0015));
+          pVelocities[idx + 1] += scrollPush * (tier === 0 ? 1.2 : tier === 1 ? 0.75 : 0.35);
         }
 
         // 6. Velocity Clamping & Fluid Damping
-        pVelocities[idx] *= MATTER_CONFIG.physics.damping;
-        pVelocities[idx + 1] *= MATTER_CONFIG.physics.damping;
-        pVelocities[idx + 2] *= MATTER_CONFIG.physics.damping;
+        const maxVel = 0.85;
+        pVelocities[idx] = Math.max(-maxVel, Math.min(maxVel, pVelocities[idx] * MATTER_CONFIG.physics.damping));
+        pVelocities[idx + 1] = Math.max(-maxVel, Math.min(maxVel, pVelocities[idx + 1] * MATTER_CONFIG.physics.damping));
+        pVelocities[idx + 2] = Math.max(-maxVel, Math.min(maxVel, pVelocities[idx + 2] * MATTER_CONFIG.physics.damping));
 
         positions[idx] += pVelocities[idx];
         positions[idx + 1] += pVelocities[idx + 1];
@@ -1043,7 +1055,9 @@ export const LivingMatterBackground: React.FC = () => {
         currentCinematicStage === 'PROFILE_COMPLETE' ||
         currentCinematicStage === 'PROFILE_HOLD';
 
-      if (!prefersReduced && !isProfileFormingOrHeld) {
+      const isGlobeActive = ambientState === 'GLOBE';
+
+      if (!prefersReduced && !isProfileFormingOrHeld && !isGlobeActive) {
         gridHead.fill(-1);
 
         // 1. Bin particles into 3D spatial hash grid

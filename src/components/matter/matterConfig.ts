@@ -3,13 +3,13 @@
  * Fully modular and calibrated for high-fidelity 60-120 FPS performance.
  */
 export const MATTER_CONFIG = {
-  // Device Particle Budgets (Calibrated for dense 6000+ particle globe and portrait)
+  // Device Particle Budgets (Calibrated for dense 20,000 particle globe and portrait)
   particles: {
-    desktopHigh: 7200,
-    desktopStandard: 6000,
-    tablet: 3600,
-    mobile: 2200,
-    lowPower: 1400,
+    desktopHigh: 20000,
+    desktopStandard: 20000,
+    tablet: 20000,
+    mobile: 20000,
+    lowPower: 12000,
   },
 
   // Color Palette (Subtle monochrome with rare electric accents on high kinetic energy)

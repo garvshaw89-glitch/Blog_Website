@@ -181,41 +181,41 @@ export function generateGlobePosition(
   // Check land vs water
   const isLand = isLandCoordinate(latDeg, lonDeg);
 
-  // Allocate ~14% of particles to atmospheric weather clouds and auroras
-  const isAtmosphereCandidate = i % 7 === 0;
-  const isAuroraCandidate = Math.abs(latDeg) > 66 && (i % 5 === 0);
+  // Allocate ~12% of particles to atmospheric weather clouds and auroras
+  const isAtmosphereCandidate = i % 8 === 0;
+  const isAuroraCandidate = Math.abs(latDeg) > 66 && (i % 6 === 0);
 
   let featureType: GlobeFeatureType = 'ocean';
-  let sphereRadius = 9.45; // Base radius (BIG Earth)
+  // Tightly calibrated base radius (5.30) so all 20,000 particles pack closely together!
+  let sphereRadius = 5.30;
   const col = new THREE.Color();
   let sizeMult = 1.0;
 
   if (isAuroraCandidate) {
-    // Polar Aurora Borealis / Australis ribbons floating high above magnetic poles
+    // Polar Aurora ribbons floating above magnetic poles
     featureType = 'aurora';
-    sphereRadius = 10.45 + (i % 4) * 0.15;
-    sizeMult = 1.35;
+    sphereRadius = 5.68 + (i % 4) * 0.04;
+    sizeMult = 1.25;
     if (i % 2 === 0) {
-      col.setRGB(0.12, 0.95, 0.58); // Shimmering emerald aurora
+      col.setRGB(0.12, 1.0, 0.65); // Shimmering emerald aurora
     } else {
-      col.setRGB(0.68, 0.35, 0.98); // Electric violet-magenta aurora
+      col.setRGB(0.84, 0.35, 1.0); // Electric violet-magenta aurora
     }
   } else if (isAtmosphereCandidate) {
-    // Swirling white clouds and storm fronts floating above surface
+    // Swirling white clouds and storm systems floating just above surface
     featureType = 'cloud';
-    sphereRadius = 9.95 + ((i * 13) % 5) * 0.08;
-    sizeMult = 1.25;
-    // Pure glistening cloud white with subtle silvery gradient
-    const cloudShade = 0.92 + ((i * 7) % 10) * 0.008;
+    sphereRadius = 5.50 + ((i * 11) % 5) * 0.02;
+    sizeMult = 1.15;
+    const cloudShade = 0.96 + ((i * 7) % 5) * 0.01;
     col.setRGB(cloudShade, cloudShade, 1.0);
   } else if (isLand) {
     // Landmass classifications based on latitude and regional geography
-    if (Math.abs(latDeg) > 62) {
+    if (Math.abs(latDeg) > 60) {
       // Polar Ice Caps (Antarctica, Greenland, Arctic)
       featureType = 'ice';
-      sphereRadius = 9.75;
-      sizeMult = 1.15;
-      col.setRGB(0.92, 0.97, 1.0); // Crystalline glacier white
+      sphereRadius = 5.34;
+      sizeMult = 1.1;
+      col.setRGB(1.0, 1.0, 1.0); // Crystalline pure glacier white
     } else if (
       (latDeg >= 14 && latDeg <= 35 && lonDeg >= -17 && lonDeg <= 60) || // Sahara & Arabia
       (latDeg >= -35 && latDeg <= -18 && lonDeg >= 115 && lonDeg <= 142) || // Australian Outback
@@ -223,10 +223,10 @@ export function generateGlobePosition(
     ) {
       // Arid Deserts (Golden sands, amber dunes, terracotta)
       featureType = 'desert';
-      sphereRadius = 9.68;
+      sphereRadius = 5.32;
       sizeMult = 1.05;
-      const duneNoise = ((i * 17) % 5) * 0.03;
-      col.setRGB(0.96, 0.68 + duneNoise, 0.15); // Vibrant glowing golden amber
+      const duneNoise = ((i * 17) % 5) * 0.02;
+      col.setRGB(1.0, 0.80 + duneNoise, 0.20); // Radiant glowing golden amber
     } else if (
       (latDeg >= -15 && latDeg <= 10 && lonDeg >= -80 && lonDeg <= -45) || // Amazon Basin
       (latDeg >= -5 && latDeg <= 8 && lonDeg >= 10 && lonDeg <= 32) || // Congo Basin
@@ -234,10 +234,10 @@ export function generateGlobePosition(
     ) {
       // Tropical Rainforests (Lush deep emerald & radiant jade)
       featureType = 'rainforest';
-      sphereRadius = 9.70;
-      sizeMult = 1.1;
-      const canopy = ((i * 11) % 6) * 0.04;
-      col.setRGB(0.04, 0.76 + canopy, 0.45); // Radiant tropical emerald
+      sphereRadius = 5.33;
+      sizeMult = 1.08;
+      const canopy = ((i * 11) % 5) * 0.025;
+      col.setRGB(0.04, 0.96 + canopy, 0.40); // Radiant tropical emerald
     } else if (
       (latDeg >= 26 && latDeg <= 36 && lonDeg >= 75 && lonDeg <= 96) || // Himalayas
       (latDeg >= -50 && latDeg <= 10 && lonDeg >= -76 && lonDeg <= -68) || // Andes
@@ -245,51 +245,56 @@ export function generateGlobePosition(
     ) {
       // Mountain Spines with Snowcaps
       featureType = 'mountain';
-      sphereRadius = 9.88; // Highest physical elevation
-      sizeMult = 1.2;
-      col.setRGB(0.85, 0.92, 0.98); // Snow-capped granite slate
+      sphereRadius = 5.42; // Elevated peak spine
+      sizeMult = 1.15;
+      col.setRGB(0.96, 0.98, 1.0); // Snow-capped granite slate
     } else {
       // Temperate Plains & Forests (North America, Europe, East Asia)
       featureType = 'land';
-      sphereRadius = 9.65;
+      sphereRadius = 5.31;
       sizeMult = 1.0;
-      const flora = ((i * 19) % 5) * 0.04;
-      col.setRGB(0.14, 0.78 + flora, 0.32); // Fresh verdant vegetation green
+      const flora = ((i * 19) % 5) * 0.025;
+      col.setRGB(0.14, 0.90 + flora, 0.35); // Fresh verdant vegetation green
     }
   } else {
-    // Oceanic waters: coastal shelves vs deep abyssal trenches
-    // Shallow water near coasts detected by proximity perturbation
+    // Oceanic waters: coastal shelves vs deep open oceans
     const isCoastalShelf = (i % 3 === 0);
 
     if (isCoastalShelf) {
       // Coastal shallow waters, coral barrier reefs, Caribbean turquoise
       featureType = 'coast';
-      sphereRadius = 9.48;
+      sphereRadius = 5.28;
       sizeMult = 1.05;
-      col.setRGB(0.02, 0.85, 0.88); // Electric cyan-turquoise
+      col.setRGB(0.03, 0.92, 0.96); // Electric glowing cyan-turquoise
     } else {
-      // Deep open oceans (Pacific, Atlantic, Indian)
+      // Deep open oceans (Pacific, Atlantic, Indian, Southern)
       featureType = 'ocean';
-      sphereRadius = 9.38;
-      sizeMult = 0.92;
-      const oceanDepth = ((i * 23) % 4) * 0.04;
-      col.setRGB(0.02, 0.32 + oceanDepth, 0.88); // Deep radiant sapphire blue
+      sphereRadius = 5.25;
+      sizeMult = 0.95;
+      const oceanDepth = ((i * 23) % 4) * 0.02;
+      col.setRGB(0.04, 0.44 + oceanDepth, 0.98); // Deep luminous sapphire blue
     }
   }
 
-  // Realistic Earth Axial Tilt: 23.44° (~0.409 rad)
-  const axialTilt = 0.409;
-  const tiltedLat = latRad * Math.cos(axialTilt) - lonRad * Math.sin(axialTilt) * 0.15;
-  const rotatedLon = lonRad + rotationY;
+  // True 3D Earth Axial Tilt: 23.44° (~0.4091 rad) rotation
+  const tilt = 0.4091;
+  const cosTilt = Math.cos(tilt);
+  const sinTilt = Math.sin(tilt);
 
-  const cosLat = Math.cos(tiltedLat);
-  const sinLat = Math.sin(tiltedLat);
-  const cosLon = Math.cos(rotatedLon);
-  const sinLon = Math.sin(rotatedLon);
+  const cosLat = Math.cos(latRad);
+  const sinLat = Math.sin(latRad);
+  const cosLon = Math.cos(lonRad + rotationY);
+  const sinLon = Math.sin(lonRad + rotationY);
 
-  const x = sphereRadius * cosLat * sinLon;
-  const y = sphereRadius * sinLat;
-  const z = sphereRadius * cosLat * cosLon - 2.0;
+  // Unrotated spherical coordinates
+  const x0 = sphereRadius * cosLat * sinLon;
+  const y0 = sphereRadius * sinLat;
+  const z0 = sphereRadius * cosLat * cosLon;
+
+  // True 3D axial tilt rotation around Z axis
+  const x = x0 * cosTilt - y0 * sinTilt;
+  const y = x0 * sinTilt + y0 * cosTilt;
+  const z = z0;
 
   return {
     pos: new THREE.Vector3(x, y, z),

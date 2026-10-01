@@ -150,7 +150,7 @@ export default function App() {
           <WritingSection id="writing" />
 
           {/* 10. LAB / RESEARCH EXPERIMENTS */}
-          <AiLabSection id="lab" />
+          <AiLabSection id="ai-lab" />
 
           {/* 11. CONTACT / DIRECT TRANSMISSION */}
           <ContactSection id="contact" />

@@ -10,7 +10,8 @@ const SECTIONS = [
   { id: 'journey', label: '06 // JOURNEY' },
   { id: 'constellation', label: '07 // TOPOLOGY' },
   { id: 'writing', label: '08 // WRITING' },
-  { id: 'contact', label: '09 // CONTACT' },
+  { id: 'ai-lab', label: '09 // AI LAB' },
+  { id: 'contact', label: '10 // CONTACT' },
 ];
 
 export const SectionProgressHUD: React.FC = () => {
