@@ -253,21 +253,21 @@ export const LivingMatterBackground: React.FC = () => {
       const isMobile = w < 768;
       const isTablet = w >= 768 && w < 1024;
 
-      // Base globe radius:
-      const radius = isNarrowMobile ? 3.0 : isMobile ? 3.3 : isTablet ? 3.7 : 4.0;
+      // Base globe radius calibrated for comfortable viewport containment:
+      const radius = isNarrowMobile ? 2.8 : isMobile ? 3.1 : isTablet ? 3.6 : 3.9;
 
       // Desired maximum coverage of the limiting viewport dimension:
-      // Narrow mobile: 65% of screen width (leaves 17.5% margin left and 17.5% margin right)
-      // Mobile: 62% of screen width (leaves 19% margin each side)
-      // Tablet: 58% of limiting dimension
-      // Desktop: 52% of height (leaves 24% margin top and 24% margin bottom)
-      const maxCoverage = isNarrowMobile ? 0.65 : isMobile ? 0.62 : isTablet ? 0.58 : 0.52;
+      // Narrow mobile: 58% of screen width (leaves 21% margin left and right)
+      // Mobile: 58% of screen width (leaves 21% margin each side)
+      // Tablet: 52% of limiting dimension
+      // Desktop: 48% of height (leaves 26% margin top and bottom)
+      const maxCoverage = isNarrowMobile ? 0.58 : isMobile ? 0.58 : isTablet ? 0.52 : 0.48;
 
       // Limiting visible half-dimension factor per unit distance:
       const minDimensionFactor = tanFovHalf * Math.min(1.0, aspect);
 
-      // Safe camera distance ensuring: radius / (distance * minDimensionFactor) <= maxCoverage
-      const safeDistance = radius / (maxCoverage * minDimensionFactor);
+      // Safe camera distance ensuring: (radius + tolerance) / (distance * minDimensionFactor) <= maxCoverage
+      const safeDistance = (radius + 0.12) / (maxCoverage * minDimensionFactor);
 
       return {
         radius,
@@ -449,6 +449,7 @@ export const LivingMatterBackground: React.FC = () => {
 
     // 9. Ambient State Machine (FREE_FLOW -> ROCK -> GLOBE -> WAVE -> ROCKET_LAUNCH -> Repeat)
     let ambientState: AmbientMatterState = 'FREE_FLOW';
+    let isUserPinnedAmbient = false;
     let ambientTime = 0;
     let targetMorphBlend = 0;
     let currentMorphBlend = 0;
@@ -487,6 +488,9 @@ export const LivingMatterBackground: React.FC = () => {
     };
 
     window.addEventListener('resize', onResize, { passive: true });
+    window.addEventListener('orientationchange', onResize, { passive: true });
+    // Run initial sync to guarantee safe camera distance & projection matrix match window
+    onResize();
 
     // 10. Visibility API Optimization for Battery & Idle Tabs
     let isTabVisible = !document.hidden;
@@ -581,10 +585,12 @@ export const LivingMatterBackground: React.FC = () => {
         ambientState = 'GLOBE';
         ambientTime = 0;
         targetMorphBlend = 1;
+        isUserPinnedAmbient = true;
       } else if (requestedAmbient === 'FLOW') {
         ambientState = 'FREE_FLOW';
         ambientTime = 0;
         targetMorphBlend = 0;
+        isUserPinnedAmbient = false;
       }
 
       if (inCinematicSequence && !prefersReduced) {
@@ -882,7 +888,7 @@ export const LivingMatterBackground: React.FC = () => {
           if (bloomPass) {
             bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.32, 0.05);
           }
-          if (ambientTime > MATTER_CONFIG.timing.globeFormDuration) {
+          if (ambientTime > MATTER_CONFIG.timing.globeFormDuration && !isUserPinnedAmbient) {
             ambientState = 'WAVE';
             ambientTime = 0;
           }
@@ -909,16 +915,15 @@ export const LivingMatterBackground: React.FC = () => {
         const shakeY = (Math.random() - 0.5) * cameraShake;
 
         if (ambientState === 'GLOBE') {
-          // Strictly frame the globe inside the camera frustum with safe camera distance
-          const targetCamX = ndcX * 0.22 + shakeX * 0.02;
-          const targetCamY = ndcY * 0.12 - Math.min(0.8, scrollProgress * 1.5) + shakeY * 0.02;
+          // Strictly frame the globe inside the camera frustum with safe camera distance centered on globeCenter
+          const targetCamX = ndcX * 0.18 + shakeX * 0.02;
+          const targetCamY = ndcY * 0.10 + shakeY * 0.02;
           const targetCamZ = safeGlobeCameraZ;
 
-          camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetCamX, 0.07);
-          camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetCamY, 0.07);
-          camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetCamZ, 0.07);
-          camera.rotation.y = -ndcX * 0.015;
-          camera.rotation.x = ndcY * 0.012;
+          camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetCamX, 0.08);
+          camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetCamY, 0.08);
+          camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetCamZ, 0.08);
+          camera.lookAt(globeCenter.x, globeCenter.y, globeCenter.z);
         } else if (!inCinematicSequence) {
           const targetCamX = ndcX * 0.75 + shakeX;
           const targetCamY = ndcY * 0.5 - scrollProgress * 6.0 + shakeY;
@@ -1235,21 +1240,21 @@ export const LivingMatterBackground: React.FC = () => {
               }
 
               // 4. True 3D Spherical Depth & Back-Facing Opacity / Visibility Hierarchy (Item 6):
-              // Front: high visibility (viewDot >= 0.15)
-              // Side: medium visibility (-0.15 <= viewDot < 0.15) with atmospheric Rayleigh rim
-              // Back: very low visibility (viewDot < -0.15) so the globe reads as a solid 3D sphere
+              // Front: high visibility (viewDot >= 0.10)
+              // Side: medium visibility (-0.08 <= viewDot < 0.10) with atmospheric Rayleigh rim
+              // Back: deeply occluded (viewDot < -0.08) so the globe reads as a solid 3D sphere
               let visibilityFactor: number;
-              if (viewDot >= 0.15) {
+              if (viewDot >= 0.10) {
                 // Front hemisphere: rich clarity and high detail
-                visibilityFactor = 0.78 + 0.27 * Math.min(1.0, (viewDot - 0.15) / 0.85);
-              } else if (viewDot >= -0.15) {
+                visibilityFactor = 0.82 + 0.28 * Math.min(1.0, (viewDot - 0.10) / 0.90);
+              } else if (viewDot >= -0.08) {
                 // Side horizon: medium visibility with atmospheric edge glow
-                const edgeT = (viewDot + 0.15) / 0.30;
-                visibilityFactor = 0.35 + 0.43 * edgeT;
+                const edgeT = (viewDot + 0.08) / 0.18;
+                visibilityFactor = 0.25 + 0.57 * edgeT;
               } else {
-                // Back hemisphere: very low visibility so the front continents read clearly as a solid sphere
-                const backDepth = Math.max(0, (-viewDot - 0.15) / 0.85);
-                visibilityFactor = (i % 2 === 0) ? (0.10 - 0.07 * backDepth) : (0.04 - 0.02 * backDepth);
+                // Back hemisphere: deeply occluded so back continents do not shine through
+                const backDepth = Math.min(1.0, (-viewDot - 0.08) / 0.45);
+                visibilityFactor = 0.03 * (1.0 - backDepth);
               }
 
               r *= visibilityFactor;
@@ -1420,7 +1425,7 @@ export const LivingMatterBackground: React.FC = () => {
         if (ambientState === 'GLOBE') {
           const blend = currentMorphBlend;
           if (blend > 0.1) {
-            const snapSpeed = 0.16 * blend;
+            const snapSpeed = (blend >= 0.8 ? 0.24 : 0.16) * blend;
             positions[idx] = THREE.MathUtils.lerp(positions[idx], formTargetX, snapSpeed);
             positions[idx + 1] = THREE.MathUtils.lerp(positions[idx + 1], formTargetY, snapSpeed);
             positions[idx + 2] = THREE.MathUtils.lerp(positions[idx + 2], formTargetZ, snapSpeed);
@@ -1433,23 +1438,35 @@ export const LivingMatterBackground: React.FC = () => {
 
           if (curDist > 0.0001) {
             const feat = globeData.featureType[i];
-            const maxTolerance = feat === 8 ? 0.09 : feat === 7 ? 0.055 : 0.02;
+            const maxTolerance = feat === 8 ? 0.06 : feat === 7 ? 0.04 : 0.015;
             const maxAllowed = globeRadius + maxTolerance;
-            const minAllowed = globeRadius - 0.025;
+            const minAllowed = globeRadius - 0.02;
 
             if (curDist > maxAllowed) {
               const s = maxAllowed / curDist;
               positions[idx] = globeCenter.x + relX * s;
               positions[idx + 1] = globeCenter.y + relY * s;
               positions[idx + 2] = globeCenter.z + relZ * s;
-              pVelocities[idx] *= 0.3;
-              pVelocities[idx + 1] *= 0.3;
-              pVelocities[idx + 2] *= 0.3;
+              pVelocities[idx] *= 0.2;
+              pVelocities[idx + 1] *= 0.2;
+              pVelocities[idx + 2] *= 0.2;
             } else if (curDist < minAllowed) {
               const s = minAllowed / curDist;
               positions[idx] = globeCenter.x + relX * s;
               positions[idx + 1] = globeCenter.y + relY * s;
               positions[idx + 2] = globeCenter.z + relZ * s;
+            }
+
+            // Remove any outward radial velocity component so particles never drift off the sphere
+            const invCur = 1.0 / Math.max(0.001, curDist);
+            const snx = relX * invCur;
+            const sny = relY * invCur;
+            const snz = relZ * invCur;
+            const vRadial = pVelocities[idx] * snx + pVelocities[idx + 1] * sny + pVelocities[idx + 2] * snz;
+            if (vRadial > 0) {
+              pVelocities[idx] -= snx * vRadial;
+              pVelocities[idx + 1] -= sny * vRadial;
+              pVelocities[idx + 2] -= snz * vRadial;
             }
           }
         }
@@ -1614,6 +1631,7 @@ export const LivingMatterBackground: React.FC = () => {
       unsubInteraction();
       unsubCinematic();
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animId);
 
