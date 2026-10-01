@@ -204,6 +204,14 @@ export const DotParticleAvatar: React.FC<DotParticleAvatarProps> = ({
         ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2);
         ctx.fillStyle = `rgb(${dot.r}, ${dot.g}, ${dot.b})`;
         ctx.fill();
+
+        // Specular core shine pinpoint on illuminated dots
+        if (dot.radius > 1.0) {
+          ctx.beginPath();
+          ctx.arc(dot.x - dot.radius * 0.28, dot.y - dot.radius * 0.28, dot.radius * 0.35, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.40)';
+          ctx.fill();
+        }
       }
 
       animFrameRef.current = requestAnimationFrame(render);

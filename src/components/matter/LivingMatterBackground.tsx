@@ -9,7 +9,6 @@ import { MATTER_CONFIG } from './matterConfig';
 import {
   getCurlNoise,
   generateRockPosition,
-  generateGlobePosition,
   generateWavePosition,
   generateArchitecturePosition,
   generateConvergencePosition,
@@ -17,6 +16,8 @@ import {
   generateRingPosition,
   generateOrbitPosition,
   generateBlueprintPosition,
+  precomputeGlobeData,
+  GlobePrecomputedData,
 } from './matterFormGeometry';
 import {
   generateRocketPosition,
@@ -143,11 +144,11 @@ export const LivingMatterBackground: React.FC = () => {
         const renderPass = new RenderPass(scene, camera);
         composer.addPass(renderPass);
 
-        // UnrealBloomPass calibrated for luxury digital matter:
-        // - threshold: 0.70 (restricts bloom to only highest-luminance / tier 0 / collision-flashed particles)
-        // - strength: 0.55 (subtle, premium light-glow halo without hazing the deep background)
-        // - radius: 0.38 (tight optical dispersion)
-        bloomPass = new UnrealBloomPass(renderResolution, 0.55, 0.38, 0.70);
+        // UnrealBloomPass calibrated for refined, luxurious shine:
+        // - threshold: 0.82 (bloom selectively captures brightest highlight particles, ocean specular glints, auroras, and cursor flare; normal background dust remains sharp with zero haze)
+        // - strength: 0.30 (controlled, luminous optical radiance)
+        // - radius: 0.24 (tight, elegant optical dispersion)
+        bloomPass = new UnrealBloomPass(renderResolution, 0.30, 0.24, 0.82);
         composer.addPass(bloomPass);
 
         const outputPass = new OutputPass();
@@ -159,42 +160,56 @@ export const LivingMatterBackground: React.FC = () => {
       }
     }
 
-    // 3. Cinematic Ambient, Spotlight & Dynamic Lighting
-    const ambientLight = new THREE.AmbientLight(0x0a0c10, 1.8);
+    // 3. Cinematic Ambient, Spotlight & Dynamic Lighting (Subtle, non-overexposed)
+    const ambientLight = new THREE.AmbientLight(0x0a0c10, 1.2);
     scene.add(ambientLight);
 
-    const cursorLight = new THREE.PointLight(0xffffff, 2.2, 28, 1.6);
+    const cursorLight = new THREE.PointLight(0xffffff, 1.2, 16, 1.8);
     cursorLight.position.set(0, 0, 5);
     scene.add(cursorLight);
 
-    const rocketEngineLight = new THREE.PointLight(0x22d3ee, 0, 20, 2.0);
+    const rocketEngineLight = new THREE.PointLight(0x22d3ee, 0, 16, 2.0);
     scene.add(rocketEngineLight);
 
+    // Dedicated Planetary Globe Radiance Lights (gentle, atmospheric illumination)
+    const globeSunLight = new THREE.PointLight(0xa5f3fc, 0, 36, 1.4);
+    globeSunLight.position.set(10, 6, 12);
+    scene.add(globeSunLight);
+
+    const globeRimLight = new THREE.PointLight(0x38bdf8, 0, 28, 1.6);
+    globeRimLight.position.set(-8, -5, -4);
+    scene.add(globeRimLight);
+
     // Dedicated GitHub Profile Radiance Spotlight (Turns on during profile reveal)
-    const profileRadianceLight = new THREE.PointLight(0xffffff, 0, 32, 1.4);
+    const profileRadianceLight = new THREE.PointLight(0xffffff, 0, 24, 1.6);
     profileRadianceLight.position.set(0, 0, 4.0);
     scene.add(profileRadianceLight);
 
-    const profileCyanFill = new THREE.PointLight(0x06b6d4, 0, 24, 1.8);
+    const profileCyanFill = new THREE.PointLight(0x06b6d4, 0, 18, 1.8);
     profileCyanFill.position.set(0, -1.0, 3.0);
     scene.add(profileCyanFill);
 
-    // 4. Procedural Soft Particle Texture
+    // 4. Procedural Clean Micro-Point Particle Texture (Sharp diamond core, luminous center, zero bleeding halo)
     const particleTexture = (() => {
       const cvs = document.createElement('canvas');
       cvs.width = 64;
       cvs.height = 64;
       const ctx = cvs.getContext('2d');
       if (ctx) {
-        const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-        grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        grad.addColorStop(0.2, 'rgba(255, 255, 255, 0.9)');
-        grad.addColorStop(0.55, 'rgba(255, 255, 255, 0.28)');
-        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        const cx = 32;
+        const cy = 32;
+
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 26);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');     // Pure sharp diamond pinpoint core
+        grad.addColorStop(0.22, 'rgba(255, 255, 255, 0.90)'); // High-specular luminous inner center
+        grad.addColorStop(0.48, 'rgba(255, 255, 255, 0.25)'); // Short subtle optical falloff
+        grad.addColorStop(0.68, 'rgba(255, 255, 255, 0.0)');  // Clean zero boundary - zero halo bleeding outside sphere
+        grad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, 64, 64);
       }
-      return new THREE.CanvasTexture(cvs);
+      const tex = new THREE.CanvasTexture(cvs);
+      return tex;
     })();
 
     // 5. Living Matter Particle System (Typed Arrays for High GPU Throughput)
@@ -224,47 +239,106 @@ export const LivingMatterBackground: React.FC = () => {
       }
     });
 
-    // Calibrated luminance tiers:
-    // - Low (Tier 2): 0.22-0.26 (deep ambient background, stays sharp and clean)
-    // - Mid (Tier 1): 0.48-0.54 (midground digital matter, sharp)
-    // - High (Tier 0): 0.95-1.10 (brightest foreground particles, triggers UnrealBloomPass!)
-    // - Accent Blue/Cyan: 1.25-1.45 (radiant specular highlight particles)
-    const colWhiteLow = { r: 0.22, g: 0.23, b: 0.26 };
-    const colWhiteMid = { r: 0.48, g: 0.50, b: 0.54 };
-    const colWhiteHigh = { r: 0.95, g: 0.98, b: 1.08 };
-    const colAccentBlue = { r: 0.42, g: 0.72, b: 1.45 };
-    const colAccentPurple = { r: 0.62, g: 0.45, b: 1.35 };
+    // 6. Explicit 3D Globe Center & Dynamic Frustum Sizing (100% Contained, Zero Clipping)
+    const globeCenter = new THREE.Vector3(0, 0, 0);
+
+    // Dynamic Safe Camera Distance & Globe Sizing:
+    // Calculates exact camera distance based on globeRadius, FOV (50 deg), and aspect ratio
+    // so the globe is 100% contained within the camera frustum with calibrated luxury margins.
+    const tanFovHalf = Math.tan(((fov * Math.PI) / 180) / 2); // tan(25 deg) ~ 0.4663
+
+    const getGlobeConfig = (w: number, h: number) => {
+      const aspect = Math.max(0.1, w / h);
+      const isNarrowMobile = w < 480;
+      const isMobile = w < 768;
+      const isTablet = w >= 768 && w < 1024;
+
+      // Base globe radius:
+      const radius = isNarrowMobile ? 3.0 : isMobile ? 3.3 : isTablet ? 3.7 : 4.0;
+
+      // Desired maximum coverage of the limiting viewport dimension:
+      // Narrow mobile: 65% of screen width (leaves 17.5% margin left and 17.5% margin right)
+      // Mobile: 62% of screen width (leaves 19% margin each side)
+      // Tablet: 58% of limiting dimension
+      // Desktop: 52% of height (leaves 24% margin top and 24% margin bottom)
+      const maxCoverage = isNarrowMobile ? 0.65 : isMobile ? 0.62 : isTablet ? 0.58 : 0.52;
+
+      // Limiting visible half-dimension factor per unit distance:
+      const minDimensionFactor = tanFovHalf * Math.min(1.0, aspect);
+
+      // Safe camera distance ensuring: radius / (distance * minDimensionFactor) <= maxCoverage
+      const safeDistance = radius / (maxCoverage * minDimensionFactor);
+
+      return {
+        radius,
+        safeDistance,
+        aspect,
+      };
+    };
+
+    let currentGlobeConfig = getGlobeConfig(window.innerWidth, window.innerHeight);
+    let globeRadius = currentGlobeConfig.radius;
+    let safeGlobeCameraZ = currentGlobeConfig.safeDistance;
+    const globeData: GlobePrecomputedData = precomputeGlobeData(particleCount);
+
+    // Calibrated luminance tiers & visual hierarchy (Intelligently sparse, non-distracting atmospheric depth):
+    // - 75% Tier 2 (Background dust): depth -18 to -5, size 0.16–0.22, subtle muted gray/slate (opacity ~0.18-0.28)
+    // - 20% Tier 1 (Midground matter): depth -5 to +1.5, size 0.24–0.30, crisp clean silver/white (opacity ~0.38-0.48)
+    // - 4.2% Tier 0 (Foreground highlights): depth 1 to 4.5, size 0.34–0.42, luminous white (opacity ~0.70-0.85)
+    // - 0.8% Rare Accents: depth 2 to 5.5, size 0.40–0.48, electric cyan/purple catching subtle bloom
+    const colDust = { r: 0.20, g: 0.22, b: 0.26 };
+    const colMid = { r: 0.42, g: 0.45, b: 0.52 };
+    const colBright = { r: 0.88, g: 0.92, b: 1.00 };
+    const colAccentCyan = { r: 0.25, g: 0.92, b: 1.05 };
+    const colAccentPurple = { r: 0.65, g: 0.48, b: 1.05 };
 
     for (let i = 0; i < particleCount; i++) {
       const idx = i * 3;
       const rand = Math.random();
 
-      let tier = 1;
-      let depthZ = -4.0 + Math.random() * 8.0;
-      let baseSize = 0.32;
-      let collisionRadius = 0.22;
-      let col = colWhiteMid;
+      let tier = 2;
+      let depthZ = -18.0 + Math.random() * 13.0;
+      let baseSize = 0.20;
+      let collisionRadius = 0.10;
+      let col = colDust;
 
-      if (rand < 0.25) {
-        tier = 0;
-        depthZ = 1.0 + Math.random() * 5.0;
-        baseSize = 0.42 + Math.random() * 0.18;
-        collisionRadius = 0.28 + Math.random() * 0.08;
-        col = rand < 0.04 ? colAccentBlue : colWhiteHigh;
-      } else if (rand > 0.75) {
+      if (rand < 0.75) {
+        // 75% Background atmospheric dust (subtle, clean, non-distracting)
         tier = 2;
-        depthZ = -16.0 + Math.random() * 8.0;
-        baseSize = 0.22 + Math.random() * 0.1;
-        collisionRadius = 0.15 + Math.random() * 0.04;
-        col = rand > 0.96 ? colAccentPurple : colWhiteLow;
+        depthZ = -18.0 + Math.random() * 13.0;
+        baseSize = 0.18 + Math.random() * 0.06;
+        collisionRadius = 0.10;
+        col = colDust;
+      } else if (rand < 0.95) {
+        // 20% Midground subtle digital matter
+        tier = 1;
+        depthZ = -5.0 + Math.random() * 6.5;
+        baseSize = 0.26 + Math.random() * 0.06;
+        collisionRadius = 0.16;
+        col = colMid;
+      } else if (rand < 0.992) {
+        // 4.2% Foreground highlights (rare bright sparkles)
+        tier = 0;
+        depthZ = 1.0 + Math.random() * 3.5;
+        baseSize = 0.36 + Math.random() * 0.08;
+        collisionRadius = 0.22;
+        col = colBright;
+      } else {
+        // 0.8% Rare special accent particles (cyan/purple celestial energy)
+        tier = 0;
+        depthZ = 2.0 + Math.random() * 3.5;
+        baseSize = 0.42 + Math.random() * 0.08;
+        collisionRadius = 0.24;
+        col = rand > 0.996 ? colAccentPurple : colAccentCyan;
       }
 
       pTiers[i] = tier;
       pSizes[i] = baseSize;
       pRadii[i] = collisionRadius;
 
-      const spreadX = tier === 2 ? 46 : tier === 1 ? 34 : 26;
-      const spreadY = tier === 2 ? 34 : tier === 1 ? 26 : 20;
+      // Intelligent spatial distribution with natural negative space
+      const spreadX = tier === 2 ? 48 : tier === 1 ? 36 : 28;
+      const spreadY = tier === 2 ? 36 : tier === 1 ? 28 : 22;
 
       const px = (Math.random() - 0.5) * spreadX;
       const py = (Math.random() - 0.5) * spreadY;
@@ -277,9 +351,9 @@ export const LivingMatterBackground: React.FC = () => {
       pOriginalHome[idx + 1] = py;
       pOriginalHome[idx + 2] = depthZ;
 
-      pVelocities[idx] = (Math.random() - 0.5) * 0.02;
-      pVelocities[idx + 1] = (Math.random() - 0.5) * 0.02;
-      pVelocities[idx + 2] = (Math.random() - 0.5) * 0.01;
+      pVelocities[idx] = (Math.random() - 0.5) * 0.012;
+      pVelocities[idx + 1] = (Math.random() - 0.5) * 0.012;
+      pVelocities[idx + 2] = (Math.random() - 0.5) * 0.006;
 
       pColors[idx] = col.r;
       pColors[idx + 1] = col.g;
@@ -294,7 +368,7 @@ export const LivingMatterBackground: React.FC = () => {
     particleGeometry.setAttribute('color', new THREE.BufferAttribute(pColors, 3));
 
     const particleMaterial = new THREE.PointsMaterial({
-      size: 0.38,
+      size: 0.32, // Calibrated point size for crisp jewel-like shine
       map: particleTexture,
       transparent: true,
       opacity: 0.92,
@@ -304,6 +378,9 @@ export const LivingMatterBackground: React.FC = () => {
     });
 
     const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+    // Explicitly disable frustum culling so Three.js never clips particles
+    particleSystem.frustumCulled = false;
+    particleGeometry.boundingSphere = new THREE.Sphere(globeCenter, 120);
     scene.add(particleSystem);
 
     // 6. Water Ripple Waves
@@ -376,12 +453,25 @@ export const LivingMatterBackground: React.FC = () => {
     let targetMorphBlend = 0;
     let currentMorphBlend = 0;
     let globeRotationY = 0;
+    let globeRotationVelocity = 0;
+
+    // Dynamic Performance Monitor (Monitors FPS over rolling 1-second cycles)
+    let perfFrameCount = 0;
+    let lastFpsCheckTime = performance.now();
+    let measuredFps = 60;
+    let qualityLevel: 'high' | 'medium' | 'low' = 'high';
+    let lowFpsStreak = 0;
+    let highFpsStreak = 0;
 
     const onResize = () => {
       const w = window.innerWidth;
       const h = window.innerHeight;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+
+      currentGlobeConfig = getGlobeConfig(w, h);
+      globeRadius = currentGlobeConfig.radius;
+      safeGlobeCameraZ = currentGlobeConfig.safeDistance;
 
       const newDpr = Math.min(window.devicePixelRatio || 1, maxDpr);
       renderer.setPixelRatio(newDpr);
@@ -418,6 +508,41 @@ export const LivingMatterBackground: React.FC = () => {
       const elapsedTime = clock.getElapsedTime();
       cinematicStageTimer += delta;
 
+      // Dynamic Performance Monitor & Adaptive Quality Adjustment
+      perfFrameCount++;
+      const now = performance.now();
+      if (now - lastFpsCheckTime >= 1000) {
+        measuredFps = (perfFrameCount * 1000) / (now - lastFpsCheckTime);
+        perfFrameCount = 0;
+        lastFpsCheckTime = now;
+
+        if (measuredFps < 38) {
+          lowFpsStreak++;
+          highFpsStreak = 0;
+          if (lowFpsStreak >= 2) {
+            if (qualityLevel === 'high') {
+              qualityLevel = 'medium';
+              particleGeometry.setDrawRange(0, Math.floor(particleCount * 0.75));
+            } else if (qualityLevel === 'medium') {
+              qualityLevel = 'low';
+              particleGeometry.setDrawRange(0, Math.floor(particleCount * 0.50));
+            }
+          }
+        } else if (measuredFps >= 56) {
+          highFpsStreak++;
+          lowFpsStreak = 0;
+          if (highFpsStreak >= 4 && qualityLevel !== 'high') {
+            if (qualityLevel === 'low') {
+              qualityLevel = 'medium';
+              particleGeometry.setDrawRange(0, Math.floor(particleCount * 0.75));
+            } else if (qualityLevel === 'medium') {
+              qualityLevel = 'high';
+              particleGeometry.setDrawRange(0, particleCount);
+            }
+          }
+        }
+      }
+
       const {
         ndcX,
         ndcY,
@@ -428,6 +553,22 @@ export const LivingMatterBackground: React.FC = () => {
       } = interactionEngine.state;
 
       updateWorldMouse();
+
+      // Frame-rate independent globe rotation with smooth cursor inertia drag
+      const safeDelta = Math.min(delta, 0.05);
+      // Frame-rate independent exponential inertia decay
+      globeRotationVelocity *= Math.exp(-3.2 * safeDelta);
+      if (ambientState === 'GLOBE') {
+        const cursorDistToCenter = Math.hypot(planeIntersection.x, planeIntersection.y);
+        if (cursorDistToCenter < globeRadius * 1.5) {
+          globeRotationVelocity = THREE.MathUtils.clamp(
+            globeRotationVelocity + cursorVelocityWorld.x * 0.012,
+            -0.25,
+            0.25
+          );
+        }
+        globeRotationY += (0.12 + globeRotationVelocity) * safeDelta;
+      }
 
       // ==========================================
       // CINEMATIC STAGE MACHINE
@@ -476,11 +617,11 @@ export const LivingMatterBackground: React.FC = () => {
         } else if (currentCinematicStage === 'IGNITION') {
           // Engine sparks buildup & supersonic downward particle velocity
           cameraShake = 0.08 + cinematicStageTimer * 0.12;
-          rocketEngineLight.intensity = Math.min(5.5, cinematicStageTimer * 4.5);
+          rocketEngineLight.intensity = Math.min(3.2, cinematicStageTimer * 3.0);
           rocketEngineLight.position.set(0, rocketY - 4.5, -2.0);
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.48, 0.05);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.32, 0.05);
           if (bloomPass) {
-            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.62, 0.05);
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.45, 0.05);
           }
           rocketCinematicManager.update({
             rocketAltitudeMeters: Math.round(cinematicStageTimer * 65),
@@ -499,9 +640,9 @@ export const LivingMatterBackground: React.FC = () => {
           rocketY += rocketVelocityY * delta;
           cameraShake = 0.15;
           rocketEngineLight.position.set(0, rocketY - 4.5, -2.0);
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.48, 0.05);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.34, 0.05);
           if (bloomPass) {
-            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.65, 0.05);
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.52, 0.05);
           }
           const altM = Math.round(250 + Math.pow(Math.max(0, rocketY + 2.5), 2.2) * 95);
           const velKmh = Math.round(rocketVelocityY * 580);
@@ -571,9 +712,9 @@ export const LivingMatterBackground: React.FC = () => {
             reconstructionPhase: Math.floor(progress * 2.99), // phases 0, 1, 2
           });
 
-          profileRadianceLight.intensity = THREE.MathUtils.lerp(profileRadianceLight.intensity, 1.4, 0.05);
-          profileCyanFill.intensity = THREE.MathUtils.lerp(profileCyanFill.intensity, 0.8, 0.05);
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.43, 0.05);
+          profileRadianceLight.intensity = THREE.MathUtils.lerp(profileRadianceLight.intensity, 1.2, 0.05);
+          profileCyanFill.intensity = THREE.MathUtils.lerp(profileCyanFill.intensity, 0.6, 0.05);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.28, 0.05);
 
           if (cinematicStageTimer >= 1.2) {
             // Transition to PROFILE_RECOGNIZABLE at 14.20s
@@ -588,9 +729,9 @@ export const LivingMatterBackground: React.FC = () => {
             reconstructionPhase: 3 + Math.floor(progress * 1.99), // phases 3, 4
           });
 
-          profileRadianceLight.intensity = THREE.MathUtils.lerp(profileRadianceLight.intensity, 1.6, 0.06);
-          profileCyanFill.intensity = THREE.MathUtils.lerp(profileCyanFill.intensity, 1.0, 0.06);
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.44, 0.05);
+          profileRadianceLight.intensity = THREE.MathUtils.lerp(profileRadianceLight.intensity, 1.3, 0.06);
+          profileCyanFill.intensity = THREE.MathUtils.lerp(profileCyanFill.intensity, 0.7, 0.06);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.29, 0.05);
 
           if (cinematicStageTimer >= 1.2) {
             // Transition to PROFILE_LOCKING at 15.40s
@@ -605,12 +746,12 @@ export const LivingMatterBackground: React.FC = () => {
             reconstructionPhase: 5, // All phases active (0 through 5)
           });
 
-          profileRadianceLight.intensity = 2.2;
-          profileCyanFill.intensity = 1.4;
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.50, 0.08);
+          profileRadianceLight.intensity = 1.4;
+          profileCyanFill.intensity = 0.8;
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.30, 0.08);
 
           if (bloomPass) {
-            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.65, 0.06);
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.38, 0.06);
           }
 
           if (cinematicStageTimer >= 0.8) {
@@ -624,11 +765,11 @@ export const LivingMatterBackground: React.FC = () => {
           cinematicStageTimer = 0;
         } else if (currentCinematicStage === 'PROFILE_HOLD') {
           // Luminous colorful profile hold
-          profileRadianceLight.intensity = 2.4;
-          profileCyanFill.intensity = 1.5;
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.50, 0.08);
+          profileRadianceLight.intensity = 1.5;
+          profileCyanFill.intensity = 0.9;
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.30, 0.08);
           if (bloomPass) {
-            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.65, 0.06);
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.38, 0.06);
           }
 
           // If explicitly triggered by user via PROFILE button, hold continuously until user clicks something else!
@@ -678,10 +819,10 @@ export const LivingMatterBackground: React.FC = () => {
             0,
             0.06
           );
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.38, 0.05);
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.24, 0.05);
 
           if (bloomPass) {
-            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.42, 0.05);
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.30, 0.05);
           }
 
           if (cinematicStageTimer > 2.8) {
@@ -694,6 +835,19 @@ export const LivingMatterBackground: React.FC = () => {
         }
       }
 
+      // Dynamic Globe Sunlight & Rim Shine intensity ramping (Gentle, elegant illumination)
+      const isGlobeActiveNow = ambientState === 'GLOBE';
+      globeSunLight.intensity = THREE.MathUtils.lerp(
+        globeSunLight.intensity,
+        isGlobeActiveNow ? 1.4 : 0,
+        0.06
+      );
+      globeRimLight.intensity = THREE.MathUtils.lerp(
+        globeRimLight.intensity,
+        isGlobeActiveNow ? 0.9 : 0,
+        0.06
+      );
+
       // ==========================================
       // AMBIENT FORM TIMELINE & CONTINUOUS REPETITION
       // ==========================================
@@ -703,22 +857,30 @@ export const LivingMatterBackground: React.FC = () => {
         ambientTime += delta;
         if (ambientState === 'FREE_FLOW') {
           targetMorphBlend = 0;
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.32, 0.04);
+          if (bloomPass) {
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.38, 0.04);
+          }
           if (ambientTime > MATTER_CONFIG.timing.freeFlowDuration) {
             ambientState = 'ROCK';
             ambientTime = 0;
           }
         } else if (ambientState === 'ROCK') {
           targetMorphBlend = 1;
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.34, 0.04);
+          if (bloomPass) {
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.42, 0.04);
+          }
           if (ambientTime > MATTER_CONFIG.timing.rockFormDuration) {
             ambientState = 'GLOBE';
             ambientTime = 0;
           }
         } else if (ambientState === 'GLOBE') {
           targetMorphBlend = 1;
-          globeRotationY += delta * 0.20;
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.46, 0.04);
+          // Calibrated crisp micro-point size so particles remain strictly inside spherical perimeter
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.22, 0.05);
           if (bloomPass) {
-            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.54, 0.04);
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.32, 0.05);
           }
           if (ambientTime > MATTER_CONFIG.timing.globeFormDuration) {
             ambientState = 'WAVE';
@@ -726,6 +888,10 @@ export const LivingMatterBackground: React.FC = () => {
           }
         } else if (ambientState === 'WAVE') {
           targetMorphBlend = 1;
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.34, 0.04);
+          if (bloomPass) {
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.42, 0.04);
+          }
           if (ambientTime > MATTER_CONFIG.timing.waveFormDuration) {
             // AUTOMATIC REPEAT: After Wave completes, trigger the Rocket & Profile sequence!
             ambientTime = 0;
@@ -737,16 +903,33 @@ export const LivingMatterBackground: React.FC = () => {
           (targetMorphBlend - currentMorphBlend) * MATTER_CONFIG.timing.morphTransitionSpeed;
       }
 
-      // Camera Parallax & Subtle Shake Response
+      // Camera Parallax & Frame-Safe Positioning (Ensures complete globe remains visible across all screens)
       if (!prefersReduced) {
         const shakeX = (Math.random() - 0.5) * cameraShake;
         const shakeY = (Math.random() - 0.5) * cameraShake;
 
-        camera.rotation.y = -ndcX * 0.035 + shakeX * 0.05;
-        camera.rotation.x = ndcY * 0.025 + shakeY * 0.05;
-        camera.position.x = ndcX * 0.75 + shakeX;
-        camera.position.y = ndcY * 0.5 - scrollProgress * 6.0 + shakeY;
-        camera.position.z = cameraBaseZ - scrollProgress * 4.0;
+        if (ambientState === 'GLOBE') {
+          // Strictly frame the globe inside the camera frustum with safe camera distance
+          const targetCamX = ndcX * 0.22 + shakeX * 0.02;
+          const targetCamY = ndcY * 0.12 - Math.min(0.8, scrollProgress * 1.5) + shakeY * 0.02;
+          const targetCamZ = safeGlobeCameraZ;
+
+          camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetCamX, 0.07);
+          camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetCamY, 0.07);
+          camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetCamZ, 0.07);
+          camera.rotation.y = -ndcX * 0.015;
+          camera.rotation.x = ndcY * 0.012;
+        } else if (!inCinematicSequence) {
+          const targetCamX = ndcX * 0.75 + shakeX;
+          const targetCamY = ndcY * 0.5 - scrollProgress * 6.0 + shakeY;
+          const targetCamZ = cameraBaseZ - scrollProgress * 4.0;
+
+          camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetCamX, 0.07);
+          camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetCamY, 0.07);
+          camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetCamZ, 0.07);
+          camera.rotation.y = -ndcX * 0.035 + shakeX * 0.05;
+          camera.rotation.x = ndcY * 0.025 + shakeY * 0.05;
+        }
       }
 
       // Update Water Ripples
@@ -768,6 +951,16 @@ export const LivingMatterBackground: React.FC = () => {
       const colors = particleGeometry.attributes.color.array as Float32Array;
       const currentSection = sectionTheme?.name || 'hero';
 
+      // Precomputed Planetary Sun, Specular & Axial Tilt vectors (reused per frame with zero GC allocation)
+      const sunDirX = 0.56;
+      const sunDirY = 0.38;
+      const sunDirZ = 0.73;
+      const halfX = 0.308;
+      const halfY = 0.209;
+      const halfZ = 0.928;
+      const cosTilt = 0.9174; // Math.cos(0.4091 rad ~ 23.44° planetary axial tilt)
+      const sinTilt = 0.3979; // Math.sin(0.4091 rad ~ 23.44° planetary axial tilt)
+
       // ==========================================
       // UNIFIED PARTICLE PHYSICS PASS
       // ==========================================
@@ -782,15 +975,21 @@ export const LivingMatterBackground: React.FC = () => {
         const oz = pOriginalHome[idx + 2];
         const tier = pTiers[i];
 
-        // 1. Organic Curl Noise (Watery Base Current)
-        const curl = getCurlNoise(
-          px * MATTER_CONFIG.physics.fluidCurlScale,
-          py * MATTER_CONFIG.physics.fluidCurlScale,
-          elapsedTime * 0.12
-        );
-        pVelocities[idx] += curl.x * MATTER_CONFIG.physics.fluidSpeed;
-        pVelocities[idx + 1] += curl.y * MATTER_CONFIG.physics.fluidSpeed;
-        pVelocities[idx + 2] += curl.z * (MATTER_CONFIG.physics.fluidSpeed * 0.5);
+        let formTargetX = ox;
+        let formTargetY = oy;
+        let formTargetZ = oz;
+
+        // 1. Organic Curl Noise (Watery Base Current) - ONLY during free flow/waves, not on rigid planetary sphere
+        if (ambientState !== 'GLOBE') {
+          const curl = getCurlNoise(
+            px * MATTER_CONFIG.physics.fluidCurlScale,
+            py * MATTER_CONFIG.physics.fluidCurlScale,
+            elapsedTime * 0.12
+          );
+          pVelocities[idx] += curl.x * MATTER_CONFIG.physics.fluidSpeed;
+          pVelocities[idx + 1] += curl.y * MATTER_CONFIG.physics.fluidSpeed;
+          pVelocities[idx + 2] += curl.z * (MATTER_CONFIG.physics.fluidSpeed * 0.5);
+        }
 
         // 2. Target Attraction Vectors (Rocket, Flight, Profile or Ambient)
         if (inCinematicSequence) {
@@ -894,10 +1093,14 @@ export const LivingMatterBackground: React.FC = () => {
                 pVelocities[idx + 1] += (targetY - py) * formPull;
                 pVelocities[idx + 2] += (targetZ - pz) * formPull;
 
-                // Sync authentic photographic RGB colors
-                colors[idx] = THREE.MathUtils.lerp(colors[idx], pt.r, 0.16);
-                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pt.g, 0.16);
-                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pt.b, 0.16);
+                // Sync authentic photographic RGB colors with subtle cybernetic holographic scanline sheen
+                const scanline = 0.08 * Math.sin(py * 3.5 - elapsedTime * 4.0);
+                const pr = Math.min(1.4, pt.r * 1.12 + scanline);
+                const pg = Math.min(1.4, pt.g * 1.12 + scanline);
+                const pb = Math.min(1.5, pt.b * 1.22 + scanline * 1.4);
+                colors[idx] = THREE.MathUtils.lerp(colors[idx], pr, 0.16);
+                colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pg, 0.16);
+                colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pb, 0.16);
               } else {
                 // Particles awaiting phase activation converge into outer halo
                 const targetX = pt.x * 1.15;
@@ -923,38 +1126,165 @@ export const LivingMatterBackground: React.FC = () => {
         } else {
           // Standard Ambient Mode (Rock, Globe, Wave, Free Flow, Section-Aware)
           if (currentMorphBlend > 0.01) {
-            let formTarget = new THREE.Vector3(ox, oy, oz);
+            formTargetX = ox;
+            formTargetY = oy;
+            formTargetZ = oz;
 
             if (ambientState === 'ROCK') {
-              formTarget = generateRockPosition(i, particleCount, elapsedTime);
-            } else if (ambientState === 'GLOBE') {
-              const globeRes = generateGlobePosition(
-                i,
-                particleCount,
-                globeRotationY
-              );
-              formTarget = globeRes.pos;
+              const rockPos = generateRockPosition(i, particleCount, elapsedTime);
+              formTargetX = rockPos.x;
+              formTargetY = rockPos.y;
+              formTargetZ = rockPos.z;
 
-              // Smoothly transition every particle into its vibrant, authentic Earth planetary color:
-              // sapphire oceans, turquoise coral barrier reefs, lush emerald rainforests, golden desert sands,
-              // snow-capped mountain spines, crystalline polar ice caps, and pure white swirling cloud fronts!
-              const targetCol = globeRes.color;
-              colors[idx] = THREE.MathUtils.lerp(colors[idx], targetCol.r, 0.09);
-              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], targetCol.g, 0.09);
-              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], targetCol.b, 0.09);
+              // Crystalline mineral sparkle
+              const rockGlint = (i % 7 === 0) ? 0.30 * (Math.sin(elapsedTime * 2.2 + i) * 0.5 + 0.5) : 0;
+              const rTarget = Math.min(1.25, pBaseColors[idx] + rockGlint);
+              const gTarget = Math.min(1.25, pBaseColors[idx + 1] + rockGlint);
+              const bTarget = Math.min(1.35, pBaseColors[idx + 2] + rockGlint * 1.2);
+              colors[idx] = THREE.MathUtils.lerp(colors[idx], rTarget, 0.06);
+              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], gTarget, 0.06);
+              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], bTarget, 0.06);
+            } else if (ambientState === 'GLOBE') {
+              // 1. Precise Fibonacci Spherical Coordinates relative to explicit globeCenter
+              const baseR = globeRadius + globeData.radiusOffset[i];
+              const rotLon = globeData.lonRad[i] + globeRotationY;
+              const cosLon = Math.cos(rotLon);
+              const sinLon = Math.sin(rotLon);
+              const cosLat = globeData.cosLat[i];
+              const sinLat = globeData.sinLat[i];
+
+              // Unrotated position on 3D sphere relative to globeCenter
+              const x0 = baseR * cosLat * sinLon;
+              const y0 = baseR * sinLat;
+              const z0 = baseR * cosLat * cosLon;
+
+              // Apply Earth's 23.44° axial tilt relative to globeCenter
+              formTargetX = globeCenter.x + (x0 * cosTilt - y0 * sinTilt);
+              formTargetY = globeCenter.y + (x0 * sinTilt + y0 * cosTilt);
+              formTargetZ = globeCenter.z + z0;
+
+              // 2. Surface normal & View-Space vector (camera looks towards origin along +Z)
+              const invR = 1.0 / baseR;
+              const nx = (formTargetX - globeCenter.x) * invR;
+              const ny = (formTargetY - globeCenter.y) * invR;
+              const nz = (formTargetZ - globeCenter.z) * invR;
+
+              // View-space relationship between particle surface normal and camera direction
+              const toCamX = camera.position.x - formTargetX;
+              const toCamY = camera.position.y - formTargetY;
+              const toCamZ = camera.position.z - formTargetZ;
+              const camDist = Math.hypot(toCamX, toCamY, toCamZ);
+              const invCamDist = camDist > 0.001 ? 1.0 / camDist : 1.0;
+              const viewDot = (nx * toCamX + ny * toCamY + nz * toCamZ) * invCamDist;
+
+              // 3. Directional Solar Illumination & Specular Glint
+              const NdotL = nx * sunDirX + ny * sunDirY + nz * sunDirZ;
+              const dayLight = Math.max(0.14, Math.min(1.0, NdotL * 0.85 + 0.44));
+
+              // Blinn-Phong specular glint (ocean, glaciers, mountain snow)
+              const NdotH = Math.max(0, nx * halfX + ny * halfY + nz * halfZ);
+              const specularGlint = Math.pow(NdotH, 24.0);
+
+              // Atmospheric Rayleigh rim scattering (ethereal blue/cyan edge glow on the planetary limb)
+              const horizonTerm = 1.0 - Math.min(1.0, Math.abs(nz));
+              const atmosphericRim = Math.pow(horizonTerm, 2.8) * 0.45;
+
+              // Base biome color from precomputed data
+              const feat = globeData.featureType[i];
+              const isLand = globeData.isLand[i];
+              let r = globeData.baseColorR[i] * dayLight;
+              let g = globeData.baseColorG[i] * dayLight;
+              let b = globeData.baseColorB[i] * dayLight;
+
+              if (feat === 0 || feat === 1) {
+                // Oceans & Coastal shelves:
+                // Sun specular glint on water + turquoise shallow reef highlights
+                const waterGlint = specularGlint * (feat === 1 ? 1.45 : 1.25);
+                r += waterGlint * 0.85 + atmosphericRim * 0.12;
+                g += waterGlint * 0.95 + atmosphericRim * 0.35;
+                b += waterGlint * 1.15 + atmosphericRim * 0.70;
+              } else if (feat === 6 || feat === 3) {
+                // Polar Ice Caps & Alpine Mountain snowcaps
+                const snowGlint = specularGlint * 1.50;
+                r += snowGlint * 0.95 + atmosphericRim * 0.18;
+                g += snowGlint * 0.98 + atmosphericRim * 0.32;
+                b += snowGlint * 1.10 + atmosphericRim * 0.48;
+              } else if (feat === 7) {
+                // High-altitude floating cloud fronts
+                const cloudPulse = 0.08 * Math.sin(elapsedTime * 2.0 + i * 0.2);
+                r = Math.min(1.4, (globeData.baseColorR[i] + cloudPulse) * (dayLight * 0.95 + 0.25));
+                g = Math.min(1.4, (globeData.baseColorG[i] + cloudPulse) * (dayLight * 0.95 + 0.25));
+                b = Math.min(1.5, (globeData.baseColorB[i] + cloudPulse) * (dayLight * 0.95 + 0.25));
+              } else if (feat === 8) {
+                // Dancing electromagnetic polar ribbons
+                const auroraWave = 0.35 * Math.sin(elapsedTime * 3.5 + i * 0.35);
+                r = globeData.baseColorR[i] * (1.1 + auroraWave);
+                g = globeData.baseColorG[i] * (1.1 + auroraWave);
+                b = globeData.baseColorB[i] * (1.1 + auroraWave);
+              } else if (isLand === 1 && NdotL < -0.05) {
+                // Nocturnal golden city lights twinkling on the dark hemisphere of continents!
+                const nightShadow = Math.min(1.0, -NdotL * 1.8);
+                const cityTwinkle = 0.65 + 0.35 * Math.sin(elapsedTime * 2.5 + i * 1.6);
+                r += nightShadow * 0.85 * cityTwinkle;
+                g += nightShadow * 0.58 * cityTwinkle;
+                b += nightShadow * 0.20 * cityTwinkle;
+              } else {
+                r += atmosphericRim * 0.14;
+                g += atmosphericRim * 0.28;
+                b += atmosphericRim * 0.38;
+              }
+
+              // 4. True 3D Spherical Depth & Back-Facing Opacity / Visibility Hierarchy (Item 6):
+              // Front: high visibility (viewDot >= 0.15)
+              // Side: medium visibility (-0.15 <= viewDot < 0.15) with atmospheric Rayleigh rim
+              // Back: very low visibility (viewDot < -0.15) so the globe reads as a solid 3D sphere
+              let visibilityFactor: number;
+              if (viewDot >= 0.15) {
+                // Front hemisphere: rich clarity and high detail
+                visibilityFactor = 0.78 + 0.27 * Math.min(1.0, (viewDot - 0.15) / 0.85);
+              } else if (viewDot >= -0.15) {
+                // Side horizon: medium visibility with atmospheric edge glow
+                const edgeT = (viewDot + 0.15) / 0.30;
+                visibilityFactor = 0.35 + 0.43 * edgeT;
+              } else {
+                // Back hemisphere: very low visibility so the front continents read clearly as a solid sphere
+                const backDepth = Math.max(0, (-viewDot - 0.15) / 0.85);
+                visibilityFactor = (i % 2 === 0) ? (0.10 - 0.07 * backDepth) : (0.04 - 0.02 * backDepth);
+              }
+
+              r *= visibilityFactor;
+              g *= visibilityFactor;
+              b *= visibilityFactor;
+
+              colors[idx] = THREE.MathUtils.lerp(colors[idx], r, 0.12);
+              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], g, 0.12);
+              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], b, 0.12);
             } else if (ambientState === 'WAVE') {
-              formTarget = generateWavePosition(i, particleCount, elapsedTime);
+              const wavePos = generateWavePosition(i, particleCount, elapsedTime);
+              formTargetX = wavePos.x;
+              formTargetY = wavePos.y;
+              formTargetZ = wavePos.z;
+
+              // Cresting fluid wave luminescence & foam sparkle
+              const waveHeight = (formTargetY + 3.0) / 6.0;
+              const crestShine = Math.pow(Math.max(0, waveHeight), 2.2) * 0.50;
+              const rTarget = 0.14 + crestShine * 0.55;
+              const gTarget = 0.60 + crestShine * 0.75;
+              const bTarget = 1.02 + crestShine * 0.95;
+              colors[idx] = THREE.MathUtils.lerp(colors[idx], rTarget, 0.06);
+              colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], gTarget, 0.06);
+              colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], bTarget, 0.06);
             }
 
-            // Strong form attraction when in GLOBE mode so all 20,000 particles lock crisply onto the sphere
+            // Strong form attraction when in GLOBE mode so all particles lock crisply onto the sphere
             let formForce = 0.035 * currentMorphBlend;
             if (ambientState === 'GLOBE') {
               formForce = 0.095 * currentMorphBlend;
             }
 
-            pVelocities[idx] += (formTarget.x - px) * formForce;
-            pVelocities[idx + 1] += (formTarget.y - py) * formForce;
-            pVelocities[idx + 2] += (formTarget.z - pz) * formForce;
+            pVelocities[idx] += (formTargetX - px) * formForce;
+            pVelocities[idx + 1] += (formTargetY - py) * formForce;
+            pVelocities[idx + 2] += (formTargetZ - pz) * formForce;
           } else {
             let targetX = ox;
             let targetY = oy;
@@ -977,9 +1307,33 @@ export const LivingMatterBackground: React.FC = () => {
             pVelocities[idx + 1] += (targetY - py) * returnSpring;
             pVelocities[idx + 2] += (targetZ - pz) * returnSpring;
 
-            colors[idx] = THREE.MathUtils.lerp(colors[idx], pBaseColors[idx], 0.02);
-            colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], pBaseColors[idx + 1], 0.02);
-            colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], pBaseColors[idx + 2], 0.02);
+            // Natural multi-phase shimmer for highlights & ambient digital matter
+            let baseR = pBaseColors[idx];
+            let baseG = pBaseColors[idx + 1];
+            let baseB = pBaseColors[idx + 2];
+
+            if (tier === 0) {
+              // Highlight particles (~5%): Slow, irregular jewel-like shimmer
+              const shimmerSpeed = 1.1 + ((i * 13) % 7) * 0.18;
+              const shimmerPhase = (i * 2.37) % (Math.PI * 2);
+              const shm = Math.sin(elapsedTime * shimmerSpeed + shimmerPhase);
+              if (shm > 0.30) {
+                const shine = ((shm - 0.30) / 0.70) * 0.42;
+                baseR = Math.min(1.35, baseR + shine);
+                baseG = Math.min(1.35, baseG + shine);
+                baseB = Math.min(1.45, baseB + shine * 1.15);
+              }
+            } else if (tier === 1) {
+              // Midground matter (20%): subtle micro-luminance modulation
+              const midPulse = 0.06 * Math.sin(elapsedTime * 0.9 + i * 1.4);
+              baseR = Math.max(0.2, baseR + midPulse);
+              baseG = Math.max(0.2, baseG + midPulse);
+              baseB = Math.max(0.25, baseB + midPulse);
+            }
+
+            colors[idx] = THREE.MathUtils.lerp(colors[idx], baseR, 0.04);
+            colors[idx + 1] = THREE.MathUtils.lerp(colors[idx + 1], baseG, 0.04);
+            colors[idx + 2] = THREE.MathUtils.lerp(colors[idx + 2], baseB, 0.04);
           }
         }
 
@@ -995,44 +1349,62 @@ export const LivingMatterBackground: React.FC = () => {
 
         if (distFromCursor < repulsionRadiusWorld && distFromCursor > 0.01) {
           const normalizedDist = distFromCursor / repulsionRadiusWorld;
-          const pushMagnitude =
+          let pushMagnitude =
             (1.0 - normalizedDist) * (1.0 - normalizedDist) * MATTER_CONFIG.physics.repulsionForce;
+
+          // When in GLOBE mode: gentle elastic surface response so the globe remains a pristine 3D sphere
+          if (ambientState === 'GLOBE') {
+            pushMagnitude *= 0.22;
+          }
 
           const nx = dx / distFromCursor;
           const ny = dy / distFromCursor;
 
           pVelocities[idx] += nx * pushMagnitude;
           pVelocities[idx + 1] += ny * pushMagnitude;
-          pVelocities[idx + 2] += (Math.random() - 0.5) * pushMagnitude * 0.4;
+          pVelocities[idx + 2] += (Math.random() - 0.5) * pushMagnitude * (ambientState === 'GLOBE' ? 0.2 : 0.4);
 
-          pVelocities[idx] += cursorVelocityWorld.x * MATTER_CONFIG.physics.wakeAttractionForce;
-          pVelocities[idx + 1] += cursorVelocityWorld.y * MATTER_CONFIG.physics.wakeAttractionForce;
+          const wakeAttract = ambientState === 'GLOBE' ? 0.06 : MATTER_CONFIG.physics.wakeAttractionForce;
+          pVelocities[idx] += cursorVelocityWorld.x * wakeAttract;
+          pVelocities[idx + 1] += cursorVelocityWorld.y * wakeAttract;
         }
 
-        // 4. WATER RIPPLE WAVE DISPLACEMENT
-        for (let rIdx = 0; rIdx < ripples.length; rIdx++) {
-          const rip = ripples[rIdx];
-          const distToRip = Math.hypot(px - rip.x, py - rip.y);
-          const waveDelta = Math.abs(distToRip - rip.radius);
+        // Interactive Cursor Specular Flare / Atmospheric Illumination
+        const cursorFlareRadius = repulsionRadiusWorld * 1.35;
+        if (distFromCursor < cursorFlareRadius && distFromCursor > 0.01) {
+          const cursorFactor = 1.0 - distFromCursor / cursorFlareRadius;
+          const cursorGleam = cursorFactor * cursorFactor * 0.48;
+          colors[idx] = Math.min(1.4, colors[idx] + cursorGleam * 0.85);
+          colors[idx + 1] = Math.min(1.4, colors[idx + 1] + cursorGleam * 0.95);
+          colors[idx + 2] = Math.min(1.5, colors[idx + 2] + cursorGleam * 1.15);
+        }
 
-          if (waveDelta < 1.8) {
-            const waveStrength =
-              (1.0 - waveDelta / 1.8) * rip.strength * 0.45;
-            const ripAngle = Math.atan2(py - rip.y, px - rip.x);
-            pVelocities[idx] += Math.cos(ripAngle) * waveStrength;
-            pVelocities[idx + 1] += Math.sin(ripAngle) * waveStrength;
-            pVelocities[idx + 2] += Math.sin(elapsedTime * 8) * waveStrength * 0.5;
+        // 4. WATER RIPPLE WAVE DISPLACEMENT (Skipped in GLOBE mode to preserve sphere stability)
+        if (ambientState !== 'GLOBE') {
+          for (let rIdx = 0; rIdx < ripples.length; rIdx++) {
+            const rip = ripples[rIdx];
+            const distToRip = Math.hypot(px - rip.x, py - rip.y);
+            const waveDelta = Math.abs(distToRip - rip.radius);
+
+            if (waveDelta < 1.8) {
+              const waveStrength =
+                (1.0 - waveDelta / 1.8) * rip.strength * 0.45;
+              const ripAngle = Math.atan2(py - rip.y, px - rip.x);
+              pVelocities[idx] += Math.cos(ripAngle) * waveStrength;
+              pVelocities[idx + 1] += Math.sin(ripAngle) * waveStrength;
+              pVelocities[idx + 2] += Math.sin(elapsedTime * 8) * waveStrength * 0.5;
+            }
+          }
+
+          // 5. Scroll Velocity Reaction (Smoothly Clamped, skipped in GLOBE mode)
+          if (Math.abs(scrollVelocity) > 0.01) {
+            const scrollPush = Math.max(-0.12, Math.min(0.12, scrollVelocity * 0.0015));
+            pVelocities[idx + 1] += scrollPush * (tier === 0 ? 1.2 : tier === 1 ? 0.75 : 0.35);
           }
         }
 
-        // 5. Scroll Velocity Reaction (Smoothly Clamped)
-        if (Math.abs(scrollVelocity) > 0.01) {
-          const scrollPush = Math.max(-0.12, Math.min(0.12, scrollVelocity * 0.0015));
-          pVelocities[idx + 1] += scrollPush * (tier === 0 ? 1.2 : tier === 1 ? 0.75 : 0.35);
-        }
-
         // 6. Velocity Clamping & Fluid Damping
-        const maxVel = 0.85;
+        const maxVel = ambientState === 'GLOBE' ? 0.45 : 0.85;
         pVelocities[idx] = Math.max(-maxVel, Math.min(maxVel, pVelocities[idx] * MATTER_CONFIG.physics.damping));
         pVelocities[idx + 1] = Math.max(-maxVel, Math.min(maxVel, pVelocities[idx + 1] * MATTER_CONFIG.physics.damping));
         pVelocities[idx + 2] = Math.max(-maxVel, Math.min(maxVel, pVelocities[idx + 2] * MATTER_CONFIG.physics.damping));
@@ -1040,6 +1412,47 @@ export const LivingMatterBackground: React.FC = () => {
         positions[idx] += pVelocities[idx];
         positions[idx + 1] += pVelocities[idx + 1];
         positions[idx + 2] += pVelocities[idx + 2];
+
+        // STRICT SPHERICAL RADIUS CONSTRAINT FOR GLOBE (Items 1, 13, 14):
+        // Guarantees all particles remain mathematically bounded to the sphere.
+        // Surface particles: distanceFromCenter ≈ globeRadius
+        // Atmospheric particles: distanceFromCenter <= globeRadius + small tolerance
+        if (ambientState === 'GLOBE') {
+          const blend = currentMorphBlend;
+          if (blend > 0.1) {
+            const snapSpeed = 0.16 * blend;
+            positions[idx] = THREE.MathUtils.lerp(positions[idx], formTargetX, snapSpeed);
+            positions[idx + 1] = THREE.MathUtils.lerp(positions[idx + 1], formTargetY, snapSpeed);
+            positions[idx + 2] = THREE.MathUtils.lerp(positions[idx + 2], formTargetZ, snapSpeed);
+          }
+
+          const relX = positions[idx] - globeCenter.x;
+          const relY = positions[idx + 1] - globeCenter.y;
+          const relZ = positions[idx + 2] - globeCenter.z;
+          const curDist = Math.hypot(relX, relY, relZ);
+
+          if (curDist > 0.0001) {
+            const feat = globeData.featureType[i];
+            const maxTolerance = feat === 8 ? 0.09 : feat === 7 ? 0.055 : 0.02;
+            const maxAllowed = globeRadius + maxTolerance;
+            const minAllowed = globeRadius - 0.025;
+
+            if (curDist > maxAllowed) {
+              const s = maxAllowed / curDist;
+              positions[idx] = globeCenter.x + relX * s;
+              positions[idx + 1] = globeCenter.y + relY * s;
+              positions[idx + 2] = globeCenter.z + relZ * s;
+              pVelocities[idx] *= 0.3;
+              pVelocities[idx + 1] *= 0.3;
+              pVelocities[idx + 2] *= 0.3;
+            } else if (curDist < minAllowed) {
+              const s = minAllowed / curDist;
+              positions[idx] = globeCenter.x + relX * s;
+              positions[idx + 1] = globeCenter.y + relY * s;
+              positions[idx + 2] = globeCenter.z + relZ * s;
+            }
+          }
+        }
       }
 
       // ==========================================
@@ -1227,12 +1640,12 @@ export const LivingMatterBackground: React.FC = () => {
         willChange: 'transform',
       }}
     >
-      {/* Deep foundation chromatic vignette */}
+      {/* Deep foundation chromatic vignette - calibrated to never clip the globe */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-50"
+        className="absolute inset-0 pointer-events-none opacity-30"
         style={{
           background:
-            'radial-gradient(circle at 50% 40%, transparent 35%, rgba(5, 5, 5, 0.92) 88%)',
+            'radial-gradient(circle at 50% 50%, transparent 68%, rgba(5, 5, 5, 0.85) 100%)',
         }}
       />
 

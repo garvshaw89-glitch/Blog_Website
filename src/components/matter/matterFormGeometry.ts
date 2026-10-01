@@ -18,10 +18,16 @@ export function isLandCoordinate(latDeg: number, lonDeg: number): boolean {
 
   // 3. North America (US, Canada, Alaska, Mexico, Central America)
   if (latDeg >= 7 && latDeg <= 72 && lonDeg >= -168 && lonDeg <= -52) {
-    // Carve oceans
+    // Carve Pacific & Atlantic waters
     if (latDeg < 28 && lonDeg < -116) return false; // Pacific
     if (latDeg > 48 && lonDeg > -50) return false;  // Atlantic
     if (latDeg < 18 && lonDeg > -75) return false;  // Caribbean open sea
+    // Carve Great Lakes (Lake Superior/Michigan/Huron/Erie/Ontario)
+    if (latDeg >= 41 && latDeg <= 49 && lonDeg >= -92 && lonDeg <= -76) {
+      if ((latDeg >= 46 && lonDeg >= -90 && lonDeg <= -84) || (latDeg >= 42 && latDeg <= 45 && lonDeg >= -87 && lonDeg <= -82)) {
+        return false;
+      }
+    }
     return true;
   }
   // Caribbean major islands
@@ -38,12 +44,25 @@ export function isLandCoordinate(latDeg: number, lonDeg: number): boolean {
   if (latDeg >= -35 && latDeg <= 37 && lonDeg >= -18 && lonDeg <= 52) {
     if (latDeg > 25 && lonDeg < -14) return false;
     if (latDeg < -25 && lonDeg < 14) return false;
+    // Carve Red Sea (separating Africa from Arabian Peninsula)
+    if (latDeg >= 12 && latDeg <= 29 && lonDeg >= 32 && lonDeg <= 44 && lonDeg < (latDeg * 0.55 + 30)) {
+      return false;
+    }
     return true;
   }
   if (latDeg >= -26 && latDeg <= -12 && lonDeg >= 43 && lonDeg <= 51) return true; // Madagascar
 
-  // 6. Europe
+  // 6. Europe & Mediterranean Basin
   if (latDeg >= 36 && latDeg <= 72 && lonDeg >= -10 && lonDeg <= 45) {
+    // Carve Mediterranean Sea separating Europe and North Africa
+    if (latDeg >= 34 && latDeg <= 44 && lonDeg >= -5 && lonDeg <= 36) {
+      const isIberia = latDeg >= 36 && latDeg <= 44 && lonDeg >= -9 && lonDeg <= 3;
+      const isItaly = latDeg >= 37 && latDeg <= 46 && lonDeg >= 8 && lonDeg <= 18;
+      const isGreece = latDeg >= 36 && latDeg <= 41 && lonDeg >= 20 && lonDeg <= 26;
+      if (!isIberia && !isItaly && !isGreece) {
+        return false; // Mediterranean water
+      }
+    }
     if (latDeg < 44 && lonDeg < -9) return false;
     return true;
   }
@@ -53,6 +72,10 @@ export function isLandCoordinate(latDeg: number, lonDeg: number): boolean {
   if (latDeg >= 5 && latDeg <= 78 && lonDeg >= 45 && lonDeg <= 180) {
     // Carve Indian Ocean south of India
     if (latDeg < 7 && lonDeg >= 60 && lonDeg <= 95) return false;
+    // Carve Caspian Sea
+    if (latDeg >= 36 && latDeg <= 47 && lonDeg >= 48 && lonDeg <= 54) return false;
+    // Carve Black Sea
+    if (latDeg >= 41 && latDeg <= 46 && lonDeg >= 28 && lonDeg <= 41) return false;
     return true;
   }
   if (latDeg >= 12 && latDeg <= 34 && lonDeg >= 35 && lonDeg <= 60) return true; // Arabian Peninsula
@@ -82,6 +105,160 @@ export interface GlobeParticleResult {
   color: THREE.Color;
   sizeMult: number;
   featureType: GlobeFeatureType;
+}
+
+/**
+ * Precomputed Fibonacci Sphere & Planetary Biome Representation
+ * Zero per-frame allocation for high-throughput 60–120 FPS rendering.
+ */
+export interface GlobePrecomputedData {
+  cosLat: Float32Array;
+  sinLat: Float32Array;
+  lonRad: Float32Array;
+  radiusOffset: Float32Array;
+  baseColorR: Float32Array;
+  baseColorG: Float32Array;
+  baseColorB: Float32Array;
+  sizeMult: Float32Array;
+  featureType: Uint8Array;
+  isLand: Uint8Array;
+}
+
+/**
+ * Precomputes static Fibonacci spherical coordinates and planetary surface biomes.
+ * Call once at startup or when particle budget updates.
+ */
+export function precomputeGlobeData(total: number): GlobePrecomputedData {
+  const cosLat = new Float32Array(total);
+  const sinLat = new Float32Array(total);
+  const lonRad = new Float32Array(total);
+  const radiusOffset = new Float32Array(total);
+  const baseColorR = new Float32Array(total);
+  const baseColorG = new Float32Array(total);
+  const baseColorB = new Float32Array(total);
+  const sizeMult = new Float32Array(total);
+  const featureType = new Uint8Array(total);
+  const isLandArr = new Uint8Array(total);
+
+  const goldenRatio = (1 + Math.sqrt(5)) / 2;
+
+  for (let i = 0; i < total; i++) {
+    // True Fibonacci sphere distribution (golden angle spiral)
+    const phi = Math.acos(1 - 2 * ((i + 0.5) / total));
+    const rawTheta = 2 * Math.PI * i * goldenRatio;
+
+    const latDeg = 90 - (phi * 180) / Math.PI;
+    let lonDeg = ((rawTheta * 180) / Math.PI) % 360;
+    if (lonDeg > 180) lonDeg -= 360;
+    if (lonDeg < -180) lonDeg += 360;
+
+    cosLat[i] = Math.sin(phi);
+    sinLat[i] = Math.cos(phi);
+    lonRad[i] = (lonDeg * Math.PI) / 180;
+
+    const isLand = isLandCoordinate(latDeg, lonDeg);
+    isLandArr[i] = isLand ? 1 : 0;
+
+    // Atmospheric weather systems & polar auroras
+    const isAtmosphereCandidate = i % 11 === 0;
+    const isAuroraCandidate = Math.abs(latDeg) > 65 && i % 5 === 0;
+
+    if (isAuroraCandidate) {
+      featureType[i] = 8; // aurora
+      radiusOffset[i] = 0.06 + (i % 3) * 0.015; // Controlled celestial polar margin (max +0.09)
+      sizeMult[i] = 1.15;
+      if (i % 2 === 0) {
+        baseColorR[i] = 0.16; baseColorG[i] = 1.25; baseColorB[i] = 0.76; // Emerald aurora
+      } else {
+        baseColorR[i] = 0.98; baseColorG[i] = 0.42; baseColorB[i] = 1.22; // Electric violet aurora
+      }
+    } else if (isAtmosphereCandidate) {
+      featureType[i] = 7; // cloud
+      radiusOffset[i] = 0.035 + (i % 3) * 0.01; // Controlled subtle atmospheric cloud margin (max +0.055)
+      sizeMult[i] = 1.10;
+      const shade = 1.15 + ((i * 5) % 4) * 0.03;
+      baseColorR[i] = shade; baseColorG[i] = shade; baseColorB[i] = 1.25;
+    } else if (isLand) {
+      if (Math.abs(latDeg) > 60) {
+        // Polar Ice Caps (Antarctica, Greenland, Arctic)
+        featureType[i] = 6; // ice
+        radiusOffset[i] = 0.01;
+        sizeMult[i] = 1.08;
+        baseColorR[i] = 1.18; baseColorG[i] = 1.20; baseColorB[i] = 1.28;
+      } else if (
+        (latDeg >= 26 && latDeg <= 36 && lonDeg >= 75 && lonDeg <= 96) || // Himalayas
+        (latDeg >= -50 && latDeg <= 10 && lonDeg >= -76 && lonDeg <= -68) || // Andes
+        (latDeg >= 34 && latDeg <= 55 && lonDeg >= -124 && lonDeg <= -105) || // Rockies
+        (latDeg >= 44 && latDeg <= 48 && lonDeg >= 5 && lonDeg <= 16) // Alps
+      ) {
+        // Mountain Spines with Snowcaps (Elevated topography)
+        featureType[i] = 3; // mountain
+        radiusOffset[i] = 0.02;
+        sizeMult[i] = 1.12;
+        baseColorR[i] = 1.14; baseColorG[i] = 1.16; baseColorB[i] = 1.26;
+      } else if (
+        (latDeg >= 14 && latDeg <= 35 && lonDeg >= -17 && lonDeg <= 60) || // Sahara & Arabia
+        (latDeg >= -35 && latDeg <= -18 && lonDeg >= 115 && lonDeg <= 142) || // Australian Outback
+        (latDeg >= 36 && latDeg <= 48 && lonDeg >= 78 && lonDeg <= 110) || // Gobi
+        (latDeg >= -28 && latDeg <= -19 && lonDeg >= 18 && lonDeg <= 26) // Kalahari
+      ) {
+        // Arid Deserts (Golden dunes & terracotta)
+        featureType[i] = 4; // desert
+        radiusOffset[i] = 0.005;
+        sizeMult[i] = 1.05;
+        const duneNoise = ((i * 17) % 5) * 0.03;
+        baseColorR[i] = 1.15; baseColorG[i] = 0.90 + duneNoise; baseColorB[i] = 0.30;
+      } else if (
+        (latDeg >= -15 && latDeg <= 10 && lonDeg >= -80 && lonDeg <= -45) || // Amazon Basin
+        (latDeg >= -5 && latDeg <= 8 && lonDeg >= 10 && lonDeg <= 32) || // Congo Basin
+        (latDeg >= -8 && latDeg <= 18 && lonDeg >= 98 && lonDeg <= 145) // SE Asia & Indonesia
+      ) {
+        // Tropical Rainforests (Lush deep emerald & radiant jade)
+        featureType[i] = 5; // rainforest
+        radiusOffset[i] = 0.008;
+        sizeMult[i] = 1.06;
+        const canopy = ((i * 11) % 5) * 0.03;
+        baseColorR[i] = 0.10; baseColorG[i] = 1.12 + canopy; baseColorB[i] = 0.48;
+      } else {
+        // Temperate Plains & Forests (North America, Europe, East Asia)
+        featureType[i] = 2; // land
+        radiusOffset[i] = 0.002;
+        sizeMult[i] = 1.02;
+        const flora = ((i * 19) % 5) * 0.03;
+        baseColorR[i] = 0.18; baseColorG[i] = 1.02 + flora; baseColorB[i] = 0.42;
+      }
+    } else {
+      // Oceanic Waters: coastal shelves vs deep open oceans
+      const isCoastalShelf = i % 3 === 0;
+      if (isCoastalShelf) {
+        // Coastal shallow waters & coral barrier reefs (Caribbean, Great Barrier Reef)
+        featureType[i] = 1; // coast
+        radiusOffset[i] = -0.005;
+        sizeMult[i] = 1.04;
+        baseColorR[i] = 0.06; baseColorG[i] = 1.08; baseColorB[i] = 1.16;
+      } else {
+        // Deep open oceans (Pacific, Atlantic, Indian, Southern)
+        featureType[i] = 0; // ocean
+        radiusOffset[i] = -0.015;
+        sizeMult[i] = 1.0;
+        const depthNoise = ((i * 23) % 4) * 0.03;
+        baseColorR[i] = 0.08; baseColorG[i] = 0.54 + depthNoise; baseColorB[i] = 1.18;
+      }
+    }
+  }
+
+  return {
+    cosLat,
+    sinLat,
+    lonRad,
+    radiusOffset,
+    baseColorR,
+    baseColorG,
+    baseColorB,
+    sizeMult,
+    featureType,
+    isLand: isLandArr,
+  };
 }
 
 /**
@@ -195,27 +372,27 @@ export function generateGlobePosition(
     // Polar Aurora ribbons floating above magnetic poles
     featureType = 'aurora';
     sphereRadius = 5.68 + (i % 4) * 0.04;
-    sizeMult = 1.25;
+    sizeMult = 1.30;
     if (i % 2 === 0) {
-      col.setRGB(0.12, 1.0, 0.65); // Shimmering emerald aurora
+      col.setRGB(0.20, 1.25, 0.78); // Hyper-radiant emerald aurora shine
     } else {
-      col.setRGB(0.84, 0.35, 1.0); // Electric violet-magenta aurora
+      col.setRGB(1.05, 0.45, 1.25); // Electric violet-magenta aurora shine
     }
   } else if (isAtmosphereCandidate) {
     // Swirling white clouds and storm systems floating just above surface
     featureType = 'cloud';
     sphereRadius = 5.50 + ((i * 11) % 5) * 0.02;
-    sizeMult = 1.15;
-    const cloudShade = 0.96 + ((i * 7) % 5) * 0.01;
-    col.setRGB(cloudShade, cloudShade, 1.0);
+    sizeMult = 1.20;
+    const cloudShade = 1.15 + ((i * 7) % 5) * 0.03;
+    col.setRGB(cloudShade, cloudShade, 1.25);
   } else if (isLand) {
     // Landmass classifications based on latitude and regional geography
     if (Math.abs(latDeg) > 60) {
       // Polar Ice Caps (Antarctica, Greenland, Arctic)
       featureType = 'ice';
       sphereRadius = 5.34;
-      sizeMult = 1.1;
-      col.setRGB(1.0, 1.0, 1.0); // Crystalline pure glacier white
+      sizeMult = 1.15;
+      col.setRGB(1.20, 1.22, 1.28); // Crystalline glistening glacier white
     } else if (
       (latDeg >= 14 && latDeg <= 35 && lonDeg >= -17 && lonDeg <= 60) || // Sahara & Arabia
       (latDeg >= -35 && latDeg <= -18 && lonDeg >= 115 && lonDeg <= 142) || // Australian Outback
@@ -224,9 +401,9 @@ export function generateGlobePosition(
       // Arid Deserts (Golden sands, amber dunes, terracotta)
       featureType = 'desert';
       sphereRadius = 5.32;
-      sizeMult = 1.05;
-      const duneNoise = ((i * 17) % 5) * 0.02;
-      col.setRGB(1.0, 0.80 + duneNoise, 0.20); // Radiant glowing golden amber
+      sizeMult = 1.10;
+      const duneNoise = ((i * 17) % 5) * 0.03;
+      col.setRGB(1.15, 0.90 + duneNoise, 0.28); // Radiant gleaming golden amber
     } else if (
       (latDeg >= -15 && latDeg <= 10 && lonDeg >= -80 && lonDeg <= -45) || // Amazon Basin
       (latDeg >= -5 && latDeg <= 8 && lonDeg >= 10 && lonDeg <= 32) || // Congo Basin
@@ -235,9 +412,9 @@ export function generateGlobePosition(
       // Tropical Rainforests (Lush deep emerald & radiant jade)
       featureType = 'rainforest';
       sphereRadius = 5.33;
-      sizeMult = 1.08;
-      const canopy = ((i * 11) % 5) * 0.025;
-      col.setRGB(0.04, 0.96 + canopy, 0.40); // Radiant tropical emerald
+      sizeMult = 1.12;
+      const canopy = ((i * 11) % 5) * 0.03;
+      col.setRGB(0.08, 1.12 + canopy, 0.48); // Radiant glowing tropical emerald
     } else if (
       (latDeg >= 26 && latDeg <= 36 && lonDeg >= 75 && lonDeg <= 96) || // Himalayas
       (latDeg >= -50 && latDeg <= 10 && lonDeg >= -76 && lonDeg <= -68) || // Andes
@@ -246,15 +423,15 @@ export function generateGlobePosition(
       // Mountain Spines with Snowcaps
       featureType = 'mountain';
       sphereRadius = 5.42; // Elevated peak spine
-      sizeMult = 1.15;
-      col.setRGB(0.96, 0.98, 1.0); // Snow-capped granite slate
+      sizeMult = 1.20;
+      col.setRGB(1.12, 1.15, 1.25); // Brilliant alpine snow-capped peak shine
     } else {
       // Temperate Plains & Forests (North America, Europe, East Asia)
       featureType = 'land';
       sphereRadius = 5.31;
-      sizeMult = 1.0;
-      const flora = ((i * 19) % 5) * 0.025;
-      col.setRGB(0.14, 0.90 + flora, 0.35); // Fresh verdant vegetation green
+      sizeMult = 1.05;
+      const flora = ((i * 19) % 5) * 0.03;
+      col.setRGB(0.18, 1.02 + flora, 0.42); // Fresh glistening vegetation green
     }
   } else {
     // Oceanic waters: coastal shelves vs deep open oceans
@@ -264,15 +441,15 @@ export function generateGlobePosition(
       // Coastal shallow waters, coral barrier reefs, Caribbean turquoise
       featureType = 'coast';
       sphereRadius = 5.28;
-      sizeMult = 1.05;
-      col.setRGB(0.03, 0.92, 0.96); // Electric glowing cyan-turquoise
+      sizeMult = 1.10;
+      col.setRGB(0.06, 1.08, 1.15); // Electric glowing cyan-turquoise shine
     } else {
       // Deep open oceans (Pacific, Atlantic, Indian, Southern)
       featureType = 'ocean';
       sphereRadius = 5.25;
-      sizeMult = 0.95;
-      const oceanDepth = ((i * 23) % 4) * 0.02;
-      col.setRGB(0.04, 0.44 + oceanDepth, 0.98); // Deep luminous sapphire blue
+      sizeMult = 1.0;
+      const oceanDepth = ((i * 23) % 4) * 0.03;
+      col.setRGB(0.08, 0.55 + oceanDepth, 1.18); // Luminous sparkling sapphire blue
     }
   }
 

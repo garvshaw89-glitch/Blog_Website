@@ -61,7 +61,7 @@ export const ProfileCinematicOverlay: React.FC = () => {
       {/* ============================================================ */}
       <div className="fixed bottom-6 left-6 z-40 pointer-events-auto transition-all duration-500">
         <div className="flex items-center gap-1.5 p-1.5 rounded-full bg-[#08090B]/90 backdrop-blur-md border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)]">
-          {/* A. 20,000 PARTICLE EARTH GLOBE BUTTON */}
+          {/* A. 3D PARTICLE EARTH GLOBE BUTTON */}
           <button
             type="button"
             onClick={() => rocketCinematicManager.triggerEarth()}
@@ -72,7 +72,7 @@ export const ProfileCinematicOverlay: React.FC = () => {
                 ? 'bg-emerald-950/80 border border-emerald-400/60 text-emerald-200 shadow-[0_0_16px_rgba(16,185,129,0.35)]'
                 : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5 border border-transparent'
             }`}
-            title="Summon 20,000-Particle Planetary Earth Hologram"
+            title="Summon 3D Planetary Earth Hologram"
           >
             <Globe
               className={`w-3.5 h-3.5 ${
@@ -117,7 +117,7 @@ export const ProfileCinematicOverlay: React.FC = () => {
                 ? 'bg-indigo-950/80 border border-indigo-400/60 text-indigo-200 shadow-[0_0_18px_rgba(99,102,241,0.4)]'
                 : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/5 border border-transparent'
             }`}
-            title="Synthesize 20,000-Particle GitHub Avatar Portrait with Authentic Colors"
+            title="Synthesize 3D GitHub Avatar Portrait Hologram"
           >
             <User
               className={`w-3.5 h-3.5 ${
@@ -158,12 +158,12 @@ export const ProfileCinematicOverlay: React.FC = () => {
             exit={{ opacity: 0, y: 10, transition: { duration: 0.3 } }}
             className="fixed bottom-6 right-6 z-40 pointer-events-none hidden md:flex flex-col items-end gap-1 font-mono text-[11px] tracking-widest select-none"
           >
-            {/* 20,000 PARTICLE EARTH TELEMETRY */}
+            {/* 3D PARTICLE EARTH TELEMETRY */}
             {isEarthActive && (
               <div className="flex flex-col items-end px-3.5 py-2 rounded-lg bg-[#08090B]/85 backdrop-blur-md border border-emerald-500/20 shadow-xl">
                 <div className="flex items-center gap-2 text-emerald-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span className="font-semibold">TERRA BIOSPHERE // 20,000 PARTICLES</span>
+                  <span className="font-semibold">TERRA BIOSPHERE // 3D PLANETARY SYSTEM</span>
                 </div>
                 <div className="text-neutral-400 mt-1 flex items-center gap-3">
                   <span>SCALE: 12,742 KM</span>
@@ -203,7 +203,7 @@ export const ProfileCinematicOverlay: React.FC = () => {
                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
                   <span className="font-semibold">
                     {isProfileForming
-                      ? 'SYNTHESIZING 20,000 PARTICLES...'
+                      ? 'SYNTHESIZING HOLOGRAPHIC MATTER...'
                       : 'AUTHENTIC PORTRAIT HOLOGRAM ACTIVE'}
                   </span>
                 </div>
@@ -212,7 +212,7 @@ export const ProfileCinematicOverlay: React.FC = () => {
                   <span>•</span>
                   <span>@garvshaw89-glitch</span>
                   <span>•</span>
-                  <span>20,000 PTS</span>
+                  <span>HOLOGRAM</span>
                 </div>
                 <div className="text-neutral-500 text-[10px] mt-0.5">
                   ACTUAL PHOTOGRAPHIC CHROMATICITY • 3D DEPTH RELIEF
@@ -291,7 +291,7 @@ export const ProfileCinematicOverlay: React.FC = () => {
                   </h2>
 
                   <p className="font-mono text-xs text-neutral-300 tracking-wider mt-1">
-                    @garvshaw89-glitch • 20,000-Dot Hologram
+                    @garvshaw89-glitch • Living Particle Hologram
                   </p>
 
                   {/* Specialization Chips */}
