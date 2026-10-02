@@ -138,129 +138,110 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose }) 
             </div>
           </div>
 
-          {/* Reader Body (Scrollable with custom scrollbar) */}
+          {/* Reader Body (Scrollable with custom scrollbar, narrow 680px readable column) */}
           <div
             onScroll={handleScroll}
-            className="overflow-y-auto px-6 sm:px-12 md:px-16 py-8 sm:py-12 space-y-10 selection:bg-cyan-500/30 selection:text-white"
+            className="overflow-y-auto px-6 sm:px-12 md:px-16 py-8 sm:py-12 selection:bg-[#7EA7FF]/25 selection:text-white"
           >
-            {/* Header Metadata */}
-            <div className="border-b border-white/10 pb-8">
-              <div className="flex flex-wrap items-center gap-3 font-mono text-xs text-neutral-400 mb-4">
-                <span className="px-2.5 py-1 rounded-full bg-cyan-950/60 border border-cyan-400/40 text-cyan-300 font-semibold">
-                  {article.category}
-                </span>
-                <span>•</span>
-                <span className="flex items-center gap-1 text-neutral-300">
-                  <Clock className="w-3.5 h-3.5" />
-                  {article.readTime}
-                </span>
-                <span>•</span>
-                <span className="flex items-center gap-1 text-neutral-400">
-                  <Calendar className="w-3.5 h-3.5" />
-                  {article.date}
-                </span>
-              </div>
-
-              <h1 className="font-editorial text-3xl sm:text-4xl md:text-5xl font-extrabold uppercase text-white tracking-tight leading-[1.08] mb-6">
-                {article.title}
-              </h1>
-
-              <div className="flex items-center gap-3 text-xs font-mono text-neutral-400">
-                <div className="w-7 h-7 rounded-full bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center font-bold text-cyan-300">
-                  GS
+            <div className="max-w-[700px] mx-auto space-y-10">
+              {/* Header Metadata (Section 21: CATEGORY, TITLE, Short intro, DATE / READING TIME) */}
+              <div className="border-b border-white/[0.08] pb-8">
+                <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-[#A7ADB5] mb-4 tracking-wider uppercase">
+                  <span className="text-[#7EA7FF] font-semibold">
+                    {article.category}
+                  </span>
+                  <span className="text-white/20">/</span>
+                  <span className="flex items-center gap-1 text-[#A7ADB5]">
+                    <Clock className="w-3.5 h-3.5 text-[#626A73]" />
+                    {article.readTime}
+                  </span>
+                  <span className="text-white/20">/</span>
+                  <span className="flex items-center gap-1 text-[#626A73]">
+                    <Calendar className="w-3.5 h-3.5 text-[#626A73]" />
+                    {article.date}
+                  </span>
                 </div>
-                <span>BY GARV SHAW // ARCHITECTURAL NOTES</span>
+
+                <h1 className="font-editorial text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#F2F3F5] leading-[1.08] mb-6">
+                  {article.title}
+                </h1>
+
+                <div className="flex items-center gap-3 text-xs font-mono text-[#626A73]">
+                  <span className="text-[#A7ADB5]">GARV SHAW</span>
+                  <span>/</span>
+                  <span>ARCHITECTURAL JOURNAL</span>
+                </div>
               </div>
-            </div>
 
-            {/* Introduction Lead */}
-            <div className="text-base sm:text-lg text-neutral-200 font-sans font-normal leading-relaxed border-l-2 border-cyan-400 pl-4 py-1 italic bg-cyan-950/10 rounded-r-xl">
-              {article.content.introduction}
-            </div>
+              {/* Introduction Lead */}
+              <div className="text-base sm:text-lg text-[#F2F3F5] font-sans font-normal leading-relaxed border-l-2 border-[#7EA7FF] pl-5 py-1 text-neutral-200">
+                {article.content.introduction}
+              </div>
 
-            {/* Core Sections */}
-            <div className="space-y-10 font-sans text-neutral-300 leading-relaxed font-light text-sm sm:text-base">
-              {article.content.sections.map((section, idx) => (
-                <div key={idx} className="space-y-4">
-                  <h2 className="font-editorial text-xl sm:text-2xl font-bold uppercase text-white tracking-tight pt-4 border-t border-white/5">
-                    {section.heading}
-                  </h2>
+              {/* Core Sections */}
+              <div className="space-y-10 font-sans text-[#A7ADB5] leading-relaxed font-light text-base">
+                {article.content.sections.map((section, idx) => (
+                  <div key={idx} className="space-y-4">
+                    <h2 className="font-editorial text-xl sm:text-2xl font-bold text-[#F2F3F5] tracking-tight pt-4 border-t border-white/[0.06]">
+                      {section.heading}
+                    </h2>
 
-                  {section.body.map((p, pIdx) => (
-                    <p key={pIdx} className="leading-relaxed">
-                      {p}
-                    </p>
-                  ))}
+                    {section.body.map((p, pIdx) => (
+                      <p key={pIdx} className="leading-relaxed text-[#A7ADB5]">
+                        {p}
+                      </p>
+                    ))}
 
-                  {section.codeSnippet && (
-                    <div className="my-4 rounded-xl overflow-hidden bg-black/80 border border-white/10 font-mono text-xs">
-                      <div className="px-4 py-2 bg-neutral-900 border-b border-white/5 text-[10px] text-neutral-400 uppercase tracking-widest flex items-center justify-between">
-                        <span>{section.codeSnippet.language}</span>
-                        <span className="text-cyan-400">SYSTEM IMPLEMENTATION</span>
+                    {section.codeSnippet && (
+                      <div className="my-5 rounded-lg overflow-hidden bg-[#050608] border border-white/[0.08] font-mono text-xs">
+                        <div className="px-4 py-2.5 bg-[#11151A] border-b border-white/[0.06] text-[10px] text-[#A7ADB5] uppercase tracking-widest flex items-center justify-between">
+                          <span>{section.codeSnippet.language}</span>
+                          <span className="text-[#7EA7FF]">SYSTEM SPECIFICATION</span>
+                        </div>
+                        <pre className="p-4 text-[#F2F3F5] overflow-x-auto text-[11px] leading-relaxed">
+                          <code>{section.codeSnippet.code}</code>
+                        </pre>
                       </div>
-                      <pre className="p-4 overflow-x-auto text-cyan-200/90 leading-relaxed">
-                        <code>{section.codeSnippet.code}</code>
-                      </pre>
-                    </div>
-                  )}
+                    )}
 
-                  {section.callout && (
-                    <div className="p-4 rounded-xl bg-neutral-900/60 border border-indigo-500/30 text-xs sm:text-sm font-mono text-indigo-200">
-                      <span className="text-cyan-400 font-bold block mb-1">KEY ARCHITECTURAL TAKEAWAY:</span>
-                      {section.callout}
-                    </div>
-                  )}
+                    {section.callout && (
+                      <div className="my-4 p-4 rounded-lg bg-[#11151A] border border-white/[0.08] text-sm text-[#F2F3F5] italic font-sans leading-relaxed">
+                        "{section.callout}"
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Conclusion */}
+              <div className="pt-8 border-t border-white/[0.08]">
+                <h3 className="font-editorial text-lg font-bold uppercase tracking-tight text-[#F2F3F5] mb-3">
+                  SYNTHESIS
+                </h3>
+                <p className="font-sans text-sm sm:text-base text-[#A7ADB5] font-light leading-relaxed">
+                  {article.content.conclusion}
+                </p>
+              </div>
+
+              {/* Article Footer Tags */}
+              <div className="pt-6 border-t border-white/[0.08] flex flex-wrap items-center justify-between gap-4 font-mono text-xs text-[#626A73]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[#A7ADB5]">TOPICS:</span>
+                  {article.tags.map((tag, idx) => (
+                    <React.Fragment key={tag}>
+                      {idx > 0 && <span>·</span>}
+                      <span className="text-[#A7ADB5]">{tag}</span>
+                    </React.Fragment>
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            {/* Conclusion */}
-            <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
-              <h3 className="font-editorial text-lg font-bold uppercase text-white tracking-wider">
-                CONCLUSION & FORWARD TRAJECTORY
-              </h3>
-              <p className="font-sans text-sm text-neutral-300 leading-relaxed font-light">
-                {article.content.conclusion}
-              </p>
-            </div>
-
-            {/* Tags footer */}
-            <div className="flex flex-wrap items-center gap-2 pt-6 border-t border-white/10">
-              <span className="font-mono text-xs text-neutral-500 flex items-center gap-1 mr-2">
-                <Tag className="w-3.5 h-3.5" /> TOPICS:
-              </span>
-              {article.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-neutral-300 font-mono text-[11px]"
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="text-[#7EA7FF] hover:text-white transition-colors cursor-pointer"
                 >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-
-            {/* Bottom Actions */}
-            <div className="flex items-center justify-between pt-6 border-t border-white/10">
-              <button
-                type="button"
-                onClick={onClose}
-                data-cursor="button"
-                className="px-5 py-2 rounded-full bg-white hover:bg-cyan-300 text-black font-mono text-xs font-semibold tracking-wider transition-colors cursor-pointer"
-              >
-                CLOSE ESSAY
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                data-cursor="button"
-                className="px-5 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/15 text-white font-mono text-xs tracking-wider transition-colors cursor-pointer"
-              >
-                DISCUSS WITH AUTHOR ↗
-              </button>
+                  ← RETURN TO JOURNAL
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>

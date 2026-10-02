@@ -4,7 +4,7 @@ import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
 import { CustomCursor } from './components/ui/CustomCursor';
 import { LuxuryIntro } from './components/intro/LuxuryIntro';
-import { CinematicAtmosphericDepth } from './components/atmosphere/CinematicAtmosphericDepth';
+import { CinematicRocketUniverse } from './components/rocket-universe/CinematicRocketUniverse';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { SectionProgressHUD } from './components/ui/SectionProgressHUD';
 import { EasterEggToast } from './components/ui/EasterEggToast';
@@ -108,8 +108,8 @@ export default function App() {
           onReplayIntro={handleReplayIntro}
         />
 
-        {/* Cinematic Atmospheric Depth System (7-Layer Environmental Foundation) */}
-        <CinematicAtmosphericDepth />
+        {/* Cinematic Rocket Universe: 4-Layer Dot Atmosphere, 3D Rocket Launch, Screen Breakthrough Fly-By & Touchdown Impact */}
+        <CinematicRocketUniverse />
 
         <div className="relative z-10 flex flex-col">
           {/* 1. HERO / LANDING PAGE with Identity Core */}

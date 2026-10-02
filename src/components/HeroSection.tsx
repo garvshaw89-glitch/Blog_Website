@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { IdentityCore } from './ui/IdentityCore';
-import { ArrowDown, ArrowUpRight, Sparkles, Terminal, Activity } from 'lucide-react';
+import { ArrowDown, ArrowUpRight, Sparkles, Terminal, Activity, Rocket } from 'lucide-react';
 
 interface HeroSectionProps {
   onContactClick?: () => void;
@@ -25,30 +25,30 @@ interface HeadlineItem {
 const HEADLINE_ROTATIONS: HeadlineItem[] = [
   {
     id: 'garv-shaw',
-    prefix: 'HELLO, I AM',
+    prefix: '01 // ARCHITECT',
     primary: 'GARV SHAW.',
     highlight: 'SHAW',
     subline: 'DIGITAL ARCHITECT & FULL-STACK SYSTEMS ENGINEER',
-    fluidSize: 'text-[clamp(2.4rem,8.2vw,5.8rem)]',
-    lineHeight: 'leading-[0.98]',
+    fluidSize: 'text-[clamp(3.8rem,9.5vw,9.5rem)]',
+    lineHeight: 'leading-[0.92]',
   },
   {
     id: 'building-systems',
-    prefix: 'I AM',
-    primary: 'BUILDING INTELLIGENT DIGITAL SYSTEMS.',
+    prefix: '02 // SYSTEMS',
+    primary: 'INTELLIGENT SYSTEMS.',
     highlight: 'INTELLIGENT',
-    subline: 'AT THE INTERSECTION OF AI, CLOUD & DISTRIBUTED PLATFORMS',
-    fluidSize: 'text-[clamp(1.75rem,5.2vw,4.5rem)]',
-    lineHeight: 'leading-[1.04]',
+    subline: 'AUTONOMOUS REASONING, CLOUD RUNTIMES & DISTRIBUTED PLATFORMS',
+    fluidSize: 'text-[clamp(3.2rem,8.2vw,7.8rem)]',
+    lineHeight: 'leading-[0.96]',
   },
   {
     id: 'turning-ai',
-    prefix: 'ENGINEERING LAB',
-    primary: 'TURNING AI INTO INNOVATION.',
+    prefix: '03 // LAB EXPERIMENTS',
+    primary: 'AI TO INNOVATION.',
     highlight: 'INNOVATION',
-    subline: 'AUTONOMOUS AGENTS, REASONING PIPELINES & HIGH-IMPACT PRODUCTS',
-    fluidSize: 'text-[clamp(1.9rem,6.2vw,4.9rem)]',
-    lineHeight: 'leading-[1.02]',
+    subline: 'REASONING PIPELINES, HIGH-FREQUENCY QUANT & SCALED PRODUCTS',
+    fluidSize: 'text-[clamp(3.4rem,8.6vw,8.4rem)]',
+    lineHeight: 'leading-[0.94]',
   },
 ];
 
@@ -78,8 +78,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       <div className="w-full max-w-7xl mx-auto my-auto py-6 sm:py-10 flex flex-col items-center opacity-100">
         {/* Dynamic Rotating Display Headline Box with Fixed Height Budget to prevent layout jumps */}
         <div className="text-center w-full mb-6 max-w-5xl mx-auto">
-          {/* Active sequence pill indicator */}
-          <div className="flex items-center justify-center gap-2 mb-4">
+          {/* Subtle Editorial Sequence Counter (Zero-Pill Discipline) */}
+          <div className="flex items-center justify-center gap-3 mb-5 font-mono text-[10px] tracking-widest text-[#626A73]">
             {HEADLINE_ROTATIONS.map((item, i) => (
               <button
                 key={item.id}
@@ -87,42 +87,40 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 onClick={() => setRotationIndex(i)}
                 aria-label={`Jump to headline: ${item.primary}`}
                 data-cursor="button"
-                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  i === rotationIndex
-                    ? 'w-9 bg-cyan-400 shadow-[0_0_12px_#22d3ee]'
-                    : 'w-2 bg-white/20 hover:bg-white/50'
+                className={`transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  i === rotationIndex ? 'text-[#F2F3F5] font-semibold' : 'text-[#626A73] hover:text-[#A7ADB5]'
                 }`}
-              />
+              >
+                <span>{`0${i + 1}`}</span>
+                {i === rotationIndex && <span className="w-1 h-1 rounded-full bg-[#7EA7FF]" />}
+              </button>
             ))}
           </div>
 
           {/* Calibrated Container with Minimum Height so the layout never jumps between short & multiline titles */}
-          <div className="min-h-[160px] sm:min-h-[190px] md:min-h-[220px] flex items-center justify-center">
+          <div className="min-h-[170px] sm:min-h-[200px] md:min-h-[230px] flex items-center justify-center">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentRotation.id}
-                initial={{ opacity: 0, y: 16, filter: 'blur(6px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: -16, filter: 'blur(6px)' }}
-                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                 className="flex flex-col items-center justify-center w-full px-2"
               >
                 {/* Micro Category Eyebrow */}
-                <span className="font-mono text-[10px] sm:text-xs md:text-sm font-semibold text-cyan-400 uppercase tracking-[0.25em] mb-2 sm:mb-3 block">
-                  [ {currentRotation.prefix} ]
+                <span className="font-mono text-[10px] sm:text-xs font-medium text-[#7EA7FF] uppercase tracking-[0.25em] mb-2 sm:mb-3 block">
+                  {currentRotation.prefix}
                 </span>
 
-                {/* Calibrated Responsive Fluid Headline
-                    - Guaranteed zero overflow on 320px mobile screens
-                    - Maintains harmonious visual weight whether rendering 2 words or 4 words
-                    - Dynamic text-wrap: balance & break-words */}
+                {/* Oversized Sharp Editorial Headline */}
                 <h1
-                  className={`font-editorial ${currentRotation.fluidSize} ${currentRotation.lineHeight} font-black uppercase tracking-tight text-white max-w-4xl mx-auto break-words [text-wrap:balance] drop-shadow-[0_10px_25px_rgba(0,0,0,0.8)]`}
+                  className={`font-editorial ${currentRotation.fluidSize} ${currentRotation.lineHeight} font-bold tracking-tight text-[#F2F3F5] max-w-5xl mx-auto break-words [text-wrap:balance]`}
                 >
                   {currentRotation.id === 'garv-shaw' && (
                     <>
                       GARV{' '}
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400">
+                      <span className="text-[#A7ADB5]">
                         SHAW
                       </span>
                       .
@@ -130,17 +128,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   )}
                   {currentRotation.id === 'building-systems' && (
                     <>
-                      BUILDING{' '}
-                      <span className="text-cyan-400">
-                        INTELLIGENT
-                      </span>{' '}
-                      DIGITAL SYSTEMS.
+                      INTELLIGENT{' '}
+                      <span className="text-[#7EA7FF]">
+                        SYSTEMS
+                      </span>
+                      .
                     </>
                   )}
                   {currentRotation.id === 'turning-ai' && (
                     <>
-                      TURNING AI INTO{' '}
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-indigo-300 to-purple-400">
+                      AI TO{' '}
+                      <span className="text-[#FF9D38]">
                         INNOVATION
                       </span>
                       .
@@ -148,26 +146,25 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   )}
                 </h1>
 
-                {/* Subtitle badge */}
-                <p className="font-mono text-[10px] sm:text-xs md:text-sm uppercase tracking-widest text-neutral-400 mt-3 sm:mt-4 max-w-xl mx-auto">
+                {/* Subtitle datum */}
+                <p className="font-mono text-[10px] sm:text-xs uppercase tracking-widest text-[#626A73] mt-3 sm:mt-4 max-w-xl mx-auto">
                   {currentRotation.subline}
                 </p>
               </motion.div>
             </AnimatePresence>
           </div>
 
-          {/* Supporting Bio Description */}
+          {/* Supporting Editorial Description */}
           <motion.p
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="mt-4 text-neutral-300 font-sans text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed font-light px-2"
+            transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-4 text-[#A7ADB5] font-sans text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed font-light px-2"
           >
-            I architect intelligent systems and digital products at the intersection of{' '}
-            <strong className="text-white font-medium">Artificial Intelligence</strong>,{' '}
-            <strong className="text-white font-medium">Cloud Infrastructure</strong>,{' '}
-            <strong className="text-white font-medium">Software Engineering</strong>, and{' '}
-            <strong className="text-white font-medium">FinTech</strong>.
+            Architecting intelligent systems and digital products at the intersection of{' '}
+            <strong className="text-[#F2F3F5] font-normal">Artificial Intelligence</strong>,{' '}
+            <strong className="text-[#F2F3F5] font-normal">Cloud Infrastructure</strong>, and{' '}
+            <strong className="text-[#F2F3F5] font-normal">Distributed Runtimes</strong>.
           </motion.p>
         </div>
 
@@ -184,13 +181,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
       {/* Bottom Editorial Control & Action Bar */}
       <div className="w-full max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-white/10 pt-6">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={onExploreClick}
             data-cursor="button"
             data-cursor-label="WORK"
-            className="group flex items-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-cyan-300 text-black font-mono text-xs font-semibold tracking-wider transition-all cursor-pointer shadow-[0_0_20px_rgba(255,255,255,0.15)]"
+            className="group flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#F2F3F5] hover:bg-white text-[#050608] font-mono text-xs font-semibold tracking-wider transition-all cursor-pointer shadow-lg"
           >
             <span>EXPLORE WORK</span>
             <ArrowDown className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" />
@@ -198,25 +195,36 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
           <button
             type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('trigger-rocket-cinematic'))}
+            data-cursor="button"
+            data-cursor-label="LAUNCH"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#171C22] hover:bg-[#1f262e] border border-[#FF9D38]/30 text-[#FFD27A] font-mono text-xs tracking-wider transition-all cursor-pointer"
+          >
+            <Rocket className="w-3.5 h-3.5 text-[#FF9D38]" />
+            <span>LAUNCH 3D FLYOVER</span>
+          </button>
+
+          <button
+            type="button"
             onClick={onContactClick}
             data-cursor="button"
             data-cursor-label="CONTACT"
-            className="px-5 py-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/15 text-white font-mono text-xs tracking-wider transition-all cursor-pointer"
+            className="px-5 py-2.5 rounded-lg bg-[#11151A] hover:bg-[#171C22] border border-white/[0.08] hover:border-white/20 text-[#A7ADB5] hover:text-[#F2F3F5] font-mono text-xs tracking-wider transition-all cursor-pointer"
           >
             START A CONVERSATION
           </button>
         </div>
 
         {/* Live System Metas */}
-        <div className="flex items-center gap-5 text-neutral-400 font-mono text-xs">
+        <div className="flex items-center gap-5 text-[#626A73] font-mono text-xs">
           <div className="flex items-center gap-1.5">
-            <Terminal className="w-3.5 h-3.5 text-neutral-400" />
-            <span>GARV_SHAW.SYSTEM</span>
+            <Terminal className="w-3.5 h-3.5 text-[#626A73]" />
+            <span>GARV_SHAW.SYS</span>
           </div>
           <span>•</span>
           <div className="flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-neutral-300">STATUS: 100% ONLINE</span>
+            <Activity className="w-3.5 h-3.5 text-[#7EA7FF]" />
+            <span className="text-[#A7ADB5]">100% OPERATIONAL</span>
           </div>
         </div>
       </div>

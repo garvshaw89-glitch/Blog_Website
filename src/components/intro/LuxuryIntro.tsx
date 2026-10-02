@@ -4,7 +4,7 @@ import { IntroScene } from './IntroScene';
 import { IntroOverlay } from './IntroOverlay';
 import { WebGlFallback } from './WebGlFallback';
 import { introAudio } from './introAudio';
-import { entrySequenceManager } from '../matter/entrySequenceManager';
+import { entrySequenceManager } from './entrySequenceManager';
 
 interface LuxuryIntroProps {
   onComplete: () => void;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { entrySequenceManager, EntryStage } from '../matter/entrySequenceManager';
+import { entrySequenceManager, EntryStage } from '../intro/entrySequenceManager';
 
 interface LoadingScreenProps {
   onComplete: () => void;

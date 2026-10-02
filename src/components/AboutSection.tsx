@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowUpRight, ShieldCheck, Terminal, Award, Compass, Cpu, Layers } from 'lucide-react';
-import { DotParticleAvatar } from './matter/DotParticleAvatar';
+import { ArchitectAvatar } from './ui/ArchitectAvatar';
 
 interface AboutSectionProps {
   onContactClick?: () => void;
@@ -37,86 +37,79 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
     >
       <div className="max-w-7xl mx-auto">
         {/* Section Header Eyebrow */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-16">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-16">
           <div className="flex items-center gap-3">
-            <span className="font-mono text-cyan-400 font-semibold text-xs">01 //</span>
-            <span className="font-mono text-xs uppercase tracking-widest text-neutral-400">
+            <span className="font-mono text-[#7EA7FF] font-semibold text-xs">01 //</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-[#A7ADB5]">
               IDENTITY & ARCHITECTURAL PHILOSOPHY
             </span>
           </div>
-          <span className="font-mono text-xs text-neutral-400">GARV SHAW</span>
+          <span className="font-mono text-xs text-[#626A73]">GARV SHAW</span>
         </div>
 
         {/* Large Editorial Headline & Verified Profile Showcase */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-20">
           <div className="lg:col-span-7">
-            <h2 className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-white leading-[0.95]">
+            <h2 className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-[#F2F3F5] leading-[0.95]">
               THE PERSON
               <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400">
+              <span className="text-[#A7ADB5]">
                 BEHIND THE
               </span>
               <br />
               SYSTEM.
             </h2>
-            <p className="font-sans text-neutral-300 text-base sm:text-lg leading-relaxed font-light mt-6 max-w-xl">
-              I am <strong className="text-white font-medium">Garv Shaw</strong>, a digital architect and software engineer designing intelligent platforms at the intersection of Artificial Intelligence, distributed cloud infrastructure, and financial systems.
+            <p className="font-sans text-[#A7ADB5] text-base sm:text-lg leading-relaxed font-light mt-6 max-w-xl">
+              I am <strong className="text-[#F2F3F5] font-normal">Garv Shaw</strong>, a digital architect and software engineer designing intelligent platforms at the intersection of Artificial Intelligence, distributed cloud infrastructure, and financial systems.
             </p>
-            <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center gap-4 font-mono text-xs text-neutral-400">
-              <span className="px-3 py-1 rounded-full bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 font-semibold">
-                AI × REASONING
-              </span>
-              <span className="px-3 py-1 rounded-full bg-indigo-950/40 border border-indigo-500/30 text-indigo-300 font-semibold">
-                CLOUD & EDGE
-              </span>
-              <span className="px-3 py-1 rounded-full bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 font-semibold">
-                FINTECH × SYSTEMS
-              </span>
+            <div className="mt-8 pt-6 border-t border-white/[0.08] flex flex-wrap items-center gap-4 font-mono text-xs text-[#626A73]">
+              <span className="text-[#7EA7FF] font-medium">AI & REASONING</span>
+              <span className="text-white/20">/</span>
+              <span className="text-[#A7ADB5]">CLOUD & EDGE</span>
+              <span className="text-white/20">/</span>
+              <span className="text-[#A7ADB5]">FINTECH & SYSTEMS</span>
             </div>
           </div>
 
-          {/* High-Resolution Verified Profile Card */}
+          {/* High-Resolution Profile Card */}
           <div className="lg:col-span-5 flex justify-center lg:justify-end">
-            <div className="relative group max-w-sm w-full p-6 sm:p-7 rounded-3xl bg-[#08090B]/90 border border-white/10 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] hover:border-cyan-400/40 transition-all duration-500">
-              {/* Colorful animated aura glow */}
-              <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-rose-500 opacity-25 group-hover:opacity-60 blur-xl transition-opacity duration-500 -z-10" />
-
+            <div className="relative group max-w-sm w-full p-6 sm:p-7 rounded-2xl bg-[#0B0E12]/95 border border-white/[0.08] shadow-2xl hover:border-white/[0.18] transition-all duration-500">
               <div className="flex items-center gap-5 mb-5">
                 {/* Avatar with authentic dot-matrix particle effect */}
                 <div className="relative shrink-0">
-                  <DotParticleAvatar size={88} gridResolution={28} interactive={true} />
+                  <ArchitectAvatar size={88} interactive={true} />
                   <span
-                    className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#08090B] shadow-[0_0_8px_#34d399] z-10"
+                    className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#10b981] border-2 border-[#0B0E12] z-10"
                     title="Status: Online"
                   />
                 </div>
 
                 <div>
-                  <div className="flex items-center gap-1.5 text-cyan-400 font-mono text-[10px] tracking-widest uppercase mb-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-                    <span>VERIFIED ARCHITECT</span>
+                  <div className="flex items-center gap-1.5 text-[#7EA7FF] font-mono text-[10px] tracking-widest uppercase mb-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#7EA7FF]" />
+                    <span>SYSTEM ARCHITECT</span>
                   </div>
-                  <h3 className="font-editorial text-2xl font-bold text-white uppercase tracking-tight">
+                  <h3 className="font-editorial text-2xl font-bold text-[#F2F3F5] uppercase tracking-tight">
                     GARV SHAW
                   </h3>
-                  <p className="font-mono text-xs text-neutral-400 mt-0.5">
+                  <p className="font-mono text-xs text-[#626A73] mt-0.5">
                     @garvshaw89-glitch
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-2 py-4 border-y border-white/5 font-mono text-xs text-neutral-300">
+              <div className="space-y-2 py-4 border-y border-white/[0.06] font-mono text-xs text-[#A7ADB5]">
                 <div className="flex justify-between">
-                  <span className="text-neutral-500">ROLE:</span>
-                  <span className="text-white font-medium">Digital Architect</span>
+                  <span className="text-[#626A73]">ROLE:</span>
+                  <span className="text-[#F2F3F5]">Digital Architect</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-neutral-500">FOCUS:</span>
-                  <span className="text-cyan-300">AI × Cloud × Software</span>
+                  <span className="text-[#626A73]">FOCUS:</span>
+                  <span className="text-[#7EA7FF]">AI × Cloud × Software</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-neutral-500">LOCATION:</span>
-                  <span className="text-neutral-300">New Delhi, India</span>
+                  <span className="text-[#626A73]">LOCATION:</span>
+                  <span className="text-[#A7ADB5]">New Delhi, India</span>
                 </div>
               </div>
 
@@ -125,12 +118,12 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
                   href="https://github.com/garvshaw89-glitch"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 transition-colors"
+                  className="flex items-center gap-1.5 text-[#7EA7FF] hover:text-white transition-colors"
                 >
-                  <span>VIEW REPOSITORIES</span>
+                  <span>VIEW GITHUB</span>
                   <ArrowUpRight className="w-3.5 h-3.5" />
                 </a>
-                <span className="text-emerald-400">AVAILABLE FOR ROLES</span>
+                <span className="text-[#A7ADB5]">AVAILABLE FOR ROLES</span>
               </div>
             </div>
           </div>
@@ -145,23 +138,23 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: i * 0.15 }}
-              className="p-8 rounded-3xl bg-[#08090B]/80 border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between h-full"
+              className="p-8 rounded-2xl bg-[#0B0E12]/80 border border-white/[0.08] hover:border-white/[0.18] transition-all flex flex-col justify-between h-full"
             >
               <div>
-                <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-400 block mb-3">
-                  PILLAR 0{i + 1} • {pillar.tag}
+                <span className="font-mono text-[10px] uppercase tracking-widest text-[#7EA7FF] block mb-3">
+                  PILLAR 0{i + 1} / {pillar.tag}
                 </span>
-                <h3 className="font-editorial text-xl sm:text-2xl font-bold text-white uppercase tracking-tight mb-4">
+                <h3 className="font-editorial text-xl sm:text-2xl font-bold text-[#F2F3F5] uppercase tracking-tight mb-4">
                   {pillar.title}
                 </h3>
-                <p className="font-sans text-sm text-neutral-300 leading-relaxed font-light">
+                <p className="font-sans text-sm text-[#A7ADB5] leading-relaxed font-light">
                   {pillar.desc}
                 </p>
               </div>
 
-              <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-neutral-400">
+              <div className="mt-8 pt-4 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-[#626A73]">
                 <span>STATUS</span>
-                <span className="text-emerald-400">PRODUCTION READY</span>
+                <span className="text-[#A7ADB5]">PRODUCTION GRADE</span>
               </div>
             </motion.div>
           ))}

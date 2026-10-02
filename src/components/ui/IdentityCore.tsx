@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Cpu, Cloud, Terminal, Grid3X3, Hammer } from 'lucide-react';
-import { DotParticleAvatar } from '../matter/DotParticleAvatar';
+import { ArchitectAvatar } from './ArchitectAvatar';
 
 interface IdentityCoreState {
   word: string;
@@ -166,7 +166,7 @@ export const IdentityCore: React.FC = () => {
           {/* Garv Shaw Profile Avatar with Interactive Dot-Matrix Particle Effect */}
           <div className="relative mb-4 group cursor-pointer" title="Garv Shaw - Verified Digital Architect">
             <div className="relative">
-              <DotParticleAvatar size={76} gridResolution={26} interactive={true} />
+              <ArchitectAvatar size={76} interactive={true} />
               <span
                 className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#08090B] shadow-[0_0_8px_#34d399] z-10"
                 title="Status: Verified Online"

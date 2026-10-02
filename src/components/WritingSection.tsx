@@ -191,51 +191,56 @@ export const WritingSection: React.FC<WritingSectionProps> = ({ id = 'writing' }
         </div>
 
         {/* Editorial Articles List */}
-        <div className="divide-y divide-white/10 border-b border-white/10">
+        <div className="flex flex-col gap-6">
           {ARTICLES.map((article) => (
             <motion.article
               key={article.id}
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
               onClick={() => setSelectedArticle(article)}
               data-cursor="link"
               data-cursor-label="READ"
-              className="group py-8 sm:py-12 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all duration-300 hover:pl-3 hover:bg-white/[0.015] rounded-xl px-2"
+              className="group relative cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-8 rounded-xl bg-[#0B0E12]/50 hover:bg-[#11151A] border border-white/[0.06] hover:border-white/[0.16] hover:-translate-y-1.5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] shadow-sm hover:shadow-[0_12px_40px_rgba(0,0,0,0.6)]"
             >
+              {/* Thin Left Accent Line on Hover */}
+              <div className="absolute left-0 top-6 bottom-6 w-[2px] bg-[#7EA7FF] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-r" />
+
               <div className="max-w-3xl">
-                <div className="flex items-center gap-3 font-mono text-xs text-neutral-400 mb-2">
-                  <span className="text-cyan-400 font-bold">{article.number}</span>
-                  <span>•</span>
-                  <span>{article.category}</span>
-                  <span>•</span>
+                <div className="flex items-center gap-3 font-mono text-[11px] text-[#626A73] mb-3 tracking-wider uppercase">
+                  <span className="text-[#FF9D38] font-bold">{article.number}</span>
+                  <span>/</span>
+                  <span className="text-[#7EA7FF] font-medium">{article.category}</span>
+                  <span>/</span>
                   <span>{article.readTime}</span>
+                  <span>/</span>
+                  <span>{article.date}</span>
                 </div>
 
-                <h3 className="font-editorial text-2xl sm:text-3xl md:text-4xl font-bold uppercase text-white tracking-tight group-hover:text-cyan-300 transition-colors">
+                <h3 className="font-editorial text-2xl sm:text-3xl md:text-4xl font-bold text-[#F2F3F5] tracking-tight group-hover:text-white transition-colors leading-[1.12]">
                   {article.title}
                 </h3>
 
-                <p className="mt-3 font-sans text-neutral-400 text-sm sm:text-base font-light leading-relaxed">
+                <p className="mt-3.5 font-sans text-[#A7ADB5] text-sm sm:text-base font-light leading-relaxed">
                   {article.excerpt}
                 </p>
 
-                <div className="flex flex-wrap items-center gap-2 mt-4 font-mono text-[11px] text-[#A5A7AC]">
+                <div className="flex flex-wrap items-center gap-2 mt-4 font-mono text-[11px] text-[#626A73]">
                   {article.tags.map((tag, idx) => (
                     <React.Fragment key={tag}>
-                      {idx > 0 && <span className="text-neutral-600" aria-hidden="true">·</span>}
+                      {idx > 0 && <span aria-hidden="true">·</span>}
                       <span>{tag}</span>
                     </React.Fragment>
                   ))}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 self-start md:self-center shrink-0">
-                <span className="font-mono text-xs uppercase tracking-wider text-neutral-400 group-hover:text-white transition-colors">
+              <div className="flex items-center gap-2 self-start md:self-center shrink-0 pt-2 md:pt-0">
+                <span className="font-mono text-xs uppercase tracking-wider text-[#626A73] group-hover:text-[#F2F3F5] transition-colors">
                   READ ESSAY
                 </span>
-                <ArrowUpRight className="w-5 h-5 text-neutral-500 group-hover:text-cyan-300 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
+                <ArrowUpRight className="w-4 h-4 text-[#626A73] group-hover:text-[#7EA7FF] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
               </div>
             </motion.article>
           ))}

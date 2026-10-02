@@ -16,7 +16,6 @@ import {
   FileCode,
   Rocket,
 } from 'lucide-react';
-import { rocketCinematicManager } from '../matter/rocketCinematicManager';
 
 interface CommandItem {
   id: string;
@@ -123,12 +122,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: 'action-rocket-reveal',
-      title: 'Launch Particle Rocket & Reveal GitHub Profile',
+      title: 'Execute 3D Rocket Cinematic Flyover (Screen Breakthrough)',
       category: 'Lab',
       shortcut: '⌘ R',
       icon: <Rocket className="w-4 h-4 text-cyan-400" />,
       action: () => {
-        rocketCinematicManager.triggerSequence();
+        window.dispatchEvent(new CustomEvent('trigger-rocket-cinematic'));
         onClose();
       },
     },
