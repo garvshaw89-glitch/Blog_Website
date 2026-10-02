@@ -11,6 +11,17 @@ export interface RocketParticleResult {
   part: string;
 }
 
+// Reusable static result object to avoid creating tens of thousands of Vector3 and Color objects per frame
+const _sharedRocketResult: RocketParticleResult = {
+  pos: new THREE.Vector3(),
+  color: new THREE.Color(),
+  isEngine: false,
+  isExhaust: false,
+  isShockDiamond: false,
+  sizeMult: 1.0,
+  part: 'fuselage',
+};
+
 /**
  * Procedural Multi-Stage Real Heavy-Lift Aerospace Rocket:
  * Modeled with high-precision aerospace engineering architecture:
@@ -24,6 +35,8 @@ export interface RocketParticleResult {
  * 8. Supersonic Shock Diamond Plume: hot-white diamond nodes, fiery orange/amber flame cone,
  *    and electric cyan plasma sheath!
  * 9. Port (Red) and Starboard (Green) active navigation beacon strobes.
+ *
+ * Zero-allocation: writes directly to reusable static result object.
  */
 export function generateRocketPosition(
   i: number,
@@ -42,7 +55,7 @@ export function generateRocketPosition(
   let sizeMult = 1.0;
   let part = 'fuselage';
 
-  const col = new THREE.Color();
+  const col = _sharedRocketResult.color;
   const vibX = (Math.random() - 0.5) * vibration;
   const vibY = (Math.random() - 0.5) * vibration;
 
@@ -294,15 +307,14 @@ export function generateRocketPosition(
   // Micro vibration & structural noise
   const noise = pseudoNoise3D(x * 1.5, y * 1.5, u * 12.0) * 0.04;
 
-  return {
-    pos: new THREE.Vector3(x + vibX + noise, y + rocketY + vibY, z),
-    color: col,
-    isEngine,
-    isExhaust,
-    isShockDiamond,
-    sizeMult,
-    part,
-  };
+  _sharedRocketResult.pos.set(x + vibX + noise, y + rocketY + vibY, z);
+  _sharedRocketResult.isEngine = isEngine;
+  _sharedRocketResult.isExhaust = isExhaust;
+  _sharedRocketResult.isShockDiamond = isShockDiamond;
+  _sharedRocketResult.sizeMult = sizeMult;
+  _sharedRocketResult.part = part;
+
+  return _sharedRocketResult;
 }
 
 /**

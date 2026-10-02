@@ -57,7 +57,7 @@ interface RippleWave {
   strength: number;
 }
 
-export const LivingMatterBackground: React.FC = () => {
+export const LivingMatterBackground: React.FC = React.memo(() => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -113,7 +113,7 @@ export const LivingMatterBackground: React.FC = () => {
       return;
     }
 
-    const maxDpr = isMobile ? 1.0 : isTablet ? 1.3 : 1.75;
+    const maxDpr = isMobile ? 1.0 : isTablet ? 1.25 : 1.75;
     const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
     renderer.setPixelRatio(dpr);
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -126,11 +126,14 @@ export const LivingMatterBackground: React.FC = () => {
     renderer.domElement.style.pointerEvents = 'none';
 
     // 2. Post-Processing Pipeline (Bloom Effect via EffectComposer for Brightest Particles)
+    // On mobile devices, skip multi-pass bloom postprocessing to conserve mobile GPU fillrate and battery.
+    // Point particles with additive blending already provide high-luminance optical glow natively.
     let composer: EffectComposer | null = null;
     let bloomPass: UnrealBloomPass | null = null;
-    const renderScale = isMobile ? 0.5 : isTablet ? 0.75 : 1.0;
+    const renderScale = isTablet ? 0.75 : 1.0;
+    const enableBloom = !isMobile && !prefersReducedMotion && hardwareConcurrency >= 4;
 
-    if (!prefersReducedMotion) {
+    if (enableBloom) {
       try {
         const renderResolution = new THREE.Vector2(
           Math.floor(window.innerWidth * renderScale),
@@ -401,18 +404,19 @@ export const LivingMatterBackground: React.FC = () => {
       });
     };
 
-    // 7. Raycasting: World Mouse coordinates at Z = 0
+    // 7. Raycasting: World Mouse coordinates at Z = 0 (Pre-allocated for zero GC pressure)
     const raycaster = new THREE.Raycaster();
     const planeZ0 = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
     const planeIntersection = new THREE.Vector3();
     const prevCursorWorld = new THREE.Vector3();
     const cursorVelocityWorld = new THREE.Vector3();
+    const mouseNdc = new THREE.Vector2();
+    const clickNdc = new THREE.Vector2();
+    const clickIntersection = new THREE.Vector3();
 
     const updateWorldMouse = () => {
-      raycaster.setFromCamera(
-        new THREE.Vector2(interactionEngine.state.ndcX, interactionEngine.state.ndcY),
-        camera
-      );
+      mouseNdc.set(interactionEngine.state.ndcX, interactionEngine.state.ndcY);
+      raycaster.setFromCamera(mouseNdc, camera);
       raycaster.ray.intersectPlane(planeZ0, planeIntersection);
       if (planeIntersection) {
         cursorVelocityWorld.x = (planeIntersection.x - prevCursorWorld.x) * 0.4;
@@ -432,7 +436,13 @@ export const LivingMatterBackground: React.FC = () => {
     const unsubInteraction = interactionEngine.subscribe((state) => {
       if (state.lastClickTime > lastObservedClick) {
         lastObservedClick = state.lastClickTime;
-        triggerRipple(planeIntersection.x, planeIntersection.y);
+        // Compute precise world coordinates at the click location (zero allocations)
+        clickNdc.set(state.ndcX, state.ndcY);
+        raycaster.setFromCamera(clickNdc, camera);
+        raycaster.ray.intersectPlane(planeZ0, clickIntersection);
+        if (clickIntersection) {
+          triggerRipple(clickIntersection.x, clickIntersection.y);
+        }
       }
     });
 
@@ -469,9 +479,20 @@ export const LivingMatterBackground: React.FC = () => {
     let lowFpsStreak = 0;
     let highFpsStreak = 0;
 
+    let prevWidth = window.innerWidth;
+    let prevHeight = window.innerHeight;
+
     const onResize = () => {
       const w = window.innerWidth;
       const h = window.innerHeight;
+
+      // On mobile devices, ignore minor vertical height shifts caused by browser address bar showing/hiding on scroll
+      if (isMobile && Math.abs(w - prevWidth) < 2 && Math.abs(h - prevHeight) < 80) {
+        return;
+      }
+      prevWidth = w;
+      prevHeight = h;
+
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
 
@@ -539,6 +560,10 @@ export const LivingMatterBackground: React.FC = () => {
     let isTabVisible = !document.hidden;
     const handleVisibilityChange = () => {
       isTabVisible = !document.hidden;
+      if (isTabVisible) {
+        clock.getDelta(); // flush stale accumulated delta to avoid physics explosions
+        lastFpsCheckTime = performance.now();
+      }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
@@ -1577,7 +1602,15 @@ export const LivingMatterBackground: React.FC = () => {
 
       const isGlobeActive = ambientState === 'GLOBE';
 
-      if (!prefersReduced && !isProfileFormingOrHeld && !isGlobeActive) {
+      // On mobile or lower quality tiers, skip expensive 27-cell spatial hash collision checks
+      const canRunParticleCollisions =
+        !isMobile &&
+        !prefersReduced &&
+        qualityLevel === 'high' &&
+        !isProfileFormingOrHeld &&
+        !isGlobeActive;
+
+      if (canRunParticleCollisions) {
         gridHead.fill(-1);
 
         // 1. Bin particles into 3D spatial hash grid
@@ -1772,4 +1805,6 @@ export const LivingMatterBackground: React.FC = () => {
       />
     </div>
   );
-};
+});
+
+LivingMatterBackground.displayName = 'LivingMatterBackground';

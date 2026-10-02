@@ -262,14 +262,11 @@
 
 .cursor-shockwave {
   position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
   border-radius: 50% !important;
   border: 2px solid rgba(34, 211, 238, 0.9) !important;
   box-shadow: 0 0 16px rgba(6, 182, 212, 0.7), inset 0 0 10px rgba(6, 182, 212, 0.3) !important;
   pointer-events: none !important;
   z-index: 2147483641 !important;
-  transform: translate3d(0, 0, 0);
   animation: singularityShockwave 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 

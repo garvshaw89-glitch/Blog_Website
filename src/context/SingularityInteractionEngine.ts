@@ -205,6 +205,12 @@ class InteractionEngine {
   private onPointerDown = (e: PointerEvent) => {
     this.state.lastClickTime = performance.now();
     this.state.clickCount += 1;
+    this.state.clientX = e.clientX;
+    this.state.clientY = e.clientY;
+    const w = window.innerWidth || 1;
+    const h = window.innerHeight || 1;
+    this.state.ndcX = (e.clientX / w) * 2 - 1;
+    this.state.ndcY = -(e.clientY / h) * 2 + 1;
     this.state.clickOrigin = {
       x: e.clientX,
       y: e.clientY,

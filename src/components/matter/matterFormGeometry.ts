@@ -498,10 +498,28 @@ export function pseudoNoise3D(x: number, y: number, z: number): number {
   return (pX + pY + pZ) / 3.0;
 }
 
+// Pre-allocated static vectors to guarantee zero garbage collection in high-frequency physics loop
+const _sharedCurl = new THREE.Vector3();
+const _sharedRock = new THREE.Vector3();
+const _sharedWave = new THREE.Vector3();
+const _sharedArch = new THREE.Vector3();
+const _sharedSphere = new THREE.Vector3();
+const _sharedRing = new THREE.Vector3();
+const _sharedOrbit = new THREE.Vector3();
+const _sharedBlueprint = new THREE.Vector3();
+const _sharedConv = new THREE.Vector3();
+
 /**
  * Curl Noise approximation to drive divergence-free, watery particle velocity fields.
+ * Zero-allocation: writes directly to reusable target vector.
  */
-export function getCurlNoise(x: number, y: number, z: number, eps = 0.15): THREE.Vector3 {
+export function getCurlNoise(
+  x: number,
+  y: number,
+  z: number,
+  eps = 0.15,
+  target = _sharedCurl
+): THREE.Vector3 {
   const n1 = pseudoNoise3D(x, y + eps, z);
   const n2 = pseudoNoise3D(x, y - eps, z);
   const n3 = pseudoNoise3D(x, y, z + eps);
@@ -509,37 +527,50 @@ export function getCurlNoise(x: number, y: number, z: number, eps = 0.15): THREE
   const n5 = pseudoNoise3D(x + eps, y, z);
   const n6 = pseudoNoise3D(x - eps, y, z);
 
-  const curlX = (n1 - n2) / (2 * eps) - (n3 - n4) / (2 * eps);
-  const curlY = (n3 - n4) / (2 * eps) - (n5 - n6) / (2 * eps);
-  const curlZ = (n5 - n6) / (2 * eps) - (n1 - n2) / (2 * eps);
+  const inv2eps = 0.5 / eps;
+  const curlX = (n1 - n2 - (n3 - n4)) * inv2eps;
+  const curlY = (n3 - n4 - (n5 - n6)) * inv2eps;
+  const curlZ = (n5 - n6 - (n1 - n2)) * inv2eps;
 
-  return new THREE.Vector3(curlX, curlY, curlZ);
+  target.set(curlX, curlY, curlZ);
+  return target;
 }
 
 /**
  * Generates organic Rock / Asteroid 3D target coordinates for particles.
- * Distributes particles onto an irregularly faceted, mineral-breathing mass.
+ * Zero-allocation: writes directly to reusable target vector.
  */
-export function generateRockPosition(i: number, total: number, time: number): THREE.Vector3 {
+export function generateRockPosition(
+  i: number,
+  total: number,
+  time: number,
+  target = _sharedRock
+): THREE.Vector3 {
   const phi = Math.acos(1 - 2 * ((i + 0.5) / total));
-  const goldenRatio = (1 + Math.sqrt(5)) / 2;
+  const goldenRatio = 1.618033988749895;
   const theta = 2 * Math.PI * i * goldenRatio;
 
   // Faceted mineral radius with noise deformation
   const baseRadius = 4.2;
+  const sinPhi = Math.sin(phi);
+  const cosTheta = Math.cos(theta);
+  const sinTheta = Math.sin(theta);
+  const cosPhi = Math.cos(phi);
+
   const noiseDeform = pseudoNoise3D(
-    Math.sin(phi) * Math.cos(theta) * 2.2,
-    Math.sin(phi) * Math.sin(theta) * 2.2,
-    Math.cos(phi) * 2.2 + time * 0.1
+    sinPhi * cosTheta * 2.2,
+    sinPhi * sinTheta * 2.2,
+    cosPhi * 2.2 + time * 0.1
   );
 
   const r = baseRadius * (0.8 + 0.45 * noiseDeform);
 
-  const x = r * Math.sin(phi) * Math.cos(theta);
-  const y = r * Math.sin(phi) * Math.sin(theta);
-  const z = r * Math.cos(phi) - 2.5; // Slight depth offset
-
-  return new THREE.Vector3(x, y, z);
+  target.set(
+    r * sinPhi * cosTheta,
+    r * sinPhi * sinTheta,
+    r * cosPhi - 2.5
+  );
+  return target;
 }
 
 /**
@@ -699,11 +730,13 @@ export function generateGlobePosition(
 
 /**
  * Generates Transverse Oceanic Fluid Wave target coordinates.
+ * Zero-allocation: writes directly to reusable target vector.
  */
 export function generateWavePosition(
   i: number,
   total: number,
-  time: number
+  time: number,
+  target = _sharedWave
 ): THREE.Vector3 {
   const rowCount = 35;
   const colCount = Math.floor(total / rowCount);
@@ -719,55 +752,66 @@ export function generateWavePosition(
     Math.cos(v * 0.45 + time * 1.2) * 1.2 +
     pseudoNoise3D(u * 0.1, v * 0.1, time * 0.5) * 0.8;
 
-  return new THREE.Vector3(u, waveHeight - 1.0, v * 0.6 - 4.0);
+  target.set(u, waveHeight - 1.0, v * 0.6 - 4.0);
+  return target;
 }
 
 /**
  * Section-Aware Form: Architectural Matrix for Projects Section
+ * Zero-allocation: writes directly to reusable target vector.
  */
 export function generateArchitecturePosition(
   i: number,
-  total: number
+  total: number,
+  target = _sharedArch
 ): THREE.Vector3 {
   const side = Math.cbrt(total) || 12;
-  const ix = i % Math.round(side);
-  const iy = Math.floor((i / Math.round(side)) % Math.round(side));
-  const iz = Math.floor(i / (Math.round(side) * Math.round(side)));
+  const roundedSide = Math.round(side);
+  const ix = i % roundedSide;
+  const iy = Math.floor((i / roundedSide) % roundedSide);
+  const iz = Math.floor(i / (roundedSide * roundedSide));
 
   const step = 2.4;
   const x = (ix - side / 2) * step;
   const y = (iy - side / 2) * (step * 0.85);
   const z = (iz - side / 2) * (step * 0.7) - 6.0;
 
-  return new THREE.Vector3(x, y, z);
+  target.set(x, y, z);
+  return target;
 }
 
 /**
  * Procedural Geometric Sphere for entry sequence (Form 01)
+ * Zero-allocation: writes directly to reusable target vector.
  */
 export function generateSpherePosition(
   i: number,
   total: number,
-  radius = 4.8
+  radius = 4.8,
+  target = _sharedSphere
 ): THREE.Vector3 {
   const phi = Math.acos(1 - 2 * ((i + 0.5) / total));
-  const goldenRatio = (1 + Math.sqrt(5)) / 2;
+  const goldenRatio = 1.618033988749895;
   const theta = 2 * Math.PI * i * goldenRatio;
 
-  const x = radius * Math.sin(phi) * Math.cos(theta);
-  const y = radius * Math.sin(phi) * Math.sin(theta);
+  const sinPhi = Math.sin(phi);
+  const x = radius * sinPhi * Math.cos(theta);
+  const y = radius * sinPhi * Math.sin(theta);
   const z = radius * Math.cos(phi) - 2.0;
 
-  return new THREE.Vector3(x, y, z);
+  target.set(x, y, z);
+  return target;
 }
 
 /**
  * Procedural 3D Circular Ring for entry sequence (Form 02)
+ * Zero-allocation: writes directly to reusable target vector.
  */
 export function generateRingPosition(
   i: number,
   total: number,
-  time = 0
+  time = 0,
+  target = _sharedRing
 ): THREE.Vector3 {
   const angle = (i / total) * Math.PI * 2;
   const radius = 5.2 + Math.sin(i * 3.7) * 0.35;
@@ -777,16 +821,19 @@ export function generateRingPosition(
   const ry = Math.sin(angle) * radius * Math.cos(tilt);
   const rz = Math.sin(angle) * radius * Math.sin(tilt) - 2.0;
 
-  return new THREE.Vector3(rx, ry, rz);
+  target.set(rx, ry, rz);
+  return target;
 }
 
 /**
  * Procedural Multi-Orbit system (Form 04)
+ * Zero-allocation: writes directly to reusable target vector.
  */
 export function generateOrbitPosition(
   i: number,
   total: number,
-  time = 0
+  time = 0,
+  target = _sharedOrbit
 ): THREE.Vector3 {
   // 3 distinct orbital tracks
   const track = i % 3;
@@ -799,15 +846,18 @@ export function generateOrbitPosition(
   const y = Math.sin(angle) * baseRadius * Math.cos(tilt);
   const z = Math.sin(angle) * baseRadius * Math.sin(tilt) - 2.5;
 
-  return new THREE.Vector3(x, y, z);
+  target.set(x, y, z);
+  return target;
 }
 
 /**
  * Procedural Blueprint / Digital Architecture Wireframe Grid (Form 07)
+ * Zero-allocation: writes directly to reusable target vector.
  */
 export function generateBlueprintPosition(
   i: number,
-  total: number
+  total: number,
+  target = _sharedBlueprint
 ): THREE.Vector3 {
   // Triangular pyramid / architectural truss lattice
   const t = i / total;
@@ -823,7 +873,8 @@ export function generateBlueprintPosition(
     else if (leg === 1) { x = 4; z = frac - 2.0; }
     else if (leg === 2) { x = -frac; z = 2.0; }
     else { x = -4; z = -frac - 2.0; }
-    return new THREE.Vector3(x, y, z);
+    target.set(x, y, z);
+    return target;
   } else if (t < 0.6) {
     // 4 ascending struts towards apex
     const strutIndex = (i % 4);
@@ -841,24 +892,28 @@ export function generateBlueprintPosition(
     const x = corner[0] * (1 - h) + apexX * h;
     const y = corner[1] * (1 - h) + apexY * h;
     const z = corner[2] * (1 - h) + apexZ * h;
-    return new THREE.Vector3(x, y, z);
+    target.set(x, y, z);
+    return target;
   } else {
     // Internal floor grids & cross braces
     const level = ((i % 5) - 2) * 1.5;
     const span = Math.max(0.5, 3.5 - Math.abs(level) * 0.7);
     const u = ((i * 1.618) % 1) * 2 - 1;
     const v = ((i * 2.718) % 1) * 2 - 1;
-    return new THREE.Vector3(u * span, level, v * span - 2.0);
+    target.set(u * span, level, v * span - 2.0);
+    return target;
   }
 }
 
 /**
  * Section-Aware Form: Concentric Convergence for Contact Section
+ * Zero-allocation: writes directly to reusable target vector.
  */
 export function generateConvergencePosition(
   i: number,
   total: number,
-  time: number
+  time: number,
+  target = _sharedConv
 ): THREE.Vector3 {
   const angle = (i / total) * Math.PI * 18 + time * 0.3;
   const radius = (i / total) * 14 + 1.2;
@@ -866,5 +921,6 @@ export function generateConvergencePosition(
   const y = Math.sin(angle) * (radius * 0.7);
   const z = -Math.sin(time + radius * 0.2) * 2.0 - 4.0;
 
-  return new THREE.Vector3(x, y, z);
+  target.set(x, y, z);
+  return target;
 }
