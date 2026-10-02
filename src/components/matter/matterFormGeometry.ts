@@ -97,7 +97,10 @@ export type GlobeFeatureType =
   | 'ocean'
   | 'cloud'
   | 'aurora'
-  | 'city_light';
+  | 'city_light'
+  | 'grid_line'
+  | 'city_beacon'
+  | 'flight_arc';
 
 export interface GlobeParticleResult {
   pos: THREE.Vector3;
@@ -106,6 +109,36 @@ export interface GlobeParticleResult {
   sizeMult: number;
   featureType: GlobeFeatureType;
 }
+
+/**
+ * Global Innovation & AI Tech Hub Coordinates:
+ * Major metropolitan nodes forming the high-tech planetary constellation.
+ */
+export const GLOBAL_TECH_HUBS = [
+  { name: 'San Francisco', lat: 37.77, lon: -122.41, r: 0.22, g: 0.95, b: 1.00 },
+  { name: 'New York', lat: 40.71, lon: -74.00, r: 0.35, g: 0.88, b: 1.00 },
+  { name: 'London', lat: 51.50, lon: -0.12, r: 0.40, g: 0.92, b: 1.00 },
+  { name: 'Zurich', lat: 47.37, lon: 8.54, r: 0.48, g: 0.95, b: 1.00 },
+  { name: 'Dubai', lat: 25.20, lon: 55.27, r: 1.00, g: 0.82, b: 0.22 },
+  { name: 'Bengaluru', lat: 12.97, lon: 77.59, r: 0.22, g: 1.00, b: 0.65 },
+  { name: 'Singapore', lat: 1.35, lon: 103.82, r: 0.15, g: 0.95, b: 1.00 },
+  { name: 'Tokyo', lat: 35.68, lon: 139.69, r: 1.00, g: 0.35, b: 0.65 },
+  { name: 'Sydney', lat: -33.86, lon: 151.20, r: 0.25, g: 0.90, b: 1.00 },
+  { name: 'São Paulo', lat: -23.55, lon: -46.63, r: 0.22, g: 1.00, b: 0.55 },
+];
+
+export const TRANSCONTINENTAL_ROUTES = [
+  { from: 0, to: 7 }, // SF -> Tokyo
+  { from: 0, to: 1 }, // SF -> New York
+  { from: 1, to: 2 }, // New York -> London
+  { from: 2, to: 3 }, // London -> Zurich
+  { from: 2, to: 4 }, // London -> Dubai
+  { from: 4, to: 5 }, // Dubai -> Bengaluru
+  { from: 5, to: 6 }, // Bengaluru -> Singapore
+  { from: 6, to: 7 }, // Singapore -> Tokyo
+  { from: 7, to: 8 }, // Tokyo -> Sydney
+  { from: 2, to: 9 }, // London -> São Paulo
+];
 
 /**
  * Precomputed Fibonacci Sphere & Planetary Biome Representation
@@ -143,23 +176,29 @@ export function precomputeGlobeData(total: number): GlobePrecomputedData {
 
   const goldenRatio = (1 + Math.sqrt(5)) / 2;
 
-  // Particle category distribution for realistic Earth:
-  // - 64% Continental Landmasses (Dense, crisp, instantly recognizable Earth continents)
-  // - 23% Oceanic Waters (Sparse, deep sapphire blue floor)
-  // - 10% Atmospheric Weather Clouds (Translucent white wisps at +0.035 radius)
-  // - 3% Polar Auroras (Emerald and electric violet ribbons above magnetic poles)
-  const targetLandCount = Math.floor(total * 0.64);
-  const targetOceanCount = Math.floor(total * 0.23);
-  const targetCloudCount = Math.floor(total * 0.10);
+  // Particle category distribution for the Full Particle Dot Globe:
+  // - ~10% Coordinate Grid Lines (Equator, Tropics, Polar Circles, Meridians)
+  // - ~3.5% Global Innovation Hub Beacons (San Francisco, NY, London, Zurich, Tokyo, Singapore, etc.)
+  // - ~4.5% Transcontinental Great-Circle 3D Data Arcs
+  // - ~3% Floating Cloud Fronts
+  // - ~2% Polar Auroras
+  // - Remaining ~77% are Distributed across the ENTIRE 360° Spherical Surface
+  //   forming a continuous, mathematically uniform Fibonacci dot matrix covering all continents & oceans!
+  const targetGridCount = Math.floor(total * 0.10);
+  const targetCityCount = Math.floor(total * 0.035);
+  const targetArcCount = Math.floor(total * 0.045);
+  const targetCloudCount = Math.floor(total * 0.03);
+  const targetAuroraCount = Math.floor(total * 0.02);
 
-  let landCount = 0;
-  let oceanCount = 0;
+  const specialFeaturesTotal =
+    targetGridCount + targetCityCount + targetArcCount + targetCloudCount + targetAuroraCount;
+  const surfaceCount = total - specialFeaturesTotal;
+
+  let gridCount = 0;
+  let cityCount = 0;
+  let arcCount = 0;
   let cloudCount = 0;
   let auroraCount = 0;
-
-  // Dense Fibonacci search spiral across the sphere
-  const maxSearch = total * 5;
-  let sampleIndex = 0;
 
   for (let i = 0; i < total; i++) {
     let latDeg = 0;
@@ -168,59 +207,106 @@ export function precomputeGlobeData(total: number): GlobePrecomputedData {
     let isLand = false;
     let feat = 0;
 
-    if (landCount < targetLandCount) {
-      // Find the next point on the sphere that lands on a real continental landmass
-      while (sampleIndex < maxSearch) {
-        const testPhi = Math.acos(1 - 2 * ((sampleIndex + 0.5) / maxSearch));
-        const rawTheta = 2 * Math.PI * sampleIndex * goldenRatio;
-        const testLat = 90 - (testPhi * 180) / Math.PI;
-        let testLon = ((rawTheta * 180) / Math.PI) % 360;
-        if (testLon > 180) testLon -= 360;
-        if (testLon < -180) testLon += 360;
+    if (i < surfaceCount) {
+      // 1. FULL SPHERICAL 360° FIBONACCI DOT MATRIX
+      // Evenly samples from North Pole (+90°) down to South Pole (-90°)
+      // Guarantees zero empty holes or blank regions anywhere on the globe!
+      phi = Math.acos(1 - 2 * ((i + 0.5) / surfaceCount));
+      const rawTheta = 2 * Math.PI * i * goldenRatio;
+      latDeg = 90 - (phi * 180) / Math.PI;
+      lonDeg = ((rawTheta * 180) / Math.PI) % 360;
+      if (lonDeg > 180) lonDeg -= 360;
+      if (lonDeg < -180) lonDeg += 360;
 
-        sampleIndex++;
-        if (isLandCoordinate(testLat, testLon)) {
-          latDeg = testLat;
-          lonDeg = testLon;
-          phi = testPhi;
-          isLand = true;
-          break;
-        }
+      isLand = isLandCoordinate(latDeg, lonDeg);
+    } else if (gridCount < targetGridCount) {
+      // 2. COORDINATE GRID LINES (Equator, Tropics, Polar Circles, Meridians)
+      const gridRing = gridCount % 12;
+      if (gridRing === 0) {
+        // Equator (0° lat) - high-tech prime cyan ring
+        latDeg = 0;
+        lonDeg = ((gridCount * 6.0) % 360) - 180;
+      } else if (gridRing === 1) {
+        // Tropic of Cancer (+23.44° lat)
+        latDeg = 23.44;
+        lonDeg = ((gridCount * 7.5) % 360) - 180;
+      } else if (gridRing === 2) {
+        // Tropic of Capricorn (-23.44° lat)
+        latDeg = -23.44;
+        lonDeg = ((gridCount * 7.5) % 360) - 180;
+      } else if (gridRing === 3) {
+        // Arctic Circle (+66.5° lat)
+        latDeg = 66.5;
+        lonDeg = ((gridCount * 12.0) % 360) - 180;
+      } else if (gridRing === 4) {
+        // Antarctic Circle (-66.5° lat)
+        latDeg = -66.5;
+        lonDeg = ((gridCount * 12.0) % 360) - 180;
+      } else {
+        // Meridians at 0°, 30°, 60°, 90°, 120°, 150°, 180°, etc.
+        const mIndex = gridRing - 5;
+        const mLongitudes = [0, 60, 120, 180, -120, -60, 30];
+        lonDeg = mLongitudes[mIndex % mLongitudes.length];
+        latDeg = -80 + ((gridCount * 4.2) % 160);
       }
-      if (!isLand) {
-        // Fallback if search exhausted
-        phi = Math.acos(1 - 2 * ((i + 0.5) / total));
-        const rawTheta = 2 * Math.PI * i * goldenRatio;
-        latDeg = 90 - (phi * 180) / Math.PI;
-        lonDeg = ((rawTheta * 180) / Math.PI) % 360;
-        if (lonDeg > 180) lonDeg -= 360;
-        if (lonDeg < -180) lonDeg += 360;
-        isLand = isLandCoordinate(latDeg, lonDeg);
-      }
-      landCount++;
-    } else if (oceanCount < targetOceanCount) {
-      // Ocean particles: distributed across deep water basins
-      while (sampleIndex < maxSearch * 2) {
-        const testPhi = Math.acos(1 - 2 * ((sampleIndex + 0.5) / (maxSearch * 2)));
-        const rawTheta = 2 * Math.PI * sampleIndex * goldenRatio;
-        const testLat = 90 - (testPhi * 180) / Math.PI;
-        let testLon = ((rawTheta * 180) / Math.PI) % 360;
-        if (testLon > 180) testLon -= 360;
-        if (testLon < -180) testLon += 360;
+      phi = ((90 - latDeg) * Math.PI) / 180;
+      feat = 9; // grid_line
+      gridCount++;
+    } else if (cityCount < targetCityCount) {
+      // 3. GLOBAL TECH HUB BEACONS
+      const hub = GLOBAL_TECH_HUBS[cityCount % GLOBAL_TECH_HUBS.length];
+      const jitterDist = ((cityCount * 13) % 7) * 0.12;
+      const jitterAngle = cityCount * 2.39996;
+      latDeg = hub.lat + Math.sin(jitterAngle) * jitterDist;
+      lonDeg = hub.lon + Math.cos(jitterAngle) * jitterDist;
+      phi = ((90 - latDeg) * Math.PI) / 180;
+      feat = 10; // city_beacon
+      isLand = true;
+      cityCount++;
+    } else if (arcCount < targetArcCount) {
+      // 4. TRANSCONTINENTAL GREAT-CIRCLE 3D DATA ARCS
+      const route = TRANSCONTINENTAL_ROUTES[arcCount % TRANSCONTINENTAL_ROUTES.length];
+      const hubA = GLOBAL_TECH_HUBS[route.from];
+      const hubB = GLOBAL_TECH_HUBS[route.to];
 
-        sampleIndex++;
-        if (!isLandCoordinate(testLat, testLon)) {
-          latDeg = testLat;
-          lonDeg = testLon;
-          phi = testPhi;
-          isLand = false;
-          break;
-        }
-      }
-      oceanCount++;
+      const latA = (hubA.lat * Math.PI) / 180;
+      const lonA = (hubA.lon * Math.PI) / 180;
+      const ax = Math.cos(latA) * Math.cos(lonA);
+      const ay = Math.sin(latA);
+      const az = Math.cos(latA) * Math.sin(lonA);
+
+      const latB = (hubB.lat * Math.PI) / 180;
+      const lonB = (hubB.lon * Math.PI) / 180;
+      const bx = Math.cos(latB) * Math.cos(lonB);
+      const by = Math.sin(latB);
+      const bz = Math.cos(latB) * Math.sin(lonB);
+
+      const dot = Math.max(-0.999, Math.min(0.999, ax * bx + ay * by + az * bz));
+      const omega = Math.acos(dot);
+      const sinOmega = Math.sin(omega);
+
+      const progress = 0.05 + 0.90 * (((arcCount * 7) % 32) / 31);
+      const c1 = Math.sin((1 - progress) * omega) / sinOmega;
+      const c2 = Math.sin(progress * omega) / sinOmega;
+
+      const px = c1 * ax + c2 * bx;
+      const py = c1 * ay + c2 * by;
+      const pz = c1 * az + c2 * bz;
+      const pLen = Math.hypot(px, py, pz) || 1;
+
+      const nx = px / pLen;
+      const ny = py / pLen;
+      const nz = pz / pLen;
+
+      latDeg = Math.asin(Math.max(-1, Math.min(1, ny))) * (180 / Math.PI);
+      lonDeg = Math.atan2(nz, nx) * (180 / Math.PI);
+      phi = ((90 - latDeg) * Math.PI) / 180;
+
+      feat = 11; // flight_arc
+      arcCount++;
     } else if (cloudCount < targetCloudCount) {
-      // Atmospheric clouds: floating weather bands across mid-latitudes and tropical convergence
-      phi = Math.acos(1 - 2 * ((cloudCount + 0.5) / targetCloudCount));
+      // 5. ATMOSPHERIC CLOUD FRONTS
+      phi = Math.acos(1 - 2 * ((cloudCount + 0.5) / Math.max(1, targetCloudCount)));
       const rawTheta = 2 * Math.PI * cloudCount * goldenRatio * 1.33;
       latDeg = 90 - (phi * 180) / Math.PI;
       lonDeg = ((rawTheta * 180) / Math.PI) % 360;
@@ -229,11 +315,11 @@ export function precomputeGlobeData(total: number): GlobePrecomputedData {
       feat = 7; // cloud
       cloudCount++;
     } else {
-      // Polar Auroras: magnetic ribbons hovering above polar caps
-      const polarLat = (auroraCount % 2 === 0 ? 1 : -1) * (68 + Math.random() * 16);
+      // 6. POLAR AURORAS
+      const polarLat = (auroraCount % 2 === 0 ? 1 : -1) * (68 + (auroraCount % 5) * 3);
       latDeg = polarLat;
       phi = ((90 - latDeg) * Math.PI) / 180;
-      lonDeg = (auroraCount * 28.5) % 360 - 180;
+      lonDeg = ((auroraCount * 28.5) % 360) - 180;
       feat = 8; // aurora
       auroraCount++;
     }
@@ -243,31 +329,65 @@ export function precomputeGlobeData(total: number): GlobePrecomputedData {
     lonRad[i] = (lonDeg * Math.PI) / 180;
     isLandArr[i] = isLand ? 1 : 0;
 
-    if (feat === 8) {
+    if (feat === 11) {
+      // Flight Arcs
+      featureType[i] = 11;
+      const t = 0.05 + 0.90 * (((i * 7) % 32) / 31);
+      radiusOffset[i] = Math.sin(t * Math.PI) * 0.045;
+      sizeMult[i] = 1.20;
+      baseColorR[i] = 0.25;
+      baseColorG[i] = 0.95;
+      baseColorB[i] = 1.35; // Luminous electric cyan arc
+    } else if (feat === 10) {
+      // City Beacons
+      featureType[i] = 10;
+      const hub = GLOBAL_TECH_HUBS[(cityCount - 1) % GLOBAL_TECH_HUBS.length];
+      radiusOffset[i] = 0.012;
+      sizeMult[i] = 1.50;
+      baseColorR[i] = hub.r * 1.35;
+      baseColorG[i] = hub.g * 1.35;
+      baseColorB[i] = hub.b * 1.35;
+    } else if (feat === 9) {
+      // Coordinate Grid Lines
+      featureType[i] = 9;
+      radiusOffset[i] = 0.004;
+      sizeMult[i] = 0.90;
+      baseColorR[i] = 0.18;
+      baseColorG[i] = 0.70;
+      baseColorB[i] = 1.05; // Radiant azure coordinate dots
+    } else if (feat === 8) {
       // Polar Aurora ribbons
       featureType[i] = 8;
       radiusOffset[i] = 0.05 + (i % 3) * 0.015;
       sizeMult[i] = 1.25;
       if (i % 2 === 0) {
-        baseColorR[i] = 0.15; baseColorG[i] = 1.25; baseColorB[i] = 0.75; // Emerald aurora
+        baseColorR[i] = 0.15;
+        baseColorG[i] = 1.35;
+        baseColorB[i] = 0.80; // Radiant emerald aurora
       } else {
-        baseColorR[i] = 0.95; baseColorG[i] = 0.40; baseColorB[i] = 1.20; // Electric violet aurora
+        baseColorR[i] = 1.05;
+        baseColorG[i] = 0.45;
+        baseColorB[i] = 1.30; // Electric violet aurora
       }
     } else if (feat === 7) {
       // Atmospheric weather cloud fronts
       featureType[i] = 7;
-      radiusOffset[i] = 0.035; // Floating cloud altitude
-      sizeMult[i] = 1.08;
-      const shade = 1.12 + ((i * 7) % 4) * 0.02;
-      baseColorR[i] = shade; baseColorG[i] = shade; baseColorB[i] = 1.20; // Clean white/silver
+      radiusOffset[i] = 0.035;
+      sizeMult[i] = 1.10;
+      const shade = 1.15 + ((i * 7) % 4) * 0.02;
+      baseColorR[i] = shade;
+      baseColorG[i] = shade;
+      baseColorB[i] = 1.25; // Clean pearl white/silver
     } else if (isLand) {
-      // Real Continental Terrains with Authentic Satellite Color Palette
+      // Real Continental Terrains with Vivid Authentic Earth Topography Palette
       if (Math.abs(latDeg) > 60) {
         // Polar Ice Caps (Antarctica, Greenland, Arctic glaciers)
         featureType[i] = 6; // ice
-        radiusOffset[i] = 0.01;
-        sizeMult[i] = 1.08;
-        baseColorR[i] = 1.15; baseColorG[i] = 1.18; baseColorB[i] = 1.25; // Glacier white
+        radiusOffset[i] = 0.008;
+        sizeMult[i] = 1.12;
+        baseColorR[i] = 1.20;
+        baseColorG[i] = 1.22;
+        baseColorB[i] = 1.35; // Brilliant glacier cyan-white
       } else if (
         (latDeg >= 26 && latDeg <= 36 && lonDeg >= 75 && lonDeg <= 96) || // Himalayas
         (latDeg >= -50 && latDeg <= 10 && lonDeg >= -76 && lonDeg <= -68) || // Andes
@@ -276,9 +396,11 @@ export function precomputeGlobeData(total: number): GlobePrecomputedData {
       ) {
         // Alpine Mountain Spines with Snowcaps
         featureType[i] = 3; // mountain
-        radiusOffset[i] = 0.02;
-        sizeMult[i] = 1.12;
-        baseColorR[i] = 1.10; baseColorG[i] = 1.12; baseColorB[i] = 1.20; // Snowcapped granite
+        radiusOffset[i] = 0.018;
+        sizeMult[i] = 1.15;
+        baseColorR[i] = 1.12;
+        baseColorG[i] = 1.15;
+        baseColorB[i] = 1.25; // Snowcapped granite
       } else if (
         (latDeg >= 14 && latDeg <= 35 && lonDeg >= -17 && lonDeg <= 60) || // Sahara & Arabia
         (latDeg >= -35 && latDeg <= -18 && lonDeg >= 115 && lonDeg <= 142) || // Australian Outback
@@ -287,10 +409,12 @@ export function precomputeGlobeData(total: number): GlobePrecomputedData {
       ) {
         // Arid Deserts (Golden dunes & terracotta)
         featureType[i] = 4; // desert
-        radiusOffset[i] = 0.005;
-        sizeMult[i] = 1.05;
+        radiusOffset[i] = 0.004;
+        sizeMult[i] = 1.08;
         const duneNoise = ((i * 17) % 5) * 0.02;
-        baseColorR[i] = 1.12; baseColorG[i] = 0.88 + duneNoise; baseColorB[i] = 0.32; // Golden amber
+        baseColorR[i] = 1.15;
+        baseColorG[i] = 0.90 + duneNoise;
+        baseColorB[i] = 0.35; // Golden amber
       } else if (
         (latDeg >= -15 && latDeg <= 10 && lonDeg >= -80 && lonDeg <= -45) || // Amazon Basin
         (latDeg >= -5 && latDeg <= 8 && lonDeg >= 10 && lonDeg <= 32) || // Congo Basin
@@ -298,34 +422,42 @@ export function precomputeGlobeData(total: number): GlobePrecomputedData {
       ) {
         // Tropical Rainforests (Lush deep emerald & radiant jade)
         featureType[i] = 5; // rainforest
-        radiusOffset[i] = 0.008;
-        sizeMult[i] = 1.06;
+        radiusOffset[i] = 0.007;
+        sizeMult[i] = 1.10;
         const canopy = ((i * 11) % 5) * 0.02;
-        baseColorR[i] = 0.12; baseColorG[i] = 1.10 + canopy; baseColorB[i] = 0.45; // Tropical emerald
+        baseColorR[i] = 0.15;
+        baseColorG[i] = 1.18 + canopy;
+        baseColorB[i] = 0.50; // Tropical emerald
       } else {
         // Temperate Plains & Forests (North America, Europe, East Asia)
         featureType[i] = 2; // land
-        radiusOffset[i] = 0.002;
-        sizeMult[i] = 1.02;
+        radiusOffset[i] = 0.003;
+        sizeMult[i] = 1.05;
         const flora = ((i * 19) % 5) * 0.02;
-        baseColorR[i] = 0.20; baseColorG[i] = 0.98 + flora; baseColorB[i] = 0.42; // Fertile flora green
+        baseColorR[i] = 0.24;
+        baseColorG[i] = 1.05 + flora;
+        baseColorB[i] = 0.46; // Fertile flora green
       }
     } else {
-      // Oceanic Waters: coastal shelves vs deep open oceans
-      const isCoastalShelf = (i % 3 === 0);
+      // Oceanic Waters: complete digital planetary dot lattice
+      const isCoastalShelf = i % 4 === 0;
       if (isCoastalShelf) {
-        // Coastal barrier reefs & turquoise shelves (Caribbean, Great Barrier Reef, Mediterranean)
+        // Coastal barrier reefs & turquoise shelves
         featureType[i] = 1; // coast
-        radiusOffset[i] = -0.005;
+        radiusOffset[i] = -0.004;
         sizeMult[i] = 1.04;
-        baseColorR[i] = 0.08; baseColorG[i] = 1.05; baseColorB[i] = 1.15; // Luminous turquoise
+        baseColorR[i] = 0.10;
+        baseColorG[i] = 1.08;
+        baseColorB[i] = 1.25; // Luminous turquoise shelf
       } else {
-        // Deep open oceans (Pacific, Atlantic, Indian, Southern) - Sparse, dark sapphire
+        // Deep open oceans (Pacific, Atlantic, Indian, Southern) - Glowing azure/sapphire dot matrix
         featureType[i] = 0; // ocean
-        radiusOffset[i] = -0.015;
+        radiusOffset[i] = -0.008;
         sizeMult[i] = 0.95;
         const depthNoise = ((i * 23) % 4) * 0.02;
-        baseColorR[i] = 0.06; baseColorG[i] = 0.38 + depthNoise; baseColorB[i] = 0.85; // Deep sapphire
+        baseColorR[i] = 0.08;
+        baseColorG[i] = 0.48 + depthNoise;
+        baseColorB[i] = 0.98; // Vibrant sapphire/azure dot
       }
     }
   }

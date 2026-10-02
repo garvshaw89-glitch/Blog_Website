@@ -1,28 +1,35 @@
 /**
- * Central State Coordinator for the Cinematic Rocket -> Landing -> GitHub Profile Reveal.
- * Allows components across the application to trigger or observe the sequence safely.
+ * Central State Coordinator for the Cinematic Digital Universe:
+ * Orchestrates:
+ * 1. Ambient Particle Universe (stars, streams, constellations, depth layers)
+ * 2. 3D GitHub Profile Particle Portrait Reveal -> Hold & Breathe -> Dissolve
+ * 3. Multi-Stage Realistic Aerospace Rocket Launch & Supersonic Ascent
  */
 
 export type CinematicStage =
-  | 'IDLE'                  // Ambient living matter flow
-  | 'GATHER'                // Particles converge toward rocket coordinates
-  | 'ROCKET_FORMED'         // Rocket silhouette stabilizes & vibrates
-  | 'IGNITION'              // Engine activates with particle stream
-  | 'LAUNCH'                // Rapid acceleration upward into depth
-  | 'FLIGHT'                // Traverses deep space particle ecosystem
-  | 'DESCENT'               // Controlled deceleration toward ground
-  | 'LANDING_IMPACT'        // Impact shockwave, particles break apart
-  | 'PARTICLE_CLOUD'        // Disperses into large floating cloud (12.40s)
-  | 'PROFILE_FORMING'       // Profile image begins forming (13.00s)
-  | 'PROFILE_RECOGNIZABLE'  // Face, hair and glasses become recognizable (14.20s)
-  | 'PROFILE_LOCKING'       // Fine image details stabilize (15.40s)
-  | 'PROFILE_COMPLETE'      // Full GitHub profile image visible (16.20s)
-  | 'PROFILE_HOLD'          // Deliberate 1.3s visual pause: PROFILE IMAGE ONLY — NO TEXT (16.20s - 17.50s)
-  | 'TEXT_PREPARE'          // Typography layer prepared, profile remains stable (17.50s - 17.70s)
-  | 'NAME_REVEAL'           // "GARV SHAW" begins appearing (17.70s - 18.10s)
-  | 'TAGLINE_REVEAL'        // "TURNING AI INTO INNOVATION" appears (18.10s - 18.70s)
-  | 'IDENTITY_COMPLETE'     // Full identity composition visible (18.70s - 19.50s)
-  | 'RETURN_TO_WORLD';      // Particles slowly return to ambient flow (19.50s+)
+  | 'IDLE'                  // Ambient digital universe
+  | 'AMBIENT_UNIVERSE'      // Ambient digital universe
+  | 'PROFILE_REVEAL'        // Ambient particles converge into authentic portrait (2-4s)
+  | 'PROFILE_FORMING'       // Alias for profile reveal start
+  | 'PROFILE_RECOGNIZABLE'  // Facial details forming
+  | 'PROFILE_LOCKING'       // Final alignment
+  | 'PROFILE_COMPLETE'      // Fully formed
+  | 'PROFILE_HOLD'          // Stabilized breathing portrait (full recognition & depth)
+  | 'PROFILE_DISSOLVE'      // Particles loosen and drift into ambient field
+  | 'TEXT_PREPARE'
+  | 'NAME_REVEAL'
+  | 'TAGLINE_REVEAL'
+  | 'IDENTITY_COMPLETE'
+  | 'GATHER'                // Rocket gathering
+  | 'ROCKET_FORM'           // Rocket geometry forming on right side
+  | 'ROCKET_FORMED'         // Rocket stabilized
+  | 'IGNITION'              // Rocket engine ignition & vibration
+  | 'LAUNCH'                // Rocket liftoff
+  | 'FLIGHT'                // Rocket supersonic ascent
+  | 'DESCENT'
+  | 'LANDING_IMPACT'
+  | 'PARTICLE_CLOUD'
+  | 'RETURN_TO_WORLD';      // Dissolving back to ambient universe
 
 export interface CinematicState {
   stage: CinematicStage;
@@ -33,8 +40,8 @@ export interface CinematicState {
   reconstructionPhase: number; // 0 to 4
   profileAlpha: number;
   isTriggeredByUser: boolean;
-  ambientState: 'FREE_FLOW' | 'ROCK' | 'GLOBE' | 'WAVE';
-  ambientRequest: 'NONE' | 'GLOBE' | 'FLOW' | 'ROCK' | 'WAVE';
+  ambientState: 'UNIVERSE' | 'FREE_FLOW' | 'ROCK' | 'GLOBE' | 'WAVE';
+  ambientRequest: 'NONE' | 'PORTRAIT' | 'ROCKET' | 'UNIVERSE' | 'GLOBE' | 'FLOW';
   rocketAltitudeMeters: number;
   rocketVelocityKmh: number;
 }
@@ -45,7 +52,7 @@ class RocketCinematicManager {
   private static instance: RocketCinematicManager;
 
   public state: CinematicState = {
-    stage: 'IDLE',
+    stage: 'PROFILE_REVEAL',
     stageProgress: 0,
     rocketY: 0,
     rocketVelocity: 0,
@@ -53,7 +60,7 @@ class RocketCinematicManager {
     reconstructionPhase: 0,
     profileAlpha: 0,
     isTriggeredByUser: false,
-    ambientState: 'FREE_FLOW',
+    ambientState: 'UNIVERSE',
     ambientRequest: 'NONE',
     rocketAltitudeMeters: 0,
     rocketVelocityKmh: 0,
@@ -76,47 +83,43 @@ class RocketCinematicManager {
     };
   }
 
+  /**
+   * Directly triggers the multi-stage aerospace rocket launch sequence
+   */
   public triggerSequence() {
-    if (this.state.stage !== 'IDLE') return;
     this.state.isTriggeredByUser = true;
-    this.state.ambientRequest = 'NONE';
+    this.state.ambientRequest = 'ROCKET';
     this.setStage('GATHER');
   }
 
   /**
-   * Directly triggers the massive colorful Earth hologram on demand
-   */
-  public triggerEarth() {
-    if (this.state.stage !== 'IDLE') {
-      this.setStage('IDLE');
-    }
-    this.state.ambientRequest = 'GLOBE';
-    this.state.ambientState = 'GLOBE';
-    this.notify();
-  }
-
-  /**
-   * Directly triggers the GitHub profile portrait formation on demand
+   * Directly triggers the 3D GitHub Profile Particle Portrait Reveal
    */
   public triggerProfile() {
     this.state.isTriggeredByUser = true;
-    this.state.ambientRequest = 'NONE';
-    this.setStage('PROFILE_LOCKING');
+    this.state.ambientRequest = 'PORTRAIT';
+    this.setStage('PROFILE_FORMING');
   }
 
   /**
-   * Directly returns to ambient fluid matter flow
+   * Directly returns to the serene Ambient Digital Universe
    */
-  public triggerFlow() {
-    if (this.state.stage !== 'IDLE') {
-      this.setStage('IDLE');
-    }
-    this.state.ambientRequest = 'FLOW';
-    this.state.ambientState = 'FREE_FLOW';
-    this.notify();
+  public triggerAmbient() {
+    this.state.isTriggeredByUser = true;
+    this.state.ambientRequest = 'UNIVERSE';
+    this.state.ambientState = 'UNIVERSE';
+    this.setStage('IDLE');
   }
 
-  public consumeAmbientRequest(): 'NONE' | 'GLOBE' | 'FLOW' | 'ROCK' | 'WAVE' {
+  public triggerFlow() {
+    this.triggerAmbient();
+  }
+
+  public triggerEarth() {
+    this.triggerProfile();
+  }
+
+  public consumeAmbientRequest(): 'NONE' | 'PORTRAIT' | 'ROCKET' | 'UNIVERSE' | 'GLOBE' | 'FLOW' {
     const req = this.state.ambientRequest;
     this.state.ambientRequest = 'NONE';
     return req;

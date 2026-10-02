@@ -160,20 +160,20 @@ export const ProfileCinematicOverlay: React.FC = () => {
           >
             {/* 3D PARTICLE EARTH TELEMETRY */}
             {isEarthActive && (
-              <div className="flex flex-col items-end px-3.5 py-2 rounded-lg bg-[#08090B]/85 backdrop-blur-md border border-emerald-500/20 shadow-xl">
+              <div className="flex flex-col items-end px-3.5 py-2 rounded-lg bg-[#08090B]/85 backdrop-blur-md border border-emerald-500/25 shadow-xl">
                 <div className="flex items-center gap-2 text-emerald-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  <span className="font-semibold">TERRA BIOSPHERE // 3D PLANETARY SYSTEM</span>
+                  <span className="font-semibold">FULL PARTICLE DOT GLOBE // 3D TERRA MATRIX</span>
                 </div>
                 <div className="text-neutral-400 mt-1 flex items-center gap-3">
                   <span>SCALE: 12,742 KM</span>
                   <span>•</span>
                   <span>TILT: 23.44°</span>
                   <span>•</span>
-                  <span>ORBIT: 29.78 KM/S</span>
+                  <span className="text-emerald-300 font-mono">DRAG TO ROTATE IN 3D</span>
                 </div>
                 <div className="text-neutral-500 text-[10px] mt-0.5">
-                  SAPPHIRE OCEANS • EMERALD FORESTS • GOLDEN DESERT • POLAR ICE
+                  DOT CONTINENTS • COORDINATE GRID • 10 TECH HUBS • GEODESIC DATA ARCS
                 </div>
               </div>
             )}

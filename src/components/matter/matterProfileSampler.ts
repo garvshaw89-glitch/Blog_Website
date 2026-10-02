@@ -8,14 +8,15 @@ export interface ProfileSamplePoint {
   g: number;
   b: number;
   a: number;
-  phase: number; // 0: core face, 1: eyes/glasses, 2: hair, 3: clothes, 4: ambient perimeter
+  phase: number; // 0: core face/eyes, 1: facial contours/nose/mouth, 2: hair silhouette, 3: shoulders/clothing, 4: ambient perimeter
+  density: number; // normalized pixel importance (0.1 to 1.0)
 }
 
 /**
  * Immediate procedural portrait fallback with authentic human skin, hair, and clothing tones,
  * ensuring particles never display artificial rainbow/neon colors.
  */
-export function getImmediateProfilePoints(targetCount: number = 20000): ProfileSamplePoint[] {
+export function getImmediateProfilePoints(targetCount: number = 7500): ProfileSamplePoint[] {
   const points: ProfileSamplePoint[] = [];
   const worldScale = 14.8;
 
@@ -35,6 +36,7 @@ export function getImmediateProfilePoints(targetCount: number = 20000): ProfileS
     let g = 0.76;
     let b = 0.62;
     let wz = 0.4;
+    let density = 0.8;
 
     // Face / skin tones (center)
     if (ny < 0.22 && ny > -0.32 && Math.abs(nx) < 0.52) {
@@ -42,7 +44,8 @@ export function getImmediateProfilePoints(targetCount: number = 20000): ProfileS
       r = 0.94;
       g = 0.78;
       b = 0.64; // Authentic warm skin
-      wz = 0.55;
+      wz = 0.65;
+      density = 1.0;
     }
     // Eyes & facial features
     else if (Math.abs(ny - 0.02) < 0.12 && Math.abs(nx) < 0.48) {
@@ -50,7 +53,8 @@ export function getImmediateProfilePoints(targetCount: number = 20000): ProfileS
       r = 0.32;
       g = 0.28;
       b = 0.30; // Eyes / glasses
-      wz = 0.60;
+      wz = 0.75;
+      density = 0.95;
     }
     // Hair at top
     else if (ny >= 0.22 && Math.abs(nx) < 0.65) {
@@ -59,6 +63,7 @@ export function getImmediateProfilePoints(targetCount: number = 20000): ProfileS
       g = 0.22;
       b = 0.26; // Natural dark hair
       wz = 0.40;
+      density = 0.7;
     }
     // Clothing & shoulders at bottom
     else if (ny <= -0.32) {
@@ -67,6 +72,7 @@ export function getImmediateProfilePoints(targetCount: number = 20000): ProfileS
       g = 0.26;
       b = 0.35; // Natural dark jacket / navy
       wz = 0.30;
+      density = 0.6;
     }
     // Perimeter background
     else {
@@ -74,7 +80,8 @@ export function getImmediateProfilePoints(targetCount: number = 20000): ProfileS
       r = 0.28;
       g = 0.34;
       b = 0.42; // Cool ambient background
-      wz = 0.20;
+      wz = 0.15;
+      density = 0.4;
     }
 
     points.push({
@@ -84,8 +91,9 @@ export function getImmediateProfilePoints(targetCount: number = 20000): ProfileS
       r,
       g,
       b,
-      a: 1.0,
+      a: density,
       phase,
+      density,
     });
   }
 
@@ -93,14 +101,16 @@ export function getImmediateProfilePoints(targetCount: number = 20000): ProfileS
 }
 
 /**
- * Loads and rasterizes the uploaded GitHub profile image onto a dense virtual particle grid.
- * Uses the ACTUAL, AUTHENTIC RGB colors from Garv Shaw's GitHub avatar photo!
- * Preserves true skin tones, real hair color, real clothing, and real background,
- * enhanced with high-definition luminous contrast so each particle is a bright, clear dot.
+ * Loads and rasterizes the real GitHub profile image onto a dense 3D particle relief.
+ * Uses the ACTUAL photographic RGB colors and luminance from Garv Shaw's GitHub avatar!
+ * 
+ * - Bright pixels: higher particle density, slightly brighter, slightly forward in Z (+0.35 to +0.85)
+ * - Dark pixels: lower density, subtle cool tone, slightly backward in Z (-0.10 to +0.20)
+ * - Preserves facial features: eyes, nose, mouth, glasses, hair silhouette, jawline
  */
 export async function sampleProfileImage(
   imageSrc: string = GITHUB_AVATAR_BASE64,
-  targetSampleCount: number = 20000
+  targetSampleCount: number = 7500
 ): Promise<ProfileSamplePoint[]> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -117,7 +127,7 @@ export async function sampleProfileImage(
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        const sampleRes = 100; // 100x100 resolution for sharp sampling
+        const sampleRes = 128; // 128x128 resolution for razor-sharp sampling
         canvas.width = sampleRes;
         canvas.height = sampleRes;
 
@@ -132,7 +142,7 @@ export async function sampleProfileImage(
         const data = imgData.data;
 
         const points: ProfileSamplePoint[] = [];
-        const worldScale = 14.8; // Calibrated for full viewport framing
+        const worldScale = 14.8; // Calibrated for luxury center viewport framing
 
         // Vogel golden-angle spiral distribution across the circular portrait
         for (let i = 0; i < targetSampleCount; i++) {
@@ -157,44 +167,46 @@ export async function sampleProfileImage(
 
           if (rawA < 0.08) continue;
 
-          // Preserve authentic photographic color with calibrated luminescence
+          // Photographic luminance calculation (Rec. 709)
+          const luminance = 0.299 * rawR + 0.587 * rawG + 0.114 * rawB;
           const maxChannel = Math.max(rawR, rawG, rawB);
+
           let r = rawR;
           let g = rawG;
           let b = rawB;
 
-          // Lift very dark pixels slightly so all 6,000 dots remain visible against dark background
-          if (maxChannel < 0.16) {
-            const lift = (0.16 - maxChannel) * 0.82;
+          // Lift very dark pixels slightly so all dots remain visible against dark background
+          if (maxChannel < 0.18) {
+            const lift = (0.18 - maxChannel) * 0.85;
             r = Math.min(1.0, rawR + lift);
             g = Math.min(1.0, rawG + lift);
-            b = Math.min(1.0, rawB + lift + 0.02);
+            b = Math.min(1.0, rawB + lift + 0.04);
           } else {
-            // Slight contrast/vibrancy boost while strictly preserving true photographic chromaticity
-            r = Math.min(1.0, Math.pow(rawR, 0.94) * 1.12);
-            g = Math.min(1.0, Math.pow(rawG, 0.94) * 1.12);
-            b = Math.min(1.0, Math.pow(rawB, 0.94) * 1.12);
+            // Elegant contrast and vibrancy boost strictly preserving authentic photographic colors
+            r = Math.min(1.0, Math.pow(rawR, 0.92) * 1.14);
+            g = Math.min(1.0, Math.pow(rawG, 0.92) * 1.14);
+            b = Math.min(1.0, Math.pow(rawB, 0.92) * 1.14);
           }
 
-          // Compute 3D holographic depth relief based on luminance
-          const luminance = 0.299 * rawR + 0.587 * rawG + 0.114 * rawB;
-          const wz = 0.35 + (luminance - 0.5) * 0.75;
+          // 3D Sculptural Z-Depth: Bright pixels sit slightly forward (+0.35 to +0.85),
+          // while dark shadow pixels sit slightly backward (-0.10 to +0.20)
+          const wz = 0.25 + (luminance - 0.45) * 0.90;
 
           const wx = nx * (worldScale * 0.5);
           const wy = ny * (worldScale * 0.5);
 
-          // Assign feature phase for progressive reconstruction
+          // Assign feature phase for the 2–4 second progressive reveal animation
           let phase = 0;
-          if (rNorm < 0.30) {
-            phase = 0; // Inner facial core
-          } else if (rNorm < 0.52) {
-            phase = 1; // Facial contours & eyes
-          } else if (rNorm < 0.72) {
+          if (rNorm < 0.26) {
+            phase = 0; // Inner facial core: eyes, nose, mouth
+          } else if (rNorm < 0.50) {
+            phase = 1; // Facial contours & jawline
+          } else if (rNorm < 0.70) {
             phase = 2; // Hair & head silhouette
-          } else if (rNorm < 0.88) {
-            phase = 3; // Shoulders & clothing
+          } else if (rNorm < 0.86) {
+            phase = 3; // Neck, shoulders & jacket
           } else {
-            phase = 4; // Perimeter halo
+            phase = 4; // Perimeter atmosphere
           }
 
           points.push({
@@ -204,8 +216,9 @@ export async function sampleProfileImage(
             r,
             g,
             b,
-            a: 1.0,
+            a: Math.max(0.25, Math.min(1.0, luminance * 0.8 + 0.3)),
             phase,
+            density: luminance,
           });
         }
 
@@ -216,8 +229,8 @@ export async function sampleProfileImage(
             const srcPt = points[i % existingCount];
             points.push({
               ...srcPt,
-              x: srcPt.x + (Math.random() - 0.5) * 0.05,
-              y: srcPt.y + (Math.random() - 0.5) * 0.05,
+              x: srcPt.x + (Math.random() - 0.5) * 0.04,
+              y: srcPt.y + (Math.random() - 0.5) * 0.04,
             });
           }
         }

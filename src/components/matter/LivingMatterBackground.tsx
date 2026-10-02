@@ -189,7 +189,7 @@ export const LivingMatterBackground: React.FC = () => {
     profileCyanFill.position.set(0, -1.0, 3.0);
     scene.add(profileCyanFill);
 
-    // 4. Procedural Clean Micro-Point Particle Texture (Sharp diamond core, luminous center, zero bleeding halo)
+    // 4. Procedural Crisp Circular Dot Matrix Particle Texture (Defined circular core, luminous body, smooth anti-aliased edge)
     const particleTexture = (() => {
       const cvs = document.createElement('canvas');
       cvs.width = 64;
@@ -199,11 +199,11 @@ export const LivingMatterBackground: React.FC = () => {
         const cx = 32;
         const cy = 32;
 
-        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 26);
-        grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');     // Pure sharp diamond pinpoint core
-        grad.addColorStop(0.22, 'rgba(255, 255, 255, 0.90)'); // High-specular luminous inner center
-        grad.addColorStop(0.48, 'rgba(255, 255, 255, 0.25)'); // Short subtle optical falloff
-        grad.addColorStop(0.68, 'rgba(255, 255, 255, 0.0)');  // Clean zero boundary - zero halo bleeding outside sphere
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');     // Brilliant sharp core
+        grad.addColorStop(0.38, 'rgba(255, 255, 255, 1.0)');  // Defined circular dot body
+        grad.addColorStop(0.68, 'rgba(255, 255, 255, 0.65)'); // Smooth anti-aliased perimeter
+        grad.addColorStop(0.88, 'rgba(255, 255, 255, 0.12)'); // Soft outer halo
         grad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, 64, 64);
@@ -447,14 +447,19 @@ export const LivingMatterBackground: React.FC = () => {
       currentCinematicStage = cState.stage;
     });
 
-    // 9. Ambient State Machine (FREE_FLOW -> ROCK -> GLOBE -> WAVE -> ROCKET_LAUNCH -> Repeat)
-    let ambientState: AmbientMatterState = 'FREE_FLOW';
-    let isUserPinnedAmbient = false;
+    // 9. Ambient State Machine (Default: Spectacular Full 3D Particle Dot Globe)
+    let ambientState: AmbientMatterState = 'GLOBE';
+    let isUserPinnedAmbient = true;
     let ambientTime = 0;
-    let targetMorphBlend = 0;
-    let currentMorphBlend = 0;
+    let targetMorphBlend = 1;
+    let currentMorphBlend = 1;
     let globeRotationY = 0;
     let globeRotationVelocity = 0;
+    let globeRotationX = 0;
+    let globeRotationVelocityX = 0;
+    let isPointerDragging = false;
+    let lastPointerX = 0;
+    let lastPointerY = 0;
 
     // Dynamic Performance Monitor (Monitors FPS over rolling 1-second cycles)
     let perfFrameCount = 0;
@@ -492,7 +497,45 @@ export const LivingMatterBackground: React.FC = () => {
     // Run initial sync to guarantee safe camera distance & projection matrix match window
     onResize();
 
-    // 10. Visibility API Optimization for Battery & Idle Tabs
+    // 10. Interactive 3D Virtual Trackball Globe Drag Handlers
+    const onPointerDown = (e: PointerEvent) => {
+      if (ambientState !== 'GLOBE') return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target?.closest('button') ||
+        target?.closest('a') ||
+        target?.closest('[role="button"]') ||
+        target?.closest('input')
+      ) {
+        return;
+      }
+      isPointerDragging = true;
+      lastPointerX = e.clientX;
+      lastPointerY = e.clientY;
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!isPointerDragging || ambientState !== 'GLOBE') return;
+      const deltaX = e.clientX - lastPointerX;
+      const deltaY = e.clientY - lastPointerY;
+      lastPointerX = e.clientX;
+      lastPointerY = e.clientY;
+
+      const sensitivity = 0.0035;
+      globeRotationVelocity += deltaX * sensitivity;
+      globeRotationVelocityX += deltaY * sensitivity;
+    };
+
+    const onPointerUp = () => {
+      isPointerDragging = false;
+    };
+
+    window.addEventListener('pointerdown', onPointerDown, { passive: true });
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerup', onPointerUp, { passive: true });
+    window.addEventListener('pointercancel', onPointerUp, { passive: true });
+
+    // 11. Visibility API Optimization for Battery & Idle Tabs
     let isTabVisible = !document.hidden;
     const handleVisibilityChange = () => {
       isTabVisible = !document.hidden;
@@ -558,20 +601,26 @@ export const LivingMatterBackground: React.FC = () => {
 
       updateWorldMouse();
 
-      // Frame-rate independent globe rotation with smooth cursor inertia drag
+      // Frame-rate independent globe rotation with smooth cursor & trackball inertia drag
       const safeDelta = Math.min(delta, 0.05);
       // Frame-rate independent exponential inertia decay
       globeRotationVelocity *= Math.exp(-3.2 * safeDelta);
+      globeRotationVelocityX *= Math.exp(-3.6 * safeDelta);
       if (ambientState === 'GLOBE') {
         const cursorDistToCenter = Math.hypot(planeIntersection.x, planeIntersection.y);
-        if (cursorDistToCenter < globeRadius * 1.5) {
+        if (cursorDistToCenter < globeRadius * 1.5 && !isPointerDragging) {
           globeRotationVelocity = THREE.MathUtils.clamp(
             globeRotationVelocity + cursorVelocityWorld.x * 0.012,
-            -0.25,
-            0.25
+            -0.35,
+            0.35
           );
         }
-        globeRotationY += (0.12 + globeRotationVelocity) * safeDelta;
+        globeRotationY += (0.10 + globeRotationVelocity) * safeDelta;
+        globeRotationX = THREE.MathUtils.clamp(
+          globeRotationX + globeRotationVelocityX * safeDelta,
+          -0.65,
+          0.65
+        );
       }
 
       // ==========================================
@@ -883,10 +932,10 @@ export const LivingMatterBackground: React.FC = () => {
           }
         } else if (ambientState === 'GLOBE') {
           targetMorphBlend = 1;
-          // Calibrated crisp micro-point size so particles remain strictly inside spherical perimeter
-          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.22, 0.05);
+          // Calibrated crisp dot matrix particle size for prominent, brilliant glowing dots
+          particleMaterial.size = THREE.MathUtils.lerp(particleMaterial.size, 0.30, 0.05);
           if (bloomPass) {
-            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.32, 0.05);
+            bloomPass.strength = THREE.MathUtils.lerp(bloomPass.strength, 0.34, 0.05);
           }
           if (ambientTime > MATTER_CONFIG.timing.globeFormDuration && !isUserPinnedAmbient) {
             ambientState = 'WAVE';
@@ -1163,10 +1212,17 @@ export const LivingMatterBackground: React.FC = () => {
               const y0 = baseR * sinLat;
               const z0 = baseR * cosLat * cosLon;
 
+              // Apply pitch tilt from interactive drag (globeRotationX)
+              const cosPitch = Math.cos(globeRotationX);
+              const sinPitch = Math.sin(globeRotationX);
+              const x1 = x0;
+              const y1 = y0 * cosPitch - z0 * sinPitch;
+              const z1 = y0 * sinPitch + z0 * cosPitch;
+
               // Apply Earth's 23.44° axial tilt relative to globeCenter
-              formTargetX = globeCenter.x + (x0 * cosTilt - y0 * sinTilt);
-              formTargetY = globeCenter.y + (x0 * sinTilt + y0 * cosTilt);
-              formTargetZ = globeCenter.z + z0;
+              formTargetX = globeCenter.x + (x1 * cosTilt - y1 * sinTilt);
+              formTargetY = globeCenter.y + (x1 * sinTilt + y1 * cosTilt);
+              formTargetZ = globeCenter.z + z1;
 
               // 2. Surface normal & View-Space vector (camera looks towards origin along +Z)
               const invR = 1.0 / baseR;
@@ -1201,7 +1257,31 @@ export const LivingMatterBackground: React.FC = () => {
               let g = globeData.baseColorG[i] * dayLight;
               let b = globeData.baseColorB[i] * dayLight;
 
-              if (feat === 0 || feat === 1) {
+              if (feat === 11) {
+                // Transcontinental Geodesic Data / Flight Arcs:
+                // Elevated glowing arcs with bright data signal pings racing across the globe
+                const arcSpeed = 3.2;
+                const arcPhase = (elapsedTime * arcSpeed + i * 0.22) % (Math.PI * 2);
+                const ping = Math.pow(Math.max(0, Math.sin(arcPhase)), 7.0) * 0.95;
+                r = Math.min(1.4, globeData.baseColorR[i] * (dayLight * 0.8 + 0.3) + ping * 0.85);
+                g = Math.min(1.4, globeData.baseColorG[i] * (dayLight * 0.8 + 0.3) + ping * 0.95);
+                b = Math.min(1.5, globeData.baseColorB[i] * (dayLight * 0.8 + 0.3) + ping * 1.25);
+              } else if (feat === 10) {
+                // Global Tech Hub Beacons (San Francisco, NY, London, Zurich, Tokyo, Singapore, etc.):
+                // High-intensity radiant tech node with synchronized breathing flare
+                const beaconPulse = 0.45 * Math.sin(elapsedTime * 4.2 + (i * 0.4));
+                const hubLuminance = 1.25 + beaconPulse;
+                r = Math.min(1.45, globeData.baseColorR[i] * hubLuminance);
+                g = Math.min(1.45, globeData.baseColorG[i] * hubLuminance);
+                b = Math.min(1.55, globeData.baseColorB[i] * hubLuminance);
+              } else if (feat === 9) {
+                // Coordinate Grid Micro-Dots (Equator, Tropics, Meridians):
+                // Ultra-clean high-tech dot matrix grid
+                const gridPulse = 0.12 * Math.sin(elapsedTime * 1.8 + i * 0.1);
+                r = Math.min(1.2, (globeData.baseColorR[i] + gridPulse) * (dayLight * 0.65 + 0.35) + atmosphericRim * 0.15);
+                g = Math.min(1.3, (globeData.baseColorG[i] + gridPulse) * (dayLight * 0.65 + 0.35) + atmosphericRim * 0.35);
+                b = Math.min(1.4, (globeData.baseColorB[i] + gridPulse) * (dayLight * 0.65 + 0.35) + atmosphericRim * 0.65);
+              } else if (feat === 0 || feat === 1) {
                 // Oceans & Coastal shelves:
                 // Sun specular glint on water + turquoise shallow reef highlights
                 const waterGlint = specularGlint * (feat === 1 ? 1.45 : 1.25);
@@ -1239,22 +1319,31 @@ export const LivingMatterBackground: React.FC = () => {
                 b += atmosphericRim * 0.38;
               }
 
-              // 4. True 3D Spherical Depth & Back-Facing Opacity / Visibility Hierarchy (Item 6):
-              // Front: high visibility (viewDot >= 0.10)
-              // Side: medium visibility (-0.08 <= viewDot < 0.10) with atmospheric Rayleigh rim
-              // Back: deeply occluded (viewDot < -0.08) so the globe reads as a solid 3D sphere
+              // 4. True 3D Spherical Full-Globe Visibility & Holographic Translucency:
+              // Delivers the complete 360° planetary globe made of glowing particle dots!
+              // - Front hemisphere: radiant clarity, vivid authentic terrain and oceanic matrix dots
+              // - Horizon limb: brilliant atmospheric Rayleigh cyan rim
+              // - Back hemisphere: visible with translucent depth attenuation (0.32 - 0.46)
+              //   so the entire spherical volume is experienced with deep 3D presence!
               let visibilityFactor: number;
-              if (viewDot >= 0.10) {
+              if (viewDot >= 0.12) {
                 // Front hemisphere: rich clarity and high detail
-                visibilityFactor = 0.82 + 0.28 * Math.min(1.0, (viewDot - 0.10) / 0.90);
-              } else if (viewDot >= -0.08) {
-                // Side horizon: medium visibility with atmospheric edge glow
-                const edgeT = (viewDot + 0.08) / 0.18;
-                visibilityFactor = 0.25 + 0.57 * edgeT;
+                visibilityFactor = 0.92 + 0.28 * Math.min(1.0, (viewDot - 0.12) / 0.88);
+              } else if (viewDot >= -0.10) {
+                // Horizon limb: medium-high visibility with atmospheric edge glow
+                const edgeT = (viewDot + 0.10) / 0.22;
+                visibilityFactor = 0.58 + 0.34 * edgeT;
               } else {
-                // Back hemisphere: deeply occluded so back continents do not shine through
-                const backDepth = Math.min(1.0, (-viewDot - 0.08) / 0.45);
-                visibilityFactor = 0.03 * (1.0 - backDepth);
+                // Back hemisphere: translucent depth visibility so the FULL GLOBE is visible
+                const backDepth = Math.min(1.0, (-viewDot - 0.10) / 0.90);
+                visibilityFactor = 0.32 + 0.14 * (1.0 - backDepth);
+              }
+
+              // Apply celestial depth shift to back hemisphere dots so front-vs-back depth is crystal clear
+              if (viewDot < -0.05) {
+                r = r * 0.45;
+                g = g * 0.55;
+                b = Math.max(b * 0.70, 0.28);
               }
 
               r *= visibilityFactor;
@@ -1438,7 +1527,8 @@ export const LivingMatterBackground: React.FC = () => {
 
           if (curDist > 0.0001) {
             const feat = globeData.featureType[i];
-            const maxTolerance = feat === 8 ? 0.06 : feat === 7 ? 0.04 : 0.015;
+            const maxTolerance =
+              feat === 8 ? 0.06 : feat === 7 ? 0.04 : feat === 11 ? 0.05 : feat === 10 ? 0.02 : 0.015;
             const maxAllowed = globeRadius + maxTolerance;
             const minAllowed = globeRadius - 0.02;
 
@@ -1632,6 +1722,10 @@ export const LivingMatterBackground: React.FC = () => {
       unsubCinematic();
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animId);
 
