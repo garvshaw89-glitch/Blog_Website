@@ -27,19 +27,9 @@ export interface FlightProgressSnapshot {
   cameraLookAt: THREE.Vector3;
   cameraFov: number;
   screenShake: number;
-  warpSpeed: number; // 0.0 to 1.0 for particle warp streak
+  warpSpeed: number; // 0.0 to 1.0
   timeScale: number; // For cinematic time slowdown
   landingImpact: number; // 0.0 to 1.0
-}
-
-export interface DotParticleLayerConfig {
-  count: number;
-  minZ: number;
-  maxZ: number;
-  minSize: number;
-  maxSize: number;
-  speedMultiplier: number;
-  alphaBase: number;
 }
 
 export interface ProjectedRocketTelemetry {

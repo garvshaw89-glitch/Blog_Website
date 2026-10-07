@@ -2,8 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Rocket3DModel } from './Rocket3DModel';
 import { LandingPlatform3D } from './LandingPlatform3D';
-import { AtmosphericDotField } from './AtmosphericDotField';
-import { MicroDotVFXEngine } from './MicroDotVFXEngine';
 import { RocketPhysicsSimulator } from './RocketPhysicsSimulator';
 import { CameraPhysics } from './CameraPhysics';
 import { CinematicFlightState, ProjectedRocketTelemetry } from './types';
@@ -14,8 +12,8 @@ import { Play, Pause, RotateCcw, Rocket } from 'lucide-react';
  * CINEMATIC ROCKET UNIVERSE
  * 
  * Signature Experience:
- * DOT PARTICLE ATMOSPHERE + REALISTIC 3D ROCKET LAUNCH + CINEMATIC CAMERA CHOREOGRAPHY
- * + 3D PARALLAX + FLIGHT SPLINE + SCREEN BREAKTHROUGH FLY-BY + LANDING IMPACT SHOCKWAVE
+ * REALISTIC 3D ROCKET LAUNCH + PHYSICAL FLIGHT DYNAMICS + CINEMATIC CAMERA CHOREOGRAPHY
+ * + SCREEN BREAKTHROUGH FLY-BY + TOUCHDOWN SETTLING (Clean, particle-free environment)
  */
 export const CinematicRocketUniverse: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -105,18 +103,12 @@ export const CinematicRocketUniverse: React.FC = () => {
     // ==========================================
     // 3. SUBSYSTEMS INSTANTIATION
     // ==========================================
-    const dotField = new AtmosphericDotField(isMobile);
-    scene.add(dotField.points);
-
     const platform = new LandingPlatform3D();
     platform.group.position.set(0, -18, -12);
     scene.add(platform.group);
 
     const rocket = new Rocket3DModel();
     scene.add(rocket.group);
-
-    const microDotVfx = new MicroDotVFXEngine(isMobile ? 1800 : 3400);
-    scene.add(microDotVfx.points);
 
     const physicsSim = new RocketPhysicsSimulator();
     const cameraPhysics = new CameraPhysics();
@@ -249,45 +241,11 @@ export const CinematicRocketUniverse: React.FC = () => {
       // Update Landing Platform
       platform.update(totalTime);
 
-      // 1. Emit Exhaust Micro-Dots from Engine Nozzle (Sections 16-19)
-      const rocketForward = new THREE.Vector3(0, 1, 0).applyEuler(flight.rocketRot).normalize();
-      const nozzlePos = flight.rocketPos.clone().addScaledVector(rocketForward, -5.2);
-      const exhaustDir = rocketForward.clone().negate();
-
-      const exhaustDotRate = flight.state === 'FLYBY' ? 16 : flight.engineThrust > 0.6 ? 12 : flight.engineThrust > 0.1 ? 6 : 0;
-      if (exhaustDotRate > 0) {
-        microDotVfx.emitExhaust(nozzlePos, exhaustDir, flight.engineThrust, rocketVel, exhaustDotRate);
-      }
-
-      // 2. Launch Ground Dust Displacement (Sections 21 & 22)
-      if (flight.rocketPos.y < -8.0 && flight.engineThrust > 0.12) {
-        const groundDustRate = flight.state === 'IGNITION' ? 4 : 14;
-        microDotVfx.emitLaunchDust(flight.rocketPos, -18.0, flight.engineThrust, groundDustRate);
-      }
-
-      // 3. Touchdown Impact Shockwave (Sections 36-39)
+      // Landing touchdown camera impulse
       if (flight.landingImpact > 0.05 && prevLandingImpact <= 0.05) {
-        microDotVfx.triggerLandingShockwave(new THREE.Vector3(0, -18.0, -12.0), flight.landingImpact, 220);
         cameraPhysics.addImpulse(flight.landingImpact * 0.45);
       }
       prevLandingImpact = flight.landingImpact;
-
-      // Update particle physics simulation
-      microDotVfx.update(dt, totalTime);
-
-      // 4. Update Atmospheric Dot Field with environmental reactions
-      const warp = prefersReducedMotion ? 0 : flight.warpSpeed;
-      const impact = prefersReducedMotion ? 0 : flight.landingImpact;
-
-      dotField.update(
-        totalTime,
-        flight.rocketPos,
-        rocketForward,
-        flight.engineThrust,
-        warp,
-        impact,
-        mousePos
-      );
 
       // 5. Physics-Based Camera Update (Sections 29, 44: Inertia, Spring-Damper & Impulse Shake)
       camera.fov = flight.cameraFov;
@@ -445,10 +403,8 @@ export const CinematicRocketUniverse: React.FC = () => {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       reducedMotionQuery.removeEventListener('change', onMotionChange);
 
-      dotField.dispose();
       rocket.dispose();
       platform.dispose();
-      microDotVfx.dispose();
       renderer.dispose();
     };
   }, []);
@@ -458,7 +414,7 @@ export const CinematicRocketUniverse: React.FC = () => {
       ref={containerRef}
       className="fixed inset-0 w-full h-full pointer-events-none z-0 overflow-hidden bg-[#050608]"
     >
-      {/* 3D WebGL Canvas for Rocket, Dot Atmosphere, and Exhaust Plume */}
+      {/* 3D WebGL Canvas for Physical Rocket and Launch Platform */}
       <canvas
         ref={canvasRef}
         aria-hidden="true"

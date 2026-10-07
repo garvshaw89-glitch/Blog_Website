@@ -108,7 +108,7 @@ export default function App() {
           onReplayIntro={handleReplayIntro}
         />
 
-        {/* Cinematic Rocket Universe: 4-Layer Dot Atmosphere, 3D Rocket Launch, Screen Breakthrough Fly-By & Touchdown Impact */}
+        {/* Cinematic Rocket Universe: Physical 3D Rocket Flight, Screen Breakthrough Fly-By & Mission Telemetry */}
         <CinematicRocketUniverse />
 
         <div className="relative z-10 flex flex-col">
