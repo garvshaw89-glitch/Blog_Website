@@ -108,29 +108,29 @@ export default function App() {
           onReplayIntro={handleReplayIntro}
         />
 
-        {/* High-End Motion Particle World (Living Digital Matter) */}
-        <MotionParticleWorld />
-
-        {/* Ambient Dark Spatial Background Vignette */}
+        {/* Ambient Dark Spatial Background Vignette (base layer) */}
         <div
           aria-hidden="true"
-          className="fixed inset-0 w-full h-full pointer-events-none z-0 overflow-hidden bg-[#050608]/85"
+          className="fixed inset-0 w-full h-full pointer-events-none z-0 overflow-hidden bg-[#050608]"
         >
           <div
-            className="absolute inset-0 pointer-events-none opacity-30"
+            className="absolute inset-0 pointer-events-none opacity-40"
             style={{
               background:
-                'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.05), transparent 70%), radial-gradient(ellipse 60% 50% at 50% 120%, rgba(14, 165, 233, 0.02), transparent 70%)',
+                'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.08), transparent 70%), radial-gradient(ellipse 60% 50% at 50% 120%, rgba(14, 165, 233, 0.04), transparent 70%)',
             }}
           />
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                'radial-gradient(circle at 50% 50%, transparent 45%, rgba(5, 6, 8, 0.5) 85%, rgba(5, 6, 8, 0.95) 100%)',
+                'radial-gradient(circle at 50% 50%, transparent 40%, rgba(3, 4, 7, 0.5) 80%, rgba(3, 4, 7, 0.95) 100%)',
             }}
           />
         </div>
+
+        {/* High-End Motion Particle World (Living Digital Matter with Optical Shine) */}
+        <MotionParticleWorld />
 
         <div className="relative z-10 flex flex-col">
           {/* 1. HERO / LANDING PAGE with Identity Core */}
