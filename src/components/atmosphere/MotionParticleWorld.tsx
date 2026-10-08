@@ -5,19 +5,26 @@ import { interactionEngine } from '../../context/SingularityInteractionEngine';
 /**
  * LIVING DIGITAL MATTER — HIGH-END MOTION PARTICLE WORLD
  * 
- * Creative Direction:
- * - High-end, luxury, cinematic WebGL particle system
- * - True optical shine: 4-pointed diamond star glints (diffraction spikes),
- *   white-hot specular nuclei, exponential photonic bloom, and dynamic scintillation (twinkle)
- * - Multi-depth layering: FAR (stardust), MID (fluid ribbons), NEAR (crystalline gems)
- * - Physical cursor field: radial repulsion with cubic falloff, water-like wake displacement, and proximity flare
- * - Click shockwave: expanding refraction wave with sparkling particle crest
+ * Clean, Precision Rendering:
+ * - Direct WebGL rendering with high clarity (zero heavy post-processing bloom haze)
+ * - Anti-aliased soft circular particle discs with crisp diamond/specular cores
+ * - Custom Uniforms:
+ *   - uOpacity: Global opacity control for subtle to pronounced luminous presence
+ *   - uSizeVariation: Point size scaling and depth spread variation
+ * - Physical cursor field: radial repulsion with cubic falloff, water-like wake displacement
+ * - Click shockwave: expanding refraction wave with particle crest
  * - Procedural 3D morphing: AMBIENT fluid -> WAVE ribbon -> CELESTIAL SPHERE -> CONSTELLATION lattice
  * - Section-aware chromatic shifts and atmospheric modulation
  * - Outside React render cycle (zero state updates per particle)
  * - Layered at z-[1] (above background vignette, below interactive content)
  * - pointer-events: none (completely unobtrusive, custom cursor authoritative)
  */
+
+export interface MotionParticleWorldProps {
+  opacity?: number;
+  sizeVariation?: number;
+  className?: string;
+}
 
 const PARTICLE_COUNT = 3800;
 
@@ -36,6 +43,8 @@ const vertexShader = `
   uniform float uMorphState;    // 0 = Ambient, 1 = Wave, 2 = Sphere, 3 = Constellation
   uniform float uMorphWeight;   // 0.0 to 1.0 transition blend
   uniform vec3 uThemeColor;     // Dynamic section accent
+  uniform float uOpacity;       // Custom uniform for overall opacity
+  uniform float uSizeVariation; // Custom uniform for point size variation
 
   attribute float aSize;
   attribute float aLayer;       // 0 = FAR, 1 = MID, 2 = NEAR
@@ -152,7 +161,6 @@ const vertexShader = `
     }
     // 3.0 = CONSTELLATION / GEOMETRIC LATTICE
     else {
-      // Hexagonal / crystalline node grid
       float col = floor(seed.x * 12.0) - 6.0;
       float row = floor(seed.y * 8.0) - 4.0;
       float nodeX = col * 12.0 + mod(row, 2.0) * 6.0 + sin(t * 0.3 + seed.z * 6.0) * 3.0;
@@ -168,9 +176,6 @@ const vertexShader = `
     vec3 pos = position;
 
     // Mobility coefficients per depth layer
-    // FAR (0.0): slowest, subtle stardust drift
-    // MID (1.0): moderate flowing fluid filaments
-    // NEAR (2.0): highly fluid, energetic, close-proximity response
     float mobility = 0.28 + aLayer * 0.42;
     float timeScale = 0.038 * (0.65 + aSeed.x * 0.35);
 
@@ -207,29 +212,19 @@ const vertexShader = `
     float cursorGlow = 0.0;
 
     if (distToPointer < radius && distToPointer > 0.0001) {
-      // Smooth cubic falloff curve: 1.0 at center, 0.0 at perimeter
       float t = 1.0 - (distToPointer / radius);
       float falloff = t * t * (3.0 - 2.0 * t);
 
-      // Repulsion direction away from cursor
       vec2 dir = normalize(pointerDiff);
-
-      // Depth responsiveness
       float depthFactor = (0.35 + aLayer * 0.45);
 
-      // Radial displacement
       vec2 displacement = dir * (falloff * uPointerForce * depthFactor);
-
-      // Digital wake: particle displaced along cursor velocity
       vec2 velNorm = length(uPointerVel) > 0.001 ? normalize(uPointerVel) : vec2(0.0);
       vec2 wake = velNorm * (falloff * 0.18 * depthFactor);
 
-      // Apply screen-space displacement back to 3D world space
       pos.xy += (displacement + wake) * (projected.w * 0.50);
-      // Subtle parting into depth
       pos.z -= falloff * 9.0 * depthFactor;
 
-      // Excitation brightness boost near cursor
       cursorGlow = falloff * 0.65;
     }
 
@@ -253,26 +248,27 @@ const vertexShader = `
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
     gl_Position = projectionMatrix * mvPosition;
 
-    // 6. POINT SIZE ATTENUATION & HIGH-DPI VISIBILITY
-    // Perspective attenuation: size scales naturally with depth
-    float baseSize = aSize;
+    // 6. POINT SIZE ATTENUATION WITH CUSTOM SIZE VARIATION UNIFORM
+    // Base size modulated by individual seed variation and the uSizeVariation uniform
+    float seedVariation = 0.80 + aSeed.y * 0.40;
+    float baseSize = aSize * seedVariation * uSizeVariation;
     gl_PointSize = baseSize * (220.0 / -mvPosition.z) * uPixelRatio;
-    // Clamped comfortably so particles are always crisp, luminous points of light
-    gl_PointSize = clamp(gl_PointSize, 2.5, 22.0);
+    // Clamped comfortably with size variation scaling
+    gl_PointSize = clamp(gl_PointSize, 2.5 * uSizeVariation, 26.0 * uSizeVariation);
 
     // 7. OPTICAL SHINE & SCINTILLATION (TWINKLE)
-    // Periodic specular sparkle: particles catch light and flash brilliant diamond glints
     float sparklePhase = uTime * (1.6 + aSeed.y * 2.4) + aSeed.x * 62.83;
-    float sparkle = pow(max(0.0, sin(sparklePhase)), 10.0); // sharp, brief, brilliant flash
+    float sparkle = pow(max(0.0, sin(sparklePhase)), 10.0);
     vSparkle = sparkle;
 
-    // Depth alpha attenuation: ensures all layers remain comfortably visible
+    // Depth alpha attenuation
     float depthAlpha = 0.52 + 0.48 * smoothstep(-135.0, -45.0, mvPosition.z);
 
-    // Subtle ambient breathing oscillation
+    // Ambient breathing oscillation
     float pulse = 0.88 + 0.12 * sin(uTime * 0.75 + aSeed.z * 14.0);
 
-    vAlpha = clamp(aAlpha * depthAlpha * pulse + cursorGlow + sparkle * 0.5, 0.1, 1.0);
+    // Calculate alpha with custom uOpacity uniform modulation
+    vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow + sparkle * 0.5) * uOpacity, 0.05, 1.0);
 
     // 8. COLOR PALETTE: LUXURY MONOCHROME WITH PRISTINE DIAMOND & CELESTIAL TONES
     vec3 farColor = vec3(0.70, 0.78, 0.90);     // Luminous celestial silver/ice
@@ -294,6 +290,9 @@ const vertexShader = `
 `;
 
 const fragmentShader = `
+  uniform float uOpacity;       // Custom uniform for opacity
+  uniform float uSizeVariation; // Custom uniform for point size variation
+
   varying float vAlpha;
   varying float vLayer;
   varying vec3 vColor;
@@ -301,58 +300,55 @@ const fragmentShader = `
   varying vec3 vSeed;
 
   void main() {
-    // Distance from center of point sprite [0..0.5]
+    // Coordinate normalized to [-0.5, 0.5] from center of point sprite
     vec2 coord = gl_PointCoord - vec2(0.5);
     float dist = length(coord);
 
+    // Circular point boundary clipping with smooth anti-aliased edge
     if (dist > 0.5) {
       discard;
     }
 
-    // 1. ROTATED 4-POINT DIFFRACTION SPIKE (DIAMOND STAR GLINT)
-    // Oriented organically by particle seed
-    float angle = vSeed.x * 3.14159;
-    float sinA = sin(angle);
-    float cosA = cos(angle);
-    vec2 rCoord = vec2(coord.x * cosA - coord.y * sinA, coord.x * sinA + coord.y * cosA);
+    // Normalized radial distance factor: 1.0 at center, 0.0 at outer boundary
+    float radialFactor = clamp(1.0 - dist * 2.0, 0.0, 1.0);
 
-    // Precision cruciform lens flare arms
-    float armX = max(0.0, 1.0 - abs(rCoord.x) * 7.5) * max(0.0, 1.0 - abs(rCoord.y) * 1.8);
-    float armY = max(0.0, 1.0 - abs(rCoord.y) * 7.5) * max(0.0, 1.0 - abs(rCoord.x) * 1.8);
-    float starGlint = (armX + armY) * (0.42 + vSparkle * 1.2 + (vLayer > 1.5 ? 0.45 : 0.15));
+    // =========================================================================
+    // CLEAN, CRISP PARTICLE SHAPING (No excessive bloom haze)
+    // =========================================================================
+    // Crisp, natural disc falloff: sharp anti-aliased edge with smooth inner falloff
+    float disc = smoothstep(0.5, 0.28, dist);
 
-    // 2. ULTRA-BRIGHT SPECULAR NUCLEUS (White-hot core)
-    // Delivers the unmistakable "ping" or "shine" of diamond/crystalline light
-    float core = smoothstep(0.12, 0.0, dist) * (1.8 + vSparkle * 2.2);
+    // Subtle gentle specular core for elegant luxury shine
+    float coreNucleus = smoothstep(0.18, 0.0, dist) * (1.2 + vSparkle * 0.8);
 
-    // 3. INNER CRISP PRISMATIC BODY
-    float innerBody = smoothstep(0.34, 0.08, dist) * 0.90;
+    // Subtle natural light intensity without milky over-saturation
+    float intensity = disc + coreNucleus * 0.5;
 
-    // 4. SOFT VOLUMETRIC AURA (Atmospheric photonic glow)
-    // Exponential falloff simulates real camera lens bloom / airy dispersion
-    float aura = exp(-dist * 5.2) * 0.80;
+    // Pristine diamond center mix
+    vec3 hotCore = vec3(1.0, 1.0, 1.0);
+    float coreMix = clamp(coreNucleus * 0.8 + vSparkle * 0.6, 0.0, 1.0);
+    vec3 finalColor = mix(vColor, hotCore, coreMix);
 
-    // 5. COMPOSITE SHINE LUMINANCE
-    float shine = core + starGlint + innerBody + aura;
-
-    // 6. COLOR GRADE
-    // Core is pristine diamond white
-    // Corona/halo takes the luxury platinum-cyan theme
-    vec3 finalColor = mix(vColor, vec3(1.0, 1.0, 1.0), clamp(core * 0.95 + vSparkle * 0.85, 0.0, 1.0));
-
-    // Dynamic specular glint flash
-    if (vSparkle > 0.08) {
-      finalColor += vec3(0.25, 0.40, 0.60) * vSparkle;
-    }
-
-    float finalAlpha = clamp(vAlpha * shine, 0.0, 0.96);
+    // Multiply by alpha and opacity uniform
+    float finalAlpha = clamp(vAlpha * intensity * uOpacity, 0.0, 0.95);
 
     gl_FragColor = vec4(finalColor, finalAlpha);
   }
 `;
 
-export const MotionParticleWorld: React.FC = () => {
+export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
+  opacity = 1.0,
+  sizeVariation = 1.0,
+  className = '',
+}) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const opacityRef = useRef(opacity);
+  const sizeVariationRef = useRef(sizeVariation);
+
+  useEffect(() => {
+    opacityRef.current = opacity;
+    sizeVariationRef.current = sizeVariation;
+  }, [opacity, sizeVariation]);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -375,16 +371,18 @@ export const MotionParticleWorld: React.FC = () => {
     const camera = new THREE.PerspectiveCamera(48, width / height, 1, 300);
     camera.position.set(0, 0, 70);
 
-    // 2. Renderer Setup
+    // 2. Direct Crisp WebGL Renderer Setup (No heavy post-processing bloom haze)
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
-      antialias: false, // Performance friendly; shaders compute anti-aliased soft edges
+      antialias: true,
       powerPreference: 'high-performance',
       preserveDrawingBuffer: false,
     });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0); // 100% transparent clear color
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
 
     const domCanvas = renderer.domElement;
     domCanvas.style.position = 'absolute';
@@ -411,10 +409,6 @@ export const MotionParticleWorld: React.FC = () => {
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const i3 = i * 3;
 
-      // Layer segmentation:
-      // 50% FAR (dense atmospheric star dust)
-      // 32% MID (flowing filaments)
-      // 18% NEAR (interactive foreground liquid crystals)
       const randLayer = Math.random();
       let layer = 0; // FAR
       let zMin = -55;
@@ -462,7 +456,7 @@ export const MotionParticleWorld: React.FC = () => {
     geometry.setAttribute('aAlpha', new THREE.BufferAttribute(alphas, 1));
     geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 3));
 
-    // 4. Custom Shader Material
+    // 4. Custom Shader Material with Additive Blending & Custom Uniforms
     const uniforms = {
       uTime: { value: 0 },
       uResolution: { value: new THREE.Vector2(width, height) },
@@ -478,6 +472,8 @@ export const MotionParticleWorld: React.FC = () => {
       uMorphState: { value: 0 },       // 0: Ambient, 1: Wave, 2: Sphere, 3: Constellation
       uMorphWeight: { value: 0 },      // 0 to 1
       uThemeColor: { value: new THREE.Color(0x7ea7ff) },
+      uOpacity: { value: opacityRef.current },
+      uSizeVariation: { value: sizeVariationRef.current },
     };
 
     const material = new THREE.ShaderMaterial({
@@ -527,33 +523,33 @@ export const MotionParticleWorld: React.FC = () => {
       // Section-aware morphology & color adaptation
       const secName = state.sectionTheme?.name || 'hero';
       if (secName === 'hero') {
-        currentMorphState = 0; // Ambient fluid
+        currentMorphState = 0;
         targetMorphWeight = 0.0;
-        targetColor.setHex(0x7ea7ff); // Celestial Ice Azure
+        targetColor.setHex(0x7ea7ff);
       } else if (secName === 'about') {
-        currentMorphState = 1; // Wave
+        currentMorphState = 1;
         targetMorphWeight = 0.35;
-        targetColor.setHex(0x6366f1); // Indigo
+        targetColor.setHex(0x6366f1);
       } else if (secName === 'projects' || secName === 'capabilities') {
-        currentMorphState = 1; // Structured wave
+        currentMorphState = 1;
         targetMorphWeight = 0.45;
-        targetColor.setHex(0x38bdf8); // Sky Cyan
+        targetColor.setHex(0x38bdf8);
       } else if (secName === 'engineering') {
-        currentMorphState = 3; // Constellation lattice
+        currentMorphState = 3;
         targetMorphWeight = 0.50;
-        targetColor.setHex(0x2563eb); // Royal Cobalt
+        targetColor.setHex(0x2563eb);
       } else if (secName === 'constellation' || secName === 'digital-dna') {
-        currentMorphState = 2; // Celestial sphere
+        currentMorphState = 2;
         targetMorphWeight = 0.55;
-        targetColor.setHex(0xa855f7); // Quantum Violet
+        targetColor.setHex(0xa855f7);
       } else if (secName === 'writing') {
-        currentMorphState = 0; // Ambient minimal
+        currentMorphState = 0;
         targetMorphWeight = 0.15;
-        targetColor.setHex(0x94a3b8); // Slate Platinum
+        targetColor.setHex(0x94a3b8);
       } else if (secName === 'contact') {
-        currentMorphState = 2; // Spherical convergence
+        currentMorphState = 2;
         targetMorphWeight = 0.40;
-        targetColor.setHex(0x14b8a6); // Teal Diamond
+        targetColor.setHex(0x14b8a6);
       }
     });
 
@@ -597,6 +593,10 @@ export const MotionParticleWorld: React.FC = () => {
 
       const seconds = time * 0.001;
       uniforms.uTime.value = seconds;
+
+      // Sync custom uniform props
+      uniforms.uOpacity.value = opacityRef.current;
+      uniforms.uSizeVariation.value = sizeVariationRef.current;
 
       // Smooth pointer lerp
       const oldX = smoothPointerX;
@@ -643,6 +643,7 @@ export const MotionParticleWorld: React.FC = () => {
       camera.position.y += (smoothPointerY * 2.2 - camera.position.y) * 0.04;
       camera.lookAt(0, 0, 0);
 
+      // Clean direct rendering: crisp, anti-aliased luxury matter without blooming haze
       renderer.render(scene, camera);
     };
 
@@ -670,7 +671,7 @@ export const MotionParticleWorld: React.FC = () => {
     <div
       aria-hidden="true"
       ref={mountRef}
-      className="fixed inset-0 w-full h-full pointer-events-none z-[1] overflow-hidden"
+      className={`MotionParticleWorld fixed inset-0 w-full h-full pointer-events-none z-[1] overflow-hidden ${className}`.trim()}
       style={{
         contain: 'strict',
       }}
