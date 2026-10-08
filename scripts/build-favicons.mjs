@@ -1,4 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+import fs from 'node:fs';
+import path from 'node:path';
+import sharp from 'sharp';
+
+const SVG_CONTENT = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
   <defs>
     <!-- Background: Deep Cosmic Obsidian with subtle gradient -->
     <linearGradient id="bgGrad" x1="64" y1="0" x2="64" y2="128" gradientUnits="userSpaceOnUse">
@@ -75,4 +79,67 @@
   <!-- Central Convergence Node: Diamond AI Spark & Core -->
   <polygon points="64,59 69,64 64,69 59,64" fill="#FFFFFF" />
   <circle cx="64" cy="64" r="1.8" fill="#38BDF8" />
-</svg>
+</svg>`;
+
+async function build() {
+  const publicDir = path.resolve('public');
+
+  // 1. Write favicon.svg
+  fs.writeFileSync(path.join(publicDir, 'favicon.svg'), SVG_CONTENT.trim());
+  console.log('Created /public/favicon.svg');
+
+  const svgBuffer = Buffer.from(SVG_CONTENT);
+
+  // 2. Generate standard favicon.png (64x64)
+  await sharp(svgBuffer).resize(64, 64).png().toFile(path.join(publicDir, 'favicon.png'));
+  console.log('Created /public/favicon.png');
+
+  // 3. Generate 32x32 favicon
+  await sharp(svgBuffer).resize(32, 32).png().toFile(path.join(publicDir, 'favicon-32x32.png'));
+  console.log('Created /public/favicon-32x32.png');
+
+  // 4. Generate 16x16 favicon
+  await sharp(svgBuffer).resize(16, 16).png().toFile(path.join(publicDir, 'favicon-16x16.png'));
+  console.log('Created /public/favicon-16x16.png');
+
+  // 5. Generate apple-touch-icon.png (180x180)
+  await sharp(svgBuffer).resize(180, 180).png().toFile(path.join(publicDir, 'apple-touch-icon.png'));
+  console.log('Created /public/apple-touch-icon.png');
+
+  // 6. Generate android-chrome-192x192.png
+  await sharp(svgBuffer).resize(192, 192).png().toFile(path.join(publicDir, 'android-chrome-192x192.png'));
+  console.log('Created /public/android-chrome-192x192.png');
+
+  // 7. Generate android-chrome-512x512.png
+  await sharp(svgBuffer).resize(512, 512).png().toFile(path.join(publicDir, 'android-chrome-512x512.png'));
+  console.log('Created /public/android-chrome-512x512.png');
+
+  // 8. Generate site.webmanifest
+  const manifest = {
+    name: "Garv Shaw - AI & Cloud Developer",
+    short_name: "Garv Shaw",
+    icons: [
+      {
+        src: "/android-chrome-192x192.png",
+        sizes: "192x192",
+        type: "image/png"
+      },
+      {
+        src: "/android-chrome-512x512.png",
+        sizes: "512x512",
+        type: "image/png"
+      }
+    ],
+    theme_color: "#05070A",
+    background_color: "#05070A",
+    display: "standalone"
+  };
+
+  fs.writeFileSync(path.join(publicDir, 'site.webmanifest'), JSON.stringify(manifest, null, 2));
+  console.log('Created /public/site.webmanifest');
+}
+
+build().catch(err => {
+  console.error('Build failed:', err);
+  process.exit(1);
+});

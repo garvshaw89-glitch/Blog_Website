@@ -98,11 +98,37 @@ const VARIANT_ITEMS: Record<AnimatedTopDockVariant, readonly DockItem[]> = {
 };
 
 const BRAND_MARK = (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <rect width="24" height="24" rx="4.5" fill="#E8E8E3" />
-    <path d="M6 6h8.6L18 9.35v8.15H9.15L6 14.35V6Z" fill="#111" />
-    <path d="M9 9h5.15L15 9.85V15H9.85L9 14.15V9Z" fill="#E8E8E3" />
-    <path d="M12 9v6M9 12h6" stroke="#111" strokeWidth=".7" />
+  <svg viewBox="0 0 24 24" aria-hidden="true" fill="none">
+    <defs>
+      <linearGradient id="dockMarkG" x1="4" y1="5" x2="15" y2="19" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#00F2FE" />
+        <stop offset="100%" stopColor="#2563EB" />
+      </linearGradient>
+      <linearGradient id="dockMarkS" x1="20" y1="5" x2="9" y2="19" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stopColor="#FFFFFF" />
+        <stop offset="50%" stopColor="#BAE6FD" />
+        <stop offset="100%" stopColor="#00F2FE" />
+      </linearGradient>
+    </defs>
+    <rect width="24" height="24" rx="5.5" fill="#060911" stroke="#38BDF8" strokeWidth="0.8" strokeOpacity="0.6" />
+    <circle cx="12" cy="12" r="9" fill="#00F2FE" fillOpacity="0.08" />
+    {/* Letter G */}
+    <path
+      d="M11.5 6 H8 C5.8 6 4 7.8 4 10 V14 C4 16.2 5.8 18 8 18 H11.5 C13.7 18 15 16.5 15 14.5 V12 H9.5"
+      stroke="url(#dockMarkG)"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Letter S */}
+    <path
+      d="M19 7.5 C19 7.5 17.8 6 15.5 6 C13.5 6 12.8 7.3 12.8 8.6 C12.8 10.6 19 10.6 19 14.2 C19 16.2 17.5 18 15.2 18 C13.2 18 12.2 16.5 12.2 16.5"
+      stroke="url(#dockMarkS)"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="12" cy="12" r="0.6" fill="#FFFFFF" />
   </svg>
 );
 
