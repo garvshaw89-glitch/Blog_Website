@@ -14,7 +14,6 @@ import {
   X,
   Compass,
   FileCode,
-  Rocket,
 } from 'lucide-react';
 
 interface CommandItem {
@@ -119,17 +118,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       category: 'System',
       icon: <Github className="w-4 h-4 text-slate-300" />,
       action: () => scrollTo('github-telemetry'),
-    },
-    {
-      id: 'action-rocket-reveal',
-      title: 'Execute 3D Rocket Cinematic Flyover (Screen Breakthrough)',
-      category: 'Lab',
-      shortcut: '⌘ R',
-      icon: <Rocket className="w-4 h-4 text-cyan-400" />,
-      action: () => {
-        window.dispatchEvent(new CustomEvent('trigger-rocket-cinematic'));
-        onClose();
-      },
     },
     {
       id: 'action-contact',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { IdentityCore } from './ui/IdentityCore';
-import { ArrowDown, ArrowUpRight, Sparkles, Terminal, Activity, Rocket } from 'lucide-react';
+import { ArrowDown, ArrowUpRight, Sparkles, Terminal, Activity } from 'lucide-react';
 
 interface HeroSectionProps {
   onContactClick?: () => void;
@@ -191,17 +191,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           >
             <span>EXPLORE WORK</span>
             <ArrowDown className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent('trigger-rocket-cinematic'))}
-            data-cursor="button"
-            data-cursor-label="LAUNCH"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#171C22] hover:bg-[#1f262e] border border-[#FF9D38]/30 text-[#FFD27A] font-mono text-xs tracking-wider transition-all cursor-pointer"
-          >
-            <Rocket className="w-3.5 h-3.5 text-[#FF9D38]" />
-            <span>LAUNCH 3D FLYOVER</span>
           </button>
 
           <button

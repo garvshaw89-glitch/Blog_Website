@@ -4,8 +4,8 @@ import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
 import { CustomCursor } from './components/ui/CustomCursor';
 import { LuxuryIntro } from './components/intro/LuxuryIntro';
-import { CinematicRocketUniverse } from './components/rocket-universe/CinematicRocketUniverse';
 import { CommandPalette } from './components/ui/CommandPalette';
+import { MotionParticleWorld } from './components/atmosphere/MotionParticleWorld';
 import { SectionProgressHUD } from './components/ui/SectionProgressHUD';
 import { EasterEggToast } from './components/ui/EasterEggToast';
 import { Navbar } from './components/Navbar';
@@ -108,8 +108,29 @@ export default function App() {
           onReplayIntro={handleReplayIntro}
         />
 
-        {/* Cinematic Rocket Universe: Physical 3D Rocket Flight, Screen Breakthrough Fly-By & Mission Telemetry */}
-        <CinematicRocketUniverse />
+        {/* High-End Motion Particle World (Living Digital Matter) */}
+        <MotionParticleWorld />
+
+        {/* Ambient Dark Spatial Background Vignette */}
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 w-full h-full pointer-events-none z-0 overflow-hidden bg-[#050608]/85"
+        >
+          <div
+            className="absolute inset-0 pointer-events-none opacity-30"
+            style={{
+              background:
+                'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.05), transparent 70%), radial-gradient(ellipse 60% 50% at 50% 120%, rgba(14, 165, 233, 0.02), transparent 70%)',
+            }}
+          />
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                'radial-gradient(circle at 50% 50%, transparent 45%, rgba(5, 6, 8, 0.5) 85%, rgba(5, 6, 8, 0.95) 100%)',
+            }}
+          />
+        </div>
 
         <div className="relative z-10 flex flex-col">
           {/* 1. HERO / LANDING PAGE with Identity Core */}
