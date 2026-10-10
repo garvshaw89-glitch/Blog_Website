@@ -52,7 +52,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ id = 'contact' }
         {/* Section Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-16">
           <div className="flex items-center gap-3">
-            <span className="font-mono text-cyan-400 font-semibold text-xs">07 //</span>
+            <span className="font-mono text-cyan-400 font-semibold text-xs">10 //</span>
             <span className="font-mono text-xs uppercase tracking-widest text-neutral-400">
               DIRECT TRANSMISSION & INQUIRY
             </span>

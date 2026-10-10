@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, Compass } from 'lucide-react';
+import { interactionEngine } from '../../context/SingularityInteractionEngine';
 
 export interface SectionMeta {
   id: string;
@@ -104,56 +105,19 @@ export const StickySectionHeader: React.FC<StickySectionHeaderProps> = ({
   const [sectionProgress, setSectionProgress] = useState(0);
 
   useEffect(() => {
-    const calculateActiveSection = () => {
-      const scrollY = window.scrollY;
-      const viewportHeight = window.innerHeight;
+    const unsubscribe = interactionEngine.subscribe((state) => {
+      setIsVisible(state.scrollY > 160);
 
-      // Show after scrolling past initial hero entrance (threshold ~160px)
-      setIsVisible(scrollY > 160);
-
-      // Find which section is currently centered/active in viewport
-      const detectionAnchor = 180; // Distance from top of viewport to sample current section
-      let currentMatched: SectionMeta = PORTFOLIO_SECTIONS[0];
-      let currentProgress = 0;
-
-      for (let i = 0; i < PORTFOLIO_SECTIONS.length; i++) {
-        const sec = PORTFOLIO_SECTIONS[i];
-        const el = document.getElementById(sec.id);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          // Check if top is above or near detection anchor and bottom is still below
-          if (rect.top <= detectionAnchor && rect.bottom > detectionAnchor) {
-            currentMatched = sec;
-            const totalH = rect.height;
-            const elapsed = Math.max(0, detectionAnchor - rect.top);
-            currentProgress = Math.min(100, Math.max(0, (elapsed / totalH) * 100));
-            break;
-          } else if (rect.top > detectionAnchor && i === 0) {
-            // Above hero anchor
-            currentMatched = PORTFOLIO_SECTIONS[0];
-            break;
-          }
+      if (state.activeSectionId) {
+        const matched = PORTFOLIO_SECTIONS.find((sec) => sec.id === state.activeSectionId);
+        if (matched) {
+          setActiveSection(matched);
         }
       }
+      setSectionProgress(Math.round(state.scrollProgress * 100));
+    });
 
-      // Check if at the very bottom of the document
-      const docHeight = document.documentElement.scrollHeight;
-      if (scrollY + viewportHeight >= docHeight - 80) {
-        currentMatched = PORTFOLIO_SECTIONS[PORTFOLIO_SECTIONS.length - 1]; // Contact
-      }
-
-      setActiveSection(currentMatched);
-      setSectionProgress(currentProgress);
-    };
-
-    calculateActiveSection();
-    window.addEventListener('scroll', calculateActiveSection, { passive: true });
-    window.addEventListener('resize', calculateActiveSection, { passive: true });
-
-    return () => {
-      window.removeEventListener('scroll', calculateActiveSection);
-      window.removeEventListener('resize', calculateActiveSection);
-    };
+    return () => unsubscribe();
   }, []);
 
   const handleJump = (id: string) => {

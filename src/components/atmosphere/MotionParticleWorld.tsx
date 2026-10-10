@@ -559,7 +559,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
     // 2. Crisp WebGL Renderer Setup
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
-      antialias: true,
+      antialias: false,
       powerPreference: 'high-performance',
       preserveDrawingBuffer: false,
     });

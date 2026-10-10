@@ -36,6 +36,9 @@ export interface SingularityInteractionState {
   isHoveringInteractive: boolean;
   hoverType: 'default' | 'button' | 'link' | 'project' | 'text';
   magneticTarget: HTMLElement | null;
+  customCursor?: string;
+  customCursorLabel?: string;
+  activeSectionId?: string;
 
   // Active click shockwave timestamp and coordinates
   lastClickTime: number;
@@ -82,6 +85,9 @@ class InteractionEngine {
     isHoveringInteractive: false,
     hoverType: 'default',
     magneticTarget: null,
+    customCursor: undefined,
+    customCursorLabel: undefined,
+    activeSectionId: 'hero-section',
     lastClickTime: 0,
     clickOrigin: { x: 0, y: 0, worldX: 0, worldY: 0 },
     clickCount: 0,
@@ -138,6 +144,10 @@ class InteractionEngine {
     window.addEventListener('pointermove', this.onPointerMove, { passive: true });
     window.addEventListener('pointerdown', this.onPointerDown, { passive: true });
     window.addEventListener('scroll', this.onScroll, { passive: true });
+    window.addEventListener('resize', () => {
+      this.lastBoundsCacheTime = 0;
+      this.cachedSectionBounds = [];
+    }, { passive: true });
   }
 
   private onPointerMove = (e: PointerEvent) => {
@@ -171,7 +181,7 @@ class InteractionEngine {
     this.state.vy = dy / dt;
     this.state.speed = Math.hypot(this.state.vx, this.state.vy);
 
-    // Contextual hover target inspection
+    // Contextual hover target inspection (read attributes directly without elementFromPoint)
     const target = e.target as HTMLElement | null;
     if (target) {
       const isButton = !!target.closest('button, [role="button"], [data-cursor="button"]');
@@ -197,6 +207,8 @@ class InteractionEngine {
       }
 
       this.state.magneticTarget = (target.closest('[data-magnetic]') as HTMLElement) || null;
+      this.state.customCursor = target.closest('[data-cursor]')?.getAttribute('data-cursor') || undefined;
+      this.state.customCursorLabel = target.closest('[data-cursor-label]')?.getAttribute('data-cursor-label') || undefined;
     }
 
     this.notify();
@@ -220,50 +232,83 @@ class InteractionEngine {
     this.notify();
   };
 
-  private onScroll = () => {
-    const scrollY = window.scrollY || window.pageYOffset || 0;
-    const maxScroll = Math.max(
-      document.documentElement.scrollHeight - window.innerHeight,
-      1
-    );
-    const delta = scrollY - this.state.scrollY;
-    this.state.scrollY = scrollY;
-    this.state.scrollVelocity = delta;
-    this.state.scrollProgress = Math.min(Math.max(scrollY / maxScroll, 0), 1);
+  private scrollRafPending = false;
 
-    this.updateSectionAtmosphere(scrollY);
-    this.notify();
+  private onScroll = () => {
+    if (this.scrollRafPending) return;
+    this.scrollRafPending = true;
+
+    requestAnimationFrame(() => {
+      this.scrollRafPending = false;
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+      const maxScroll = Math.max(
+        document.documentElement.scrollHeight - window.innerHeight,
+        1
+      );
+      const delta = scrollY - this.state.scrollY;
+      this.state.scrollY = scrollY;
+      this.state.scrollVelocity = delta;
+      this.state.scrollProgress = Math.min(Math.max(scrollY / maxScroll, 0), 1);
+
+      this.updateSectionAtmosphere(scrollY);
+      this.notify();
+    });
   };
 
-  private updateSectionAtmosphere(scrollY: number) {
-    const viewportMid = scrollY + window.innerHeight * 0.45;
-    const sections = [
-      { id: 'hero-section', name: 'hero', primary: 0x06b6d4, secondary: 0x3b82f6, ambient: 0x081528 },
-      { id: 'about', name: 'about', primary: 0x6366f1, secondary: 0x06b6d4, ambient: 0x0c1126 },
-      { id: 'capabilities', name: 'capabilities', primary: 0x0ea5e9, secondary: 0x2563eb, ambient: 0x081730 },
-      { id: 'digital-dna', name: 'digital-dna', primary: 0xa855f7, secondary: 0x06b6d4, ambient: 0x140d28 },
-      { id: 'projects', name: 'projects', primary: 0x06b6d4, secondary: 0x38bdf8, ambient: 0x061424 },
-      { id: 'github-telemetry', name: 'engineering', primary: 0x38bdf8, secondary: 0x6366f1, ambient: 0x0a1630 },
-      { id: 'journey', name: 'journey', primary: 0x10b981, secondary: 0x06b6d4, ambient: 0x061824 },
-      { id: 'constellation', name: 'constellation', primary: 0xa855f7, secondary: 0x06b6d4, ambient: 0x140d28 },
-      { id: 'writing', name: 'writing', primary: 0x38bdf8, secondary: 0x6366f1, ambient: 0x0a1630 },
-      { id: 'contact', name: 'contact', primary: 0x14b8a6, secondary: 0x06b6d4, ambient: 0x061824 },
-    ];
+  private lastBoundsCacheTime = 0;
+  private cachedSectionBounds: {
+    id: string;
+    name: string;
+    primary: number;
+    secondary: number;
+    ambient: number;
+    top: number;
+    bottom: number;
+  }[] = [];
 
-    for (const sec of sections) {
-      const el = document.getElementById(sec.id);
-      if (el) {
-        const top = el.offsetTop;
-        const bottom = top + el.offsetHeight;
-        if (viewportMid >= top && viewportMid <= bottom) {
+  private updateSectionAtmosphere(scrollY: number) {
+    const now = performance.now();
+    // Cache section bounds and recalculate at most once every 600ms or on resize
+    if (this.cachedSectionBounds.length === 0 || now - this.lastBoundsCacheTime > 600) {
+      this.lastBoundsCacheTime = now;
+      const sections = [
+        { id: 'hero-section', name: 'hero', primary: 0x06b6d4, secondary: 0x3b82f6, ambient: 0x081528 },
+        { id: 'about', name: 'about', primary: 0x6366f1, secondary: 0x06b6d4, ambient: 0x0c1126 },
+        { id: 'capabilities', name: 'capabilities', primary: 0x0ea5e9, secondary: 0x2563eb, ambient: 0x081730 },
+        { id: 'digital-dna', name: 'digital-dna', primary: 0xa855f7, secondary: 0x06b6d4, ambient: 0x140d28 },
+        { id: 'projects', name: 'projects', primary: 0x06b6d4, secondary: 0x38bdf8, ambient: 0x061424 },
+        { id: 'github-telemetry', name: 'engineering', primary: 0x38bdf8, secondary: 0x6366f1, ambient: 0x0a1630 },
+        { id: 'journey', name: 'journey', primary: 0x10b981, secondary: 0x06b6d4, ambient: 0x061824 },
+        { id: 'constellation', name: 'constellation', primary: 0xa855f7, secondary: 0x06b6d4, ambient: 0x140d28 },
+        { id: 'writing', name: 'writing', primary: 0x38bdf8, secondary: 0x6366f1, ambient: 0x0a1630 },
+        { id: 'ai-lab', name: 'ai-lab', primary: 0x06b6d4, secondary: 0x8b5cf6, ambient: 0x091024 },
+        { id: 'contact', name: 'contact', primary: 0x14b8a6, secondary: 0x06b6d4, ambient: 0x061824 },
+      ];
+
+      this.cachedSectionBounds = sections
+        .map((sec) => {
+          const el = document.getElementById(sec.id);
+          if (!el) return null;
+          const top = el.offsetTop;
+          const bottom = top + el.offsetHeight;
+          return { ...sec, top, bottom };
+        })
+        .filter(Boolean) as typeof this.cachedSectionBounds;
+    }
+
+    const viewportMid = scrollY + window.innerHeight * 0.45;
+    for (const sec of this.cachedSectionBounds) {
+      if (viewportMid >= sec.top && viewportMid <= sec.bottom) {
+        this.state.activeSectionId = sec.id;
+        if (this.state.sectionTheme.name !== sec.name) {
           this.state.sectionTheme = {
             name: sec.name,
             primary: sec.primary,
             secondary: sec.secondary,
             ambient: sec.ambient,
           };
-          break;
         }
+        break;
       }
     }
   }

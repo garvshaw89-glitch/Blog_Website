@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Command, ExternalLink, Menu, X } from 'lucide-react';
+import { interactionEngine } from '../context/SingularityInteractionEngine';
 
 interface NavbarProps {
   onContactClick?: () => void;
@@ -18,39 +19,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [hasScrolled, setHasScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setHasScrolled(window.scrollY > 40);
-
-      const sections = [
-        'hero-section',
-        'about',
-        'capabilities',
-        'digital-dna',
-        'projects',
-        'github-telemetry',
-        'journey',
-        'constellation',
-        'writing',
-        'ai-lab',
-        'contact',
-      ];
-      const scrollPos = window.scrollY + 220;
-
-      for (const sectionId of sections) {
-        const el = document.getElementById(sectionId);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPos >= top && scrollPos < top + height) {
-            setActiveSection(sectionId);
-            break;
-          }
-        }
+    const unsubscribe = interactionEngine.subscribe((state) => {
+      setHasScrolled(state.scrollY > 40);
+      if (state.activeSectionId) {
+        setActiveSection(state.activeSectionId);
       }
-    };
+    });
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => unsubscribe();
   }, []);
 
   const scrollToSection = (sectionId: string) => {
@@ -204,6 +180,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {onOpenCommandPalette && (
             <button
               type="button"
+              id="cmd-palette-trigger"
               onClick={onOpenCommandPalette}
               data-cursor="button"
               data-cursor-label="CMD"

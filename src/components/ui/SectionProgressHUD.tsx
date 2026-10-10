@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { interactionEngine } from '../../context/SingularityInteractionEngine';
 
 const SECTIONS = [
   { id: 'hero-section', label: '00 // HERO' },
@@ -18,21 +19,13 @@ export const SectionProgressHUD: React.FC = () => {
   const [activeSection, setActiveSection] = useState('hero-section');
 
   useEffect(() => {
-    const handleScroll = () => {
-      for (const sec of SECTIONS) {
-        const el = document.getElementById(sec.id);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.top <= 260 && rect.bottom >= 220) {
-            setActiveSection(sec.id);
-            break;
-          }
-        }
+    const unsubscribe = interactionEngine.subscribe((state) => {
+      if (state.activeSectionId) {
+        setActiveSection(state.activeSectionId);
       }
-    };
+    });
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => unsubscribe();
   }, []);
 
   const scrollToSection = (id: string) => {

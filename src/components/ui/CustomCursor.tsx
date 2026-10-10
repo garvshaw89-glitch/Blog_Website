@@ -47,6 +47,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
   const shockwaveIdRef = useRef(0);
 
   const activeMagneticRef = useRef<HTMLElement | null>(null);
+  const currentCursorKeyRef = useRef<string>('default:');
   const [isSupported, setIsSupported] = useState<boolean>(true);
 
   useEffect(() => {
@@ -112,50 +113,63 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
       const labelEl = labelRef.current;
 
       if (outerEl && coreEl && labelEl) {
-        outerEl.classList.remove('is-button', 'is-link', 'is-project', 'is-text');
-        coreEl.classList.remove('is-button', 'is-text');
+        const customCursor = state.customCursor;
+        const customLabel = state.customCursorLabel;
 
-        const targetEl = document.elementFromPoint(state.clientX, state.clientY) as HTMLElement | null;
-        const customCursor = targetEl?.closest('[data-cursor]')?.getAttribute('data-cursor');
-        const customLabel = targetEl?.closest('[data-cursor-label]')?.getAttribute('data-cursor-label');
+        let newCursorType = 'default';
+        let newLabelText = '';
 
         if (customCursor === 'project' || customCursor === 'view' || state.hoverType === 'project') {
-          outerEl.classList.add('is-project');
-          labelEl.textContent = customLabel || 'OPEN';
-          labelEl.style.display = 'block';
+          newCursorType = 'project';
+          newLabelText = customLabel || 'OPEN';
         } else if (customCursor === 'image') {
-          outerEl.classList.add('is-project');
-          labelEl.textContent = customLabel || 'EXPLORE';
-          labelEl.style.display = 'block';
+          newCursorType = 'project';
+          newLabelText = customLabel || 'EXPLORE';
         } else if (customCursor === 'drag') {
-          outerEl.classList.add('is-button');
-          labelEl.textContent = '← DRAG →';
-          labelEl.style.display = 'block';
+          newCursorType = 'drag';
+          newLabelText = '← DRAG →';
         } else if (customCursor === 'button' || state.hoverType === 'button') {
-          outerEl.classList.add('is-button');
-          coreEl.classList.add('is-button');
-          if (customLabel) {
-            labelEl.textContent = customLabel;
-            labelEl.style.display = 'block';
-          } else {
-            labelEl.textContent = 'VIEW ↗';
-            labelEl.style.display = 'block';
-          }
+          newCursorType = 'button';
+          newLabelText = customLabel || 'VIEW ↗';
         } else if (customCursor === 'link' || state.hoverType === 'link') {
-          outerEl.classList.add('is-link');
-          if (customLabel) {
-            labelEl.textContent = customLabel;
-            labelEl.style.display = 'block';
-          } else {
-            labelEl.textContent = 'VISIT ↗';
-            labelEl.style.display = 'block';
-          }
+          newCursorType = 'link';
+          newLabelText = customLabel || 'VISIT ↗';
         } else if (state.hoverType === 'text') {
-          outerEl.classList.add('is-text');
-          coreEl.classList.add('is-text');
-          labelEl.style.display = 'none';
-        } else {
-          labelEl.style.display = 'none';
+          newCursorType = 'text';
+          newLabelText = '';
+        }
+
+        const stateKey = `${newCursorType}:${newLabelText}`;
+        if (stateKey !== currentCursorKeyRef.current) {
+          currentCursorKeyRef.current = stateKey;
+
+          outerEl.classList.remove('is-button', 'is-link', 'is-project', 'is-text');
+          coreEl.classList.remove('is-button', 'is-text');
+
+          if (newCursorType === 'project') {
+            outerEl.classList.add('is-project');
+            labelEl.textContent = newLabelText;
+            labelEl.style.display = 'block';
+          } else if (newCursorType === 'drag') {
+            outerEl.classList.add('is-button');
+            labelEl.textContent = newLabelText;
+            labelEl.style.display = 'block';
+          } else if (newCursorType === 'button') {
+            outerEl.classList.add('is-button');
+            coreEl.classList.add('is-button');
+            labelEl.textContent = newLabelText;
+            labelEl.style.display = 'block';
+          } else if (newCursorType === 'link') {
+            outerEl.classList.add('is-link');
+            labelEl.textContent = newLabelText;
+            labelEl.style.display = 'block';
+          } else if (newCursorType === 'text') {
+            outerEl.classList.add('is-text');
+            coreEl.classList.add('is-text');
+            labelEl.style.display = 'none';
+          } else {
+            labelEl.style.display = 'none';
+          }
         }
       }
     });
