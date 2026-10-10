@@ -41,7 +41,7 @@ export interface MotionParticleWorldProps {
   className?: string;
 }
 
-const PARTICLE_COUNT = 7500;
+const PARTICLE_COUNT = 9500; // Increased by ~26.7% (within 20-30% target) with scaled Float32Array buffers
 
 const vertexShader = `
   uniform float uTime;
