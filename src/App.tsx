@@ -144,7 +144,7 @@ export default function App() {
           />
         </div>
 
-        {/* High-End Motion Particle World (Living Digital Matter with Optical Shine) */}
+        {/* Luxury Interactive Particle Universe (Award-Winning Creative Studio Experience) */}
         <MotionParticleWorld />
 
         <div className="relative z-10 flex flex-col">
