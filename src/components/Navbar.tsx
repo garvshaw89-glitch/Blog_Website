@@ -21,8 +21,20 @@ export const Navbar: React.FC<NavbarProps> = ({
     const handleScroll = () => {
       setHasScrolled(window.scrollY > 40);
 
-      const sections = ['hero-section', 'about', 'projects', 'writing', 'contact'];
-      const scrollPos = window.scrollY + 200;
+      const sections = [
+        'hero-section',
+        'about',
+        'capabilities',
+        'digital-dna',
+        'projects',
+        'github-telemetry',
+        'journey',
+        'constellation',
+        'writing',
+        'ai-lab',
+        'contact',
+      ];
+      const scrollPos = window.scrollY + 220;
 
       for (const sectionId of sections) {
         const el = document.getElementById(sectionId);
@@ -79,6 +91,38 @@ export const Navbar: React.FC<NavbarProps> = ({
               SYS // 2026
             </span>
           </button>
+
+          {/* Dynamic Sticky Section Indicator in Navbar */}
+          {hasScrolled && (
+            <div className="hidden sm:flex items-center gap-1.5 pl-2.5 border-l border-white/10 animate-fadeIn">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-300 font-semibold">
+                {activeSection === 'hero-section'
+                  ? 'HERO'
+                  : activeSection === 'about'
+                  ? 'ABOUT'
+                  : activeSection === 'capabilities'
+                  ? 'CAPABILITIES'
+                  : activeSection === 'digital-dna'
+                  ? 'DIGITAL DNA'
+                  : activeSection === 'projects'
+                  ? 'PROJECTS'
+                  : activeSection === 'github-telemetry'
+                  ? 'GITHUB'
+                  : activeSection === 'journey'
+                  ? 'JOURNEY'
+                  : activeSection === 'constellation'
+                  ? 'CONSTELLATION'
+                  : activeSection === 'writing'
+                  ? 'WRITING'
+                  : activeSection === 'ai-lab'
+                  ? 'AI LAB'
+                  : activeSection === 'contact'
+                  ? 'CONTACT'
+                  : activeSection.toUpperCase()}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Desktop Top-Center/Right: Editorial Nav Links */}

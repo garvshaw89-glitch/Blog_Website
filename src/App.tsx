@@ -7,6 +7,7 @@ import { LuxuryIntro } from './components/intro/LuxuryIntro';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { MotionParticleWorld } from './components/atmosphere/MotionParticleWorld';
 import { SectionProgressHUD } from './components/ui/SectionProgressHUD';
+import { StickySectionHeader } from './components/ui/StickySectionHeader';
 import { EasterEggToast } from './components/ui/EasterEggToast';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
@@ -106,6 +107,20 @@ export default function App() {
           onContactClick={handleScrollToContact}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onReplayIntro={handleReplayIntro}
+        />
+
+        {/* 6b. Dynamic Sticky Section Header (updates based on scroll position) */}
+        <StickySectionHeader
+          onNavigateToSection={(sectionId) => {
+            if (sectionId === 'contact') {
+              handleScrollToContact();
+            } else if (sectionId === 'projects') {
+              handleScrollToProjects();
+            } else {
+              const el = document.getElementById(sectionId);
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }
+          }}
         />
 
         {/* Ambient Dark Spatial Background Vignette (base layer) */}

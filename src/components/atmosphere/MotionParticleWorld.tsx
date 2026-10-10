@@ -37,6 +37,7 @@ const vertexShader = `
   uniform float uPointerForce;  // Repulsion force
   uniform float uScrollOffset;  // Scroll parallax offset
   uniform float uScrollVel;     // Scroll impulse
+  uniform float uScrollProgress;// Normalized scroll position [0.0 to 1.0]
   uniform float uShockTime;     // Time since last click
   uniform vec2 uShockOrigin;    // Click origin in NDC [-1, 1]
   uniform float uPixelRatio;
@@ -270,22 +271,42 @@ const vertexShader = `
     // Calculate alpha with custom uOpacity uniform modulation
     vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow + sparkle * 0.5) * uOpacity, 0.05, 1.0);
 
-    // 8. COLOR PALETTE: LUXURY MONOCHROME WITH PRISTINE DIAMOND & CELESTIAL TONES
-    vec3 farColor = vec3(0.70, 0.78, 0.90);     // Luminous celestial silver/ice
-    vec3 midColor = vec3(0.86, 0.92, 0.98);     // Platinum white with subtle azure sheen
-    vec3 nearColor = vec3(0.98, 0.99, 1.00);    // Crisp diamond white
+    // 8. SCROLL-DRIVEN SUBTLE COLOR-SHIFTING CYCLE: COLD BLUE -> VIBRANT CYAN
+    // Progressively shifts from cold blue hues at top to vibrant cyan tones as user scrolls
+    float seedPhase = (aSeed.x - 0.5) * 0.18 + (aSeed.y - 0.5) * 0.10;
+    float harmonicBreathe = sin(uTime * 0.35 + aSeed.z * 6.28) * 0.05;
+    float scrollProg = clamp(uScrollProgress, 0.0, 1.0);
+    // Smooth, cinematic cycle progression with organic particle phase dispersion
+    float cycleT = clamp(smoothstep(0.0, 0.88, scrollProg) + seedPhase + harmonicBreathe, 0.0, 1.0);
+
+    // COLD BLUE SPECTRUM (Scroll position = 0 / Hero & top)
+    // Deep, crystalline glacial blues with pristine depth
+    vec3 coldBlueFar  = vec3(0.20, 0.42, 0.82); // Cold glacial cobalt
+    vec3 coldBlueMid  = vec3(0.38, 0.62, 0.96); // Luminous arctic ice blue
+    vec3 coldBlueNear = vec3(0.72, 0.86, 1.00); // Crisp celestial diamond blue
+
+    // VIBRANT CYAN SPECTRUM (Lower scroll positions / Mid-to-bottom sections)
+    // Luminous, vibrant electric cyan and radiant aqua
+    vec3 cyanFar  = vec3(0.02, 0.64, 0.84);     // Deep electric ocean cyan
+    vec3 cyanMid  = vec3(0.12, 0.88, 0.98);     // Vibrant radiant cyan
+    vec3 cyanNear = vec3(0.58, 0.98, 1.00);     // Brilliant luminous aquamarine diamond
+
+    // Interpolate per depth layer across the scroll color-shift cycle
+    vec3 shiftedFar  = mix(coldBlueFar, cyanFar, cycleT);
+    vec3 shiftedMid  = mix(coldBlueMid, cyanMid, cycleT);
+    vec3 shiftedNear = mix(coldBlueNear, cyanNear, cycleT);
 
     vec3 baseCol;
     if (aLayer < 0.5) {
-      baseCol = farColor;
+      baseCol = shiftedFar;
     } else if (aLayer < 1.5) {
-      baseCol = mix(farColor, midColor, 0.65);
+      baseCol = mix(shiftedFar, shiftedMid, 0.65);
     } else {
-      baseCol = mix(midColor, nearColor, 0.85);
+      baseCol = mix(shiftedMid, shiftedNear, 0.85);
     }
 
-    // Subtle section theme tinting
-    vColor = mix(baseCol, uThemeColor, 0.22);
+    // Blend gently with section theme accent while preserving cold blue -> vibrant cyan cycle
+    vColor = mix(baseCol, uThemeColor, 0.14);
   }
 `;
 
@@ -466,6 +487,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       uPointerForce: { value: 0.22 },  // Smooth physical repulsion
       uScrollOffset: { value: 0 },
       uScrollVel: { value: 0 },
+      uScrollProgress: { value: 0 },   // Scroll-driven color shift uniform [0..1]
       uShockTime: { value: -1 },
       uShockOrigin: { value: new THREE.Vector2(0, 0) },
       uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
@@ -498,6 +520,8 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
 
     let targetScrollY = 0;
     let smoothScrollY = 0;
+    let targetScrollProgress = 0;
+    let smoothScrollProgress = 0;
     let scrollVel = 0;
 
     let shockStartTime = -1;
@@ -514,6 +538,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       targetPointerX = state.ndcX;
       targetPointerY = state.ndcY;
       targetScrollY = state.scrollY;
+      targetScrollProgress = state.scrollProgress;
 
       if (state.lastClickTime > 0) {
         shockStartTime = state.lastClickTime / 1000;
@@ -616,9 +641,16 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       smoothScrollY += (targetScrollY - smoothScrollY) * 0.1;
       scrollVel = (smoothScrollY - oldScroll) * 0.02;
 
-      // Normalize scroll offset to subtle world units
+      // Calculate scroll progress with real-time viewport fallback
+      const docHeight = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      const directProgress = Math.min(Math.max((window.scrollY || 0) / docHeight, 0), 1);
+      const activeProgressTarget = targetScrollProgress > 0 ? targetScrollProgress : directProgress;
+      smoothScrollProgress += (activeProgressTarget - smoothScrollProgress) * 0.08;
+
+      // Normalize scroll offset and progress to uniforms
       uniforms.uScrollOffset.value = -smoothScrollY * 0.012;
       uniforms.uScrollVel.value = -scrollVel;
+      uniforms.uScrollProgress.value = smoothScrollProgress;
 
       // Shockwave timing
       if (shockStartTime > 0) {
