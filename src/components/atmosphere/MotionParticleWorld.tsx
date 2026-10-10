@@ -37,10 +37,11 @@ import { interactionEngine } from '../../context/SingularityInteractionEngine';
 export interface MotionParticleWorldProps {
   opacity?: number;
   sizeVariation?: number;
+  glowIntensity?: number;
   className?: string;
 }
 
-const PARTICLE_COUNT = 4800;
+const PARTICLE_COUNT = 7500;
 
 const vertexShader = `
   uniform float uTime;
@@ -60,6 +61,7 @@ const vertexShader = `
   uniform vec3 uThemeColor;       // Subtly blended ambient section tone
   uniform float uOpacity;         // Global opacity uniform
   uniform float uSizeVariation;   // Global size variation uniform
+  uniform float uGlowIntensity;   // Radial falloff and luminous glow intensity uniform
 
   attribute float aSize;          // Pre-calibrated CSS pixel diameter (0.8 to 2.2)
   attribute float aLayer;         // 0 = DISTANT, 1 = MAIN, 2 = HIGHLIGHT
@@ -410,35 +412,32 @@ const vertexShader = `
     float speedSizeBoost = 1.0 + clamp(uScrollSpeedNorm * 0.08, 0.0, 0.12);
 
     float cssDiameter = aSize * perspectiveScale * uSizeVariation * speedSizeBoost;
-    // Strictly bounded between 0.75 px and 2.20 CSS px
-    cssDiameter = clamp(cssDiameter, 0.75, 2.20);
+    // Minimal subtle size calibration (0.90 to 2.50 CSS px)
+    cssDiameter = clamp(cssDiameter, 0.90, 2.50);
 
     float physicalSize = cssDiameter * uPixelRatio;
-    // Hard physical cap: guarantees visibility on 1x while preventing oversized circles
-    gl_PointSize = clamp(physicalSize, 1.0, 2.25 * uPixelRatio * uSizeVariation);
+    // Guaranteed crisp rendering: clamp between 1.2px physical and 2.55 * uPixelRatio
+    gl_PointSize = clamp(physicalSize, 1.2, 2.55 * uPixelRatio * uSizeVariation);
 
     // =========================================================================
-    // 6. RADIANT SILVER OPACITY & SCINTILLATION
-    // - Distant wisps: 0.35–0.52
-    // - Main silk ribbon: 0.55–0.78
-    // - Highlight stars: 0.78–0.96
+    // 6. RADIANT SILVER OPACITY & SCINTILLATION (ENHANCED SHINE)
     // =========================================================================
-    float twinklePhase = effectiveTime * (1.8 + aSeed.y * 2.8) + aSeed.x * 62.83;
-    float twinkle = pow(max(0.0, sin(twinklePhase)), 8.0);
-    vTwinkle = twinkle * (0.5 + aSeed.z * 0.5);
+    float twinklePhase = effectiveTime * (2.0 + aSeed.y * 3.2) + aSeed.x * 62.83;
+    float twinkle = pow(max(0.0, sin(twinklePhase)), 6.0);
+    vTwinkle = twinkle * (0.65 + aSeed.z * 0.45);
 
-    float depthAlpha = 0.70 + 0.30 * smoothstep(-110.0, -30.0, mvPosition.z);
+    float depthAlpha = 0.72 + 0.28 * smoothstep(-110.0, -30.0, mvPosition.z);
     float pulse = 0.94 + 0.06 * sin(effectiveTime * 0.55 + aSeed.z * 10.0);
 
-    vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow + vTwinkle * 0.28) * uOpacity * heroAttenuation * flankBoost, 0.0, 1.0);
+    vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow + vTwinkle * 0.35) * uOpacity * heroAttenuation * flankBoost, 0.0, 1.0);
 
     // =========================================================================
     // 7. MONOCHROME SILVER-WHITE & TITANIUM PALETTE
     // Fine digital silk aesthetic: muted silver-grey, radiant platinum, diamond white
     // =========================================================================
-    vec3 silverGrey   = vec3(0.62, 0.66, 0.74);  // Restrained cool silver-grey
-    vec3 platinumMid  = vec3(0.82, 0.86, 0.94);  // Luminous silk platinum
-    vec3 pureWhite    = vec3(0.98, 0.99, 1.00);  // Pure crystalline white highlight
+    vec3 silverGrey   = vec3(0.65, 0.70, 0.78);  // Crisp cool silver-grey
+    vec3 platinumMid  = vec3(0.85, 0.89, 0.96);  // Radiant silk platinum
+    vec3 pureWhite    = vec3(0.99, 1.00, 1.00);  // Pure crystalline white highlight
 
     vec3 baseCol;
     if (aLayer < 0.5) {
@@ -455,6 +454,7 @@ const vertexShader = `
 
 const fragmentShader = `
   uniform float uOpacity;
+  uniform float uGlowIntensity; // Radial falloff and luminous glow intensity uniform
 
   varying float vAlpha;
   varying float vLayer;
@@ -472,24 +472,45 @@ const fragmentShader = `
     }
 
     // =========================================================================
-    // REFINED DIGITAL SILK MICRO-DOT SHADER
-    // Anti-aliased circular disc with luminous micro-specular core (no large halo)
+    // LUMINOUS DIGITAL SILK SHADER (SUBTLE RADIAL FALLOFF & RADIANT GLOW)
+    // Anti-aliased circular disc + needle specular core + soft radial falloff glow
     // =========================================================================
-    // Sub-pixel anti-aliased edge
-    float edge = smoothstep(0.50, 0.22, dist);
-    // Micro-specular core in the center
-    float core = exp(-dist * 8.5);
-    // Delicate star glint for highlight sparkles
-    float starGlint = (exp(-abs(coord.y) * 20.0) + exp(-abs(coord.x) * 20.0)) * 0.20;
+    // 1. Sub-pixel anti-aliased edge mask for clean circular discipline
+    float edgeMask = smoothstep(0.50, 0.22, dist);
 
-    // Pure white specular center
+    // 2. Needle-point specular core (instantaneous falloff, brilliant center)
+    float core = exp(-dist * 8.5) * 1.45;
+
+    // 3. Subtle radial falloff glow halo (exponential-gaussian luminous aura)
+    // Infuses the particle with authentic luminous warmth and ethereal presence
+    float radialFalloff = exp(-dist * 4.6) * (0.62 * uGlowIntensity);
+    float glowAura = pow(max(0.0, 1.0 - dist * 2.0), 2.2) * (0.38 * uGlowIntensity);
+    float totalRadialGlow = radialFalloff + glowAura;
+
+    // 4. Optical 4-point diamond star cross rays (crystalline glint & shine)
+    float rayH = exp(-abs(coord.y) * 22.0) * max(0.0, 1.0 - abs(coord.x) * 2.2);
+    float rayV = exp(-abs(coord.x) * 22.0) * max(0.0, 1.0 - abs(coord.y) * 2.2);
+    float starFlare = (rayH + rayV) * 0.40;
+
+    // 5. Faceted diagonal glint (scintillation facet)
+    vec2 diag = vec2(coord.x + coord.y, coord.x - coord.y) * 0.7071;
+    float diagRay1 = exp(-abs(diag.y) * 26.0) * max(0.0, 1.0 - abs(diag.x) * 2.4);
+    float diagRay2 = exp(-abs(diag.x) * 26.0) * max(0.0, 1.0 - abs(diag.y) * 2.4);
+    float diamondGlint = (diagRay1 + diagRay2) * 0.22;
+
+    // 6. Total combined radiant luminous intensity
+    float luminousIntensity = core 
+                            + totalRadialGlow 
+                            + (starFlare + diamondGlint) * (0.65 + vTwinkle * 1.35);
+
+    // 7. Brilliant pure white diamond center fading into luminous silver aura
     vec3 pureWhite = vec3(1.0, 1.0, 1.0);
-    vec3 finalColor = mix(vColor, pureWhite, clamp(core * 0.55 + vTwinkle * 0.55, 0.0, 1.0));
+    float coreWhiteness = clamp(core * 0.72 + vTwinkle * 0.65, 0.0, 1.0);
+    vec3 finalColor = mix(vColor, pureWhite, coreWhiteness);
 
-    float intensity = mix(edge, core, 0.45) + starGlint * vTwinkle;
-    float finalAlpha = clamp(vAlpha * intensity * uOpacity, 0.0, 1.0);
+    float finalAlpha = clamp(vAlpha * (luminousIntensity * 0.72 + edgeMask * 0.32) * uOpacity, 0.0, 1.0);
 
-    if (finalAlpha < 0.006) {
+    if (finalAlpha < 0.005) {
       discard;
     }
 
@@ -500,16 +521,19 @@ const fragmentShader = `
 export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
   opacity = 1.0,
   sizeVariation = 1.0,
+  glowIntensity = 1.0,
   className = '',
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const opacityRef = useRef(opacity);
   const sizeVariationRef = useRef(sizeVariation);
+  const glowIntensityRef = useRef(glowIntensity);
 
   useEffect(() => {
     opacityRef.current = opacity;
     sizeVariationRef.current = sizeVariation;
-  }, [opacity, sizeVariation]);
+    glowIntensityRef.current = glowIntensity;
+  }, [opacity, sizeVariation, glowIntensity]);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -544,7 +568,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
     renderer.setPixelRatio(pixelRatio);
     renderer.setClearColor(0x000000, 0); // 100% transparent clear color
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.08;
+    renderer.toneMappingExposure = 1.15;
 
     const domCanvas = renderer.domElement;
     domCanvas.style.position = 'absolute';
@@ -585,24 +609,24 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
         currentId = 1; // Upper wisp
       }
 
-      // Layer Distribution (Phase 2 Targets):
-      // - Distant / Ambient (~78%): 0.85–1.18 CSS px, Alpha: 0.36–0.54
-      // - Main Ribbon Spine (~18%): 1.25–1.68 CSS px, Alpha: 0.58–0.76
-      // - Highlight Star (~4%): 1.70–2.15 CSS px, Alpha: 0.78–0.92
+      // Layer Distribution (Minimal Subtle Size Increase for Luminous Radial Falloff):
+      // - Distant / Ambient (~78%): 0.98–1.36 CSS px, Alpha: 0.42–0.58
+      // - Main Ribbon Spine (~18%): 1.42–1.88 CSS px, Alpha: 0.65–0.83
+      // - Highlight Star (~4%): 1.95–2.45 CSS px, Alpha: 0.85–0.97
       let layer = 0;
-      let cssSize = 0.85 + Math.random() * 0.33;   // 0.85 – 1.18 CSS px
-      let alphaBase = 0.38 + Math.random() * 0.16; // 0.38 – 0.54 opacity
+      let cssSize = 0.98 + Math.random() * 0.38;   // 0.98 – 1.36 CSS px
+      let alphaBase = 0.42 + Math.random() * 0.16; // 0.42 – 0.58 opacity
 
       if (seedVal > 0.96) {
         // HIGHLIGHT STAR (4%)
         layer = 2;
-        cssSize = 1.70 + Math.random() * 0.45;     // 1.70 – 2.15 CSS px
-        alphaBase = 0.78 + Math.random() * 0.14;   // 0.78 – 0.92 opacity
+        cssSize = 1.95 + Math.random() * 0.50;     // 1.95 – 2.45 CSS px
+        alphaBase = 0.85 + Math.random() * 0.12;   // 0.85 – 0.97 opacity
       } else if (seedVal > 0.78) {
         // MAIN RIBBON SPINE (18%)
         layer = 1;
-        cssSize = 1.25 + Math.random() * 0.42;     // 1.25 – 1.67 CSS px
-        alphaBase = 0.58 + Math.random() * 0.18;   // 0.58 – 0.76 opacity
+        cssSize = 1.42 + Math.random() * 0.46;     // 1.42 – 1.88 CSS px
+        alphaBase = 0.65 + Math.random() * 0.18;   // 0.65 – 0.83 opacity
       }
 
       // Initial parametric base seeds
@@ -651,6 +675,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       uThemeColor: { value: new THREE.Color(0xbcc5d2) }, // Radiant platinum
       uOpacity: { value: opacityRef.current },
       uSizeVariation: { value: sizeVariationRef.current },
+      uGlowIntensity: { value: glowIntensityRef.current },
     };
 
     const material = new THREE.ShaderMaterial({
@@ -780,6 +805,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
 
       uniforms.uOpacity.value = opacityRef.current;
       uniforms.uSizeVariation.value = sizeVariationRef.current;
+      uniforms.uGlowIntensity.value = glowIntensityRef.current;
 
       // Smooth pointer presence
       smoothPointerActive += (targetPointerActive - smoothPointerActive) * (dt * 7.5);
