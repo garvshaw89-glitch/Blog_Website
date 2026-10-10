@@ -46,6 +46,7 @@ const vertexShader = `
   uniform vec3 uThemeColor;     // Dynamic section accent
   uniform float uOpacity;       // Custom uniform for overall opacity
   uniform float uSizeVariation; // Custom uniform for point size variation
+  uniform float uTrailLag;      // Lag offset for data-stream trails
 
   attribute float aSize;
   attribute float aLayer;       // 0 = FAR, 1 = MID, 2 = NEAR
@@ -57,6 +58,7 @@ const vertexShader = `
   varying vec3 vColor;
   varying float vSparkle;
   varying vec3 vSeed;
+  varying float vNodeT;
 
   // GLSL 3D Simplex-like noise helper for organic fluid currents
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -174,24 +176,34 @@ const vertexShader = `
   void main() {
     vLayer = aLayer;
     vSeed = aSeed;
+    vNodeT = clamp(1.0 - uTrailLag * 2.8, 0.05, 1.0);
     vec3 pos = position;
+
+    // Delayed stream time for persistent data-stream trails behind moving particles
+    float effectiveTime = uTime - uTrailLag;
 
     // Mobility coefficients per depth layer
     float mobility = 0.28 + aLayer * 0.42;
     float timeScale = 0.038 * (0.65 + aSeed.x * 0.35);
 
-    // 1. Large-scale evolving 3D curl flow field
+    // 1. Large-scale evolving 3D curl flow field along stream history
     vec3 noiseCoord = pos * 0.025 + vec3(aSeed.y * 8.0, aSeed.z * 8.0, 0.0);
-    vec3 flow = curlNoise(noiseCoord, uTime * timeScale);
+    vec3 flow = curlNoise(noiseCoord, effectiveTime * timeScale);
 
-    // Continuous laminar drift + organic sinusoids
-    pos.x += flow.x * (18.0 * mobility) + sin(uTime * 0.22 + aSeed.x * 6.28) * (3.5 * mobility);
-    pos.y += flow.y * (16.0 * mobility) + cos(uTime * 0.20 + aSeed.y * 6.28) * (3.5 * mobility);
+    // Continuous laminar drift + organic sinusoids along motion path
+    pos.x += flow.x * (18.0 * mobility) + sin(effectiveTime * 0.22 + aSeed.x * 6.28) * (3.5 * mobility);
+    pos.y += flow.y * (16.0 * mobility) + cos(effectiveTime * 0.20 + aSeed.y * 6.28) * (3.5 * mobility);
     pos.z += flow.z * (12.0 * mobility);
+
+    // Streamline trail data offset along flow velocity vector to form continuous stream filaments
+    if (uTrailLag > 0.001) {
+      vec3 streamDir = normalize(vec3(flow.x, flow.y, flow.z * 0.5) + vec3(0.001));
+      pos -= streamDir * (uTrailLag * 26.0 * mobility);
+    }
 
     // 2. Procedural Morphing Transition
     if (uMorphWeight > 0.001) {
-      vec3 targetPos = getTargetFormation(position, aSeed, uTime, uMorphState);
+      vec3 targetPos = getTargetFormation(position, aSeed, effectiveTime, uMorphState);
       pos = mix(pos, targetPos, uMorphWeight * (0.65 + aLayer * 0.2));
     }
 
@@ -251,30 +263,32 @@ const vertexShader = `
 
     // 6. POINT SIZE ATTENUATION WITH CUSTOM SIZE VARIATION UNIFORM
     // Base size modulated by individual seed variation and the uSizeVariation uniform
-    float seedVariation = 0.80 + aSeed.y * 0.40;
+    float seedVariation = 0.85 + aSeed.y * 0.35;
     float baseSize = aSize * seedVariation * uSizeVariation;
-    gl_PointSize = baseSize * (220.0 / -mvPosition.z) * uPixelRatio;
-    // Clamped comfortably with size variation scaling
-    gl_PointSize = clamp(gl_PointSize, 2.5 * uSizeVariation, 26.0 * uSizeVariation);
+    // Data stream trail nodes taper gracefully along the tail
+    float trailSizeTaper = 1.0 - clamp(uTrailLag * 2.2, 0.0, 0.55);
+    gl_PointSize = baseSize * trailSizeTaper * (190.0 / -mvPosition.z) * uPixelRatio;
+    // Clamped so star flare rays render crisply without oversize blobs
+    gl_PointSize = clamp(gl_PointSize, 2.0 * uSizeVariation, 20.0 * uSizeVariation);
 
     // 7. OPTICAL SHINE & SCINTILLATION (TWINKLE)
-    float sparklePhase = uTime * (1.6 + aSeed.y * 2.4) + aSeed.x * 62.83;
-    float sparkle = pow(max(0.0, sin(sparklePhase)), 10.0);
+    float sparklePhase = effectiveTime * (1.8 + aSeed.y * 2.8) + aSeed.x * 62.83;
+    float sparkle = pow(max(0.0, sin(sparklePhase)), 8.0);
     vSparkle = sparkle;
 
     // Depth alpha attenuation
-    float depthAlpha = 0.52 + 0.48 * smoothstep(-135.0, -45.0, mvPosition.z);
+    float depthAlpha = 0.55 + 0.45 * smoothstep(-135.0, -45.0, mvPosition.z);
 
     // Ambient breathing oscillation
-    float pulse = 0.88 + 0.12 * sin(uTime * 0.75 + aSeed.z * 14.0);
+    float pulse = 0.88 + 0.12 * sin(effectiveTime * 0.75 + aSeed.z * 14.0);
 
-    // Calculate alpha with custom uOpacity uniform modulation
-    vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow + sparkle * 0.5) * uOpacity, 0.05, 1.0);
+    // Calculate alpha with custom uOpacity uniform modulation and trail taper
+    vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow + sparkle * 0.6) * uOpacity * vNodeT, 0.04, 1.0);
 
     // 8. SCROLL-DRIVEN SUBTLE COLOR-SHIFTING CYCLE: COLD BLUE -> VIBRANT CYAN
     // Progressively shifts from cold blue hues at top to vibrant cyan tones as user scrolls
     float seedPhase = (aSeed.x - 0.5) * 0.18 + (aSeed.y - 0.5) * 0.10;
-    float harmonicBreathe = sin(uTime * 0.35 + aSeed.z * 6.28) * 0.05;
+    float harmonicBreathe = sin(effectiveTime * 0.35 + aSeed.z * 6.28) * 0.05;
     float scrollProg = clamp(uScrollProgress, 0.0, 1.0);
     // Smooth, cinematic cycle progression with organic particle phase dispersion
     float cycleT = clamp(smoothstep(0.0, 0.88, scrollProg) + seedPhase + harmonicBreathe, 0.0, 1.0);
@@ -325,33 +339,46 @@ const fragmentShader = `
     vec2 coord = gl_PointCoord - vec2(0.5);
     float dist = length(coord);
 
-    // Circular point boundary clipping with smooth anti-aliased edge
+    // Discard outside point sprite boundary
     if (dist > 0.5) {
       discard;
     }
 
-    // Normalized radial distance factor: 1.0 at center, 0.0 at outer boundary
-    float radialFactor = clamp(1.0 - dist * 2.0, 0.0, 1.0);
-
     // =========================================================================
-    // CLEAN, CRISP PARTICLE SHAPING (No excessive bloom haze)
+    // REMOVED BLOOMING DOT: PURE SHINY SPECULAR CORE & DIAMOND STAR GLINT
+    // Zero circular disc, zero blooming halos, zero blurry round dot shapes
     // =========================================================================
-    // Crisp, natural disc falloff: sharp anti-aliased edge with smooth inner falloff
-    float disc = smoothstep(0.5, 0.28, dist);
 
-    // Subtle gentle specular core for elegant luxury shine
-    float coreNucleus = smoothstep(0.18, 0.0, dist) * (1.2 + vSparkle * 0.8);
+    // 1. Ultra-sharp needle-point specular core (instantaneous falloff, ZERO round blooming dot)
+    float specularCore = exp(-dist * 22.0);
 
-    // Subtle natural light intensity without milky over-saturation
-    float intensity = disc + coreNucleus * 0.5;
+    // 2. Optical 4-point diamond star diffraction rays (crystalline glint & shine)
+    float rayH = exp(-abs(coord.y) * 26.0) * max(0.0, 1.0 - abs(coord.x) * 2.2);
+    float rayV = exp(-abs(coord.x) * 26.0) * max(0.0, 1.0 - abs(coord.y) * 2.2);
+    float starFlare = (rayH + rayV) * 0.75;
 
-    // Pristine diamond center mix
-    vec3 hotCore = vec3(1.0, 1.0, 1.0);
-    float coreMix = clamp(coreNucleus * 0.8 + vSparkle * 0.6, 0.0, 1.0);
-    vec3 finalColor = mix(vColor, hotCore, coreMix);
+    // 3. Faceted diamond diagonal glint (scintillation / twinkle facet)
+    vec2 diag = vec2(coord.x + coord.y, coord.x - coord.y) * 0.7071;
+    float diagRay1 = exp(-abs(diag.y) * 34.0) * max(0.0, 1.0 - abs(diag.x) * 2.8);
+    float diagRay2 = exp(-abs(diag.x) * 34.0) * max(0.0, 1.0 - abs(diag.y) * 2.8);
+    float diamondGlint = (diagRay1 + diagRay2) * 0.40;
 
-    // Multiply by alpha and opacity uniform
-    float finalAlpha = clamp(vAlpha * intensity * uOpacity, 0.0, 0.95);
+    // 4. Combined pure optical shine: diamond star rays + needle core (No blooming dot!)
+    float shineIntensity = specularCore * (1.4 + vSparkle * 2.0) 
+                         + (starFlare + diamondGlint) * (0.65 + vSparkle * 1.5);
+
+    // Discard near-zero outskirts to keep background clean and obsidian-black
+    if (shineIntensity < 0.015) {
+      discard;
+    }
+
+    // 5. Specular highlight: brilliant pure white diamond center fading into chromatic rays
+    vec3 pureWhite = vec3(1.0, 1.0, 1.0);
+    float coreWhiteness = clamp(specularCore * 1.6 + vSparkle * 0.8, 0.0, 1.0);
+    vec3 finalColor = mix(vColor, pureWhite, coreWhiteness);
+
+    // 6. Alpha calculation: high-contrast sparkling shine, no soft circular blob
+    float finalAlpha = clamp(vAlpha * shineIntensity * uOpacity, 0.0, 1.0);
 
     gl_FragColor = vec4(finalColor, finalAlpha);
   }
@@ -434,21 +461,21 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       let layer = 0; // FAR
       let zMin = -55;
       let zMax = -25;
-      let sizeBase = 2.8;
-      let alphaBase = 0.65;
+      let sizeBase = 2.4;
+      let alphaBase = 0.70;
 
       if (randLayer > 0.82) {
         layer = 2; // NEAR
         zMin = 0;
         zMax = 18;
-        sizeBase = 5.8;
-        alphaBase = 0.95;
+        sizeBase = 4.2;
+        alphaBase = 0.98;
       } else if (randLayer > 0.50) {
         layer = 1; // MID
         zMin = -25;
         zMax = 0;
-        sizeBase = 4.0;
-        alphaBase = 0.80;
+        sizeBase = 3.2;
+        alphaBase = 0.85;
       }
 
       // Natural central clustering with organic boundary dispersion
@@ -496,6 +523,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       uThemeColor: { value: new THREE.Color(0x7ea7ff) },
       uOpacity: { value: opacityRef.current },
       uSizeVariation: { value: sizeVariationRef.current },
+      uTrailLag: { value: 0.0 },
     };
 
     const material = new THREE.ShaderMaterial({
@@ -509,6 +537,70 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
 
     const particles = new THREE.Points(geometry, material);
     scene.add(particles);
+
+    // =========================================================================
+    // 4b. PERSISTENT 'DATA-STREAM' TRAIL EFFECT
+    // Multi-tiered delayed trail stream that tracks moving particles, rendering
+    // fine luminous data-trails behind them with chromatic scroll shift
+    // =========================================================================
+    const TRAIL_STEPS = 5; // Number of trail nodes in each data-stream ribbon
+    const trailGeometries: THREE.BufferGeometry[] = [];
+    const trailPoints: THREE.Points[] = [];
+
+    // Trail fragment shader: rendered as sleek, elongated micro-data points
+    const trailFragmentShader = `
+      uniform float uOpacity;
+      varying float vAlpha;
+      varying vec3 vColor;
+      varying float vNodeT; // 1.0 (near head) down to 0.0 (tail end)
+
+      void main() {
+        vec2 coord = gl_PointCoord - vec2(0.5);
+        float dist = length(coord);
+        if (dist > 0.5) discard;
+
+        // Data-stream micro-glint: horizontal stream compression
+        float streamCore = exp(-dist * 18.0);
+        float lineSheen = exp(-abs(coord.y) * 22.0) * max(0.0, 1.0 - abs(coord.x) * 2.0);
+        float intensity = (streamCore * 0.7 + lineSheen * 0.6) * vNodeT;
+
+        if (intensity < 0.02) discard;
+
+        vec3 streamColor = mix(vColor, vec3(0.85, 0.96, 1.0), streamCore * 0.5);
+        gl_FragColor = vec4(streamColor, clamp(vAlpha * intensity * uOpacity * 0.75, 0.0, 1.0));
+      }
+    `;
+
+    for (let s = 1; s <= TRAIL_STEPS; s++) {
+      const trailGeo = new THREE.BufferGeometry();
+      trailGeo.setAttribute('position', geometry.getAttribute('position'));
+      trailGeo.setAttribute('aLayer', geometry.getAttribute('aLayer'));
+      trailGeo.setAttribute('aSize', geometry.getAttribute('aSize'));
+      trailGeo.setAttribute('aAlpha', geometry.getAttribute('aAlpha'));
+      trailGeo.setAttribute('aSeed', geometry.getAttribute('aSeed'));
+
+      const lagRatio = s / (TRAIL_STEPS + 1);
+      const trailUniforms = {
+        ...uniforms,
+        uTrailLag: { value: s * 0.055 }, // Time delay offset for backward stream history
+        uOpacity: { value: opacityRef.current * (1.0 - lagRatio * 0.65) },
+        uSizeVariation: { value: sizeVariationRef.current * (1.0 - lagRatio * 0.45) },
+      };
+
+      const trailMat = new THREE.ShaderMaterial({
+        vertexShader,
+        fragmentShader: trailFragmentShader,
+        uniforms: trailUniforms,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+
+      const trailMesh = new THREE.Points(trailGeo, trailMat);
+      scene.add(trailMesh);
+      trailGeometries.push(trailGeo);
+      trailPoints.push(trailMesh);
+    }
 
     // 5. Interaction Tracking & Physics State
     let targetPointerX = 0;
@@ -670,6 +762,24 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       // Smooth theme color lerp
       uniforms.uThemeColor.value.lerp(targetColor, 0.04);
 
+      // Sync trail uniforms with main simulation
+      for (let s = 0; s < trailPoints.length; s++) {
+        const trMat = trailPoints[s].material as THREE.ShaderMaterial;
+        trMat.uniforms.uTime.value = seconds;
+        trMat.uniforms.uOpacity.value = opacityRef.current * (1.0 - ((s + 1) / (TRAIL_STEPS + 1)) * 0.60);
+        trMat.uniforms.uSizeVariation.value = sizeVariationRef.current * (0.85 - ((s + 1) / (TRAIL_STEPS + 1)) * 0.40);
+        trMat.uniforms.uPointer.value.copy(uniforms.uPointer.value);
+        trMat.uniforms.uPointerVel.value.copy(uniforms.uPointerVel.value);
+        trMat.uniforms.uScrollOffset.value = uniforms.uScrollOffset.value;
+        trMat.uniforms.uScrollVel.value = uniforms.uScrollVel.value;
+        trMat.uniforms.uScrollProgress.value = uniforms.uScrollProgress.value;
+        trMat.uniforms.uShockTime.value = uniforms.uShockTime.value;
+        trMat.uniforms.uShockOrigin.value.copy(uniforms.uShockOrigin.value);
+        trMat.uniforms.uMorphState.value = uniforms.uMorphState.value;
+        trMat.uniforms.uMorphWeight.value = uniforms.uMorphWeight.value;
+        trMat.uniforms.uThemeColor.value.copy(uniforms.uThemeColor.value);
+      }
+
       // Subtle scene camera breathing & inclination based on pointer
       camera.position.x += (smoothPointerX * 2.8 - camera.position.x) * 0.04;
       camera.position.y += (smoothPointerY * 2.2 - camera.position.y) * 0.04;
@@ -691,6 +801,8 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
 
       geometry.dispose();
       material.dispose();
+      trailGeometries.forEach((g) => g.dispose());
+      trailPoints.forEach((p) => (p.material as THREE.Material).dispose());
       renderer.dispose();
 
       if (container.contains(domCanvas)) {
