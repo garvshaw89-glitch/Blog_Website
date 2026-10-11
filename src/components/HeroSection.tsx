@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { IdentityCore } from './ui/IdentityCore';
-import { ArrowDown, ArrowUpRight, Sparkles, Terminal, Activity, Rocket } from 'lucide-react';
-import { interactionEngine } from '../context/SingularityInteractionEngine';
+import { ArrowDown, ArrowUpRight, Sparkles, Terminal, Activity } from 'lucide-react';
 
 interface HeroSectionProps {
   onContactClick?: () => void;
@@ -59,69 +58,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   id = 'hero-section',
 }) => {
   const [rotationIndex, setRotationIndex] = useState(2);
-  const [rocketTelemetry, setRocketTelemetry] = useState<{
-    isActive: boolean;
-    stage: string;
-    speed: number;
-  }>({
-    isActive: false,
-    stage: 'IDLE',
-    speed: 0,
-  });
-
-  const handleLaunchRocket = () => {
-    interactionEngine.triggerRocketLaunch(0, -0.92);
-  };
-
   useEffect(() => {
-    const unsubscribe = interactionEngine.subscribe((state) => {
-      if (state.rocketEmitter) {
-        setRocketTelemetry({
-          isActive: state.rocketEmitter.isActive,
-          stage: state.rocketEmitter.stage,
-          speed: Math.round(state.rocketEmitter.speed),
-        });
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Automatic rocket liftoff on page load & periodic cinematic launch
-  useEffect(() => {
-    // Initial cinematic appearance after page elements settle
-    const initialLaunchTimer = setTimeout(() => {
-      interactionEngine.triggerRocketLaunch(0, -0.92);
-    }, 1600);
-
-    // Periodic automatic launch every 24s so the particle rocket is a living signature feature
-    const recurringLaunchTimer = setInterval(() => {
-      // Only auto-launch if not currently active and user is near top of page
-      if (
-        !interactionEngine.state.rocketEmitter.isActive &&
-        typeof window !== 'undefined' &&
-        window.scrollY < window.innerHeight * 0.8
-      ) {
-        interactionEngine.triggerRocketLaunch(0, -0.92);
-      }
-    }, 24000);
-
-    return () => {
-      clearTimeout(initialLaunchTimer);
-      clearInterval(recurringLaunchTimer);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.key.toLowerCase() === 'r' &&
-        !['input', 'textarea'].includes((e.target as HTMLElement)?.tagName?.toLowerCase())
-      ) {
-        handleLaunchRocket();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const timer = setInterval(() => {
+      setRotationIndex((prev) => (prev + 1) % HEADLINE_ROTATIONS.length);
+    }, 5500);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -276,39 +217,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             className="px-5 py-2.5 rounded-lg bg-[#11151A] hover:bg-[#171C22] border border-white/[0.08] hover:border-white/20 text-[#A7ADB5] hover:text-[#F2F3F5] font-mono text-xs tracking-wider transition-all cursor-pointer"
           >
             START A CONVERSATION
-          </button>
-
-          <button
-            type="button"
-            onClick={handleLaunchRocket}
-            data-cursor="button"
-            data-cursor-label="ROCKET"
-            className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-lg border font-mono text-xs tracking-wider transition-all cursor-pointer ${
-              rocketTelemetry.isActive
-                ? 'bg-[#FF9D38]/20 border-[#FF9D38] text-[#FF9D38] shadow-[0_0_24px_rgba(255,157,56,0.4)]'
-                : 'bg-[#11151A] hover:bg-[#191F26] border-amber-500/30 hover:border-amber-400/70 text-amber-200 hover:text-white'
-            }`}
-          >
-            <Rocket
-              className={`w-3.5 h-3.5 transition-transform duration-300 ${
-                rocketTelemetry.isActive
-                  ? '-translate-y-1 text-[#FF9D38] animate-bounce'
-                  : 'group-hover:-translate-y-0.5 text-amber-400'
-              }`}
-            />
-            <span>
-              {rocketTelemetry.isActive
-                ? rocketTelemetry.stage === 'IGNITION'
-                  ? 'T-00 // IGNITION'
-                  : rocketTelemetry.stage === 'LIFTOFF'
-                  ? `LIFTOFF // ${rocketTelemetry.speed}U/S`
-                  : rocketTelemetry.stage === 'MAX_Q'
-                  ? `MAX-Q // ${rocketTelemetry.speed}U/S`
-                  : rocketTelemetry.stage === 'SUPERSONIC'
-                  ? `MACH-3 // ${rocketTelemetry.speed}U/S`
-                  : 'ORBIT INSERTION'
-                : 'LAUNCH ROCKET [R]'}
-            </span>
           </button>
         </div>
 
