@@ -26,6 +26,7 @@ import { FooterSection } from './components/FooterSection';
 import { ProjectModal } from './components/ProjectModal';
 import { PROJECTS } from './data/portfolioData';
 import { ProjectItem } from './types';
+import { interactionEngine } from './context/SingularityInteractionEngine';
 
 export default function App() {
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
@@ -37,10 +38,24 @@ export default function App() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsCommandPaletteOpen((prev) => !prev);
+      } else if (
+        e.key.toLowerCase() === 'r' &&
+        !['input', 'textarea'].includes((e.target as HTMLElement)?.tagName?.toLowerCase())
+      ) {
+        interactionEngine.triggerRocketLaunch(0, -0.92);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    // Initial cinematic rocket launch showcase on landing (after brief intro)
+    const initialLaunchTimer = setTimeout(() => {
+      interactionEngine.triggerRocketLaunch(0, -0.92);
+    }, 2800);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(initialLaunchTimer);
+    };
   }, []);
 
   const handleIntroComplete = () => {

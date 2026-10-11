@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { IdentityCore } from './ui/IdentityCore';
-import { ArrowDown, ArrowUpRight, Sparkles, Terminal, Activity } from 'lucide-react';
+import { ArrowDown, ArrowUpRight, Sparkles, Terminal, Activity, Rocket } from 'lucide-react';
+import { interactionEngine } from '../context/SingularityInteractionEngine';
 
 interface HeroSectionProps {
   onContactClick?: () => void;
@@ -58,6 +59,28 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   id = 'hero-section',
 }) => {
   const [rotationIndex, setRotationIndex] = useState(2);
+  const [isLaunchingRocket, setIsLaunchingRocket] = useState(false);
+
+  const handleLaunchRocket = () => {
+    interactionEngine.triggerRocketLaunch(0, -0.92);
+    setIsLaunchingRocket(true);
+    setTimeout(() => {
+      setIsLaunchingRocket(false);
+    }, 4600);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key.toLowerCase() === 'r' &&
+        !['input', 'textarea'].includes((e.target as HTMLElement)?.tagName?.toLowerCase())
+      ) {
+        handleLaunchRocket();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -211,6 +234,27 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             className="px-5 py-2.5 rounded-lg bg-[#11151A] hover:bg-[#171C22] border border-white/[0.08] hover:border-white/20 text-[#A7ADB5] hover:text-[#F2F3F5] font-mono text-xs tracking-wider transition-all cursor-pointer"
           >
             START A CONVERSATION
+          </button>
+
+          <button
+            type="button"
+            onClick={handleLaunchRocket}
+            data-cursor="button"
+            data-cursor-label="ROCKET"
+            className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-lg border font-mono text-xs tracking-wider transition-all cursor-pointer ${
+              isLaunchingRocket
+                ? 'bg-[#FF9D38]/15 border-[#FF9D38] text-[#FF9D38] shadow-[0_0_20px_rgba(255,157,56,0.35)]'
+                : 'bg-[#11151A] hover:bg-[#191F26] border-amber-500/30 hover:border-amber-400/70 text-amber-200 hover:text-white'
+            }`}
+          >
+            <Rocket
+              className={`w-3.5 h-3.5 transition-transform duration-300 ${
+                isLaunchingRocket
+                  ? '-translate-y-1 text-[#FF9D38] animate-bounce'
+                  : 'group-hover:-translate-y-0.5 text-amber-400'
+              }`}
+            />
+            <span>{isLaunchingRocket ? 'T+02 // LIFTOFF' : 'LAUNCH ROCKET [R]'}</span>
           </button>
         </div>
 

@@ -14,7 +14,9 @@ import {
   X,
   Compass,
   FileCode,
+  Rocket,
 } from 'lucide-react';
+import { interactionEngine } from '../../context/SingularityInteractionEngine';
 
 interface CommandItem {
   id: string;
@@ -143,6 +145,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       icon: <Linkedin className="w-4 h-4 text-blue-400" />,
       action: () => {
         window.open('https://linkedin.com/in/garv-shaw-08a33237b', '_blank', 'noopener,noreferrer');
+        onClose();
+      },
+    },
+    {
+      id: 'action-launch-rocket',
+      title: 'Ignite Rocket Particle Launch Effect',
+      category: 'System',
+      shortcut: 'R',
+      icon: <Rocket className="w-4 h-4 text-amber-400" />,
+      action: () => {
+        interactionEngine.triggerRocketLaunch(0, -0.92);
         onClose();
       },
     },

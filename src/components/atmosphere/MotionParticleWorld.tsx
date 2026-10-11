@@ -60,13 +60,16 @@ const vertexShader = `
   uniform float uScrollSpeedNorm; // Normalized scroll speed [0.0 to 1.0+]
   uniform float uShockTime;       // Click shockwave time elapsed
   uniform vec2 uShockOrigin;      // Click origin in NDC
+  uniform float uRocketTime;      // Elapsed seconds since rocket liftoff (-1 = inactive)
+  uniform vec2 uRocketOrigin;     // Rocket launch origin in NDC
+  uniform float uRocketActive;    // 1.0 if rocket is currently firing
   uniform float uPixelRatio;      // Device pixel ratio (1x, 2x, 3x)
   uniform vec3 uThemeColor;       // Subtly blended ambient section tone
   uniform float uOpacity;         // Global opacity uniform
   uniform float uSizeVariation;   // Global size variation uniform
   uniform float uGlowIntensity;   // Radial falloff and luminous glow intensity uniform
 
-  attribute float aSize;          // Pre-calibrated CSS pixel diameter (0.8 to 2.2)
+  attribute float aSize;          // Pre-calibrated CSS pixel diameter (2.1 to 5.4)
   attribute float aLayer;         // 0 = DISTANT, 1 = MAIN, 2 = HIGHLIGHT
   attribute vec3 aSeed;           // Deterministic unique particle seeds
   attribute float aAlpha;         // Base target alpha
@@ -79,6 +82,7 @@ const vertexShader = `
   varying float vTwinkle;
   varying float vIsOrange;
   varying float vDofBlur;
+  varying float vRocketFlame;
 
   // 3D Simplex noise helper
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -399,6 +403,94 @@ const vertexShader = `
     pos.y += uScrollOffset * (0.024 + aLayer * 0.032);
     pos.y += uScrollVel * (0.040 + aLayer * 0.055);
 
+    // =========================================================================
+    // 2B. ROCKET LAUNCH EFFECT (CINEMATIC ASCENT & FLUID THRUSTER EXHAUST PLUME)
+    // =========================================================================
+    float rocketFlame = 0.0;
+    if (uRocketTime >= 0.0 && uRocketTime < 4.8) {
+      float tLaunch = uRocketTime;
+      // Pad origin in 3D world space
+      vec3 padPos = vec3(uRocketOrigin.x * 48.0, -28.0 + uRocketOrigin.y * 12.0, -5.0);
+
+      // Rocket physics trajectory:
+      // [0.0..0.40]: Ignition spool-up & pad vibration
+      // [0.40..4.8]: Liftoff & vertical supersonic acceleration
+      float tFlight = max(0.0, tLaunch - 0.40);
+      float rocketY = padPos.y + tFlight * 16.5 + tFlight * tFlight * 10.2;
+      float rocketX = padPos.x + sin(tFlight * 1.5) * 2.2;
+      float rocketZ = padPos.z + cos(tFlight * 1.1) * 2.5;
+      vec3 rocketPos = vec3(rocketX, rocketY, rocketZ);
+
+      // Pad ignition rumble
+      if (tLaunch < 0.40) {
+        float rumble = sin(tLaunch * 80.0) * 0.7;
+        rocketPos.x += rumble;
+        rocketPos.y += cos(tLaunch * 70.0) * 0.5;
+      }
+
+      // 1. DEDICATED ROCKET VESSEL & THRUSTER EXHAUST PLUME (~18% of particles)
+      if (aSeed.x < 0.18) {
+        float rocketFrac = aSeed.x / 0.18; // [0.0 .. 1.0]
+
+        if (rocketFrac < 0.12) {
+          // A. ROCKET NOSE CONE & AERODYNAMIC HULL
+          float coneT = rocketFrac / 0.12; // 0 at tip, 1 at nozzle
+          float coneHeight = 4.2;
+          float coneRadius = (1.0 - coneT * 0.65) * 1.1;
+          float coneAngle = aSeed.y * 6.283185 + effectiveTime * 8.0;
+
+          pos.x = rocketX + cos(coneAngle) * coneRadius;
+          pos.y = rocketY + (1.0 - coneT) * coneHeight - 0.5;
+          pos.z = rocketZ + sin(coneAngle) * coneRadius * 0.9;
+          rocketFlame = 0.35; // Pure white crystalline needle tip
+        } else {
+          // B. SUPERHEATED THRUSTER EXHAUST PLUME & SUPERSONIC MACH DIAMONDS
+          float plumeFrac = (rocketFrac - 0.12) / 0.88; // 0..1 along plume length
+          float plumeDist = plumeFrac * 50.0; // Trails 50 units downward
+
+          // Aerodynamic nozzle expansion
+          float plumeRadius = 0.60 + plumeDist * 0.18 + sin(plumeDist * 3.0 - effectiveTime * 28.0) * 0.35;
+
+          // Mach diamond periodic pressure nodes
+          float machPulse = 1.0 + 0.45 * sin(plumeDist * 2.2 - effectiveTime * 32.0);
+          float plumeAngle = aSeed.y * 6.283185 + effectiveTime * 38.0;
+
+          float pX = rocketX + cos(plumeAngle) * plumeRadius * machPulse + (aSeed.z - 0.5) * 1.5;
+          float pY = rocketY - 1.2 - plumeDist;
+          float pZ = rocketZ + sin(plumeAngle) * plumeRadius * 0.9;
+
+          pos = vec3(pX, pY, pZ);
+          // Flame intensity fades from blinding white at nozzle to amber smoke
+          rocketFlame = clamp(1.0 - (plumeDist / 46.0), 0.0, 1.0) * 2.2;
+        }
+      } else {
+        // 2. LAUNCH PAD BLAST WAVE & BILLOWING SMOKE (tLaunch < 2.2)
+        if (tLaunch < 2.2 && pos.y < (padPos.y + 16.0)) {
+          float padDist = length(pos.xy - padPos.xy);
+          float padBlast = smoothstep(24.0, 0.0, padDist) * (1.0 - tLaunch / 2.2);
+          vec2 blastDir = normalize(pos.xy - padPos.xy + vec2(0.001, -2.0));
+          pos.xy += blastDir * (padBlast * 14.0 * sin(tLaunch * 3.14159));
+          rocketFlame = max(rocketFlame, padBlast * 0.75);
+        }
+
+        // 3. SUPERSONIC MACH CONE & AERODYNAMIC BOW SHOCKWAVE ACROSS THE UNIVERSE
+        vec3 deltaRocket = pos - rocketPos;
+        float trailDistY = rocketPos.y - pos.y;
+        if (trailDistY > 0.0 && trailDistY < 60.0) {
+          float radialDist = length(deltaRocket.xz);
+          float machConeRadius = trailDistY * 0.70; // Mach cone angle
+          float coneDist = abs(radialDist - machConeRadius);
+          if (coneDist < 9.5) {
+            float shockStrength = (1.0 - coneDist / 9.5) * smoothstep(60.0, 6.0, trailDistY);
+            vec3 shockPush = normalize(vec3(deltaRocket.x, 0.0, deltaRocket.z) + vec3(0.001));
+            pos += shockPush * (shockStrength * 4.5);
+            rocketFlame = max(rocketFlame, shockStrength * 0.65);
+          }
+        }
+      }
+    }
+    vRocketFlame = rocketFlame;
+
     // Screen-space NDC projection
     vec4 projected = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
     vec2 ndc = projected.xy / projected.w;
@@ -499,11 +591,12 @@ const vertexShader = `
     float speedSizeBoost = 1.0 + clamp(uScrollSpeedNorm * 0.06, 0.0, 0.10);
 
     float cssDiameter = aSize * perspectiveScale * uSizeVariation * speedSizeBoost * dofSizeMod * clusterMod;
-    cssDiameter = clamp(cssDiameter, 1.30, 3.90);
+    cssDiameter *= (1.0 + rocketFlame * 0.55);
+    cssDiameter = clamp(cssDiameter, 1.95, 6.00);
 
     float physicalSize = cssDiameter * uPixelRatio;
-    // Guaranteed crisp rendering with +25% size presence: clamped between 1.70px physical and 4.00 * uPixelRatio
-    gl_PointSize = clamp(physicalSize, 1.70, 4.00 * uPixelRatio * uSizeVariation);
+    // Guaranteed crisp rendering with +50% size presence: clamped between 2.55px physical and 6.00 * uPixelRatio
+    gl_PointSize = clamp(physicalSize, 2.55, 6.00 * uPixelRatio * uSizeVariation);
 
     // =========================================================================
     // 6. RADIANT OPACITY & SCINTILLATING SHINE (ENHANCED SPECULAR GLINT)
@@ -520,7 +613,7 @@ const vertexShader = `
     // Content section attenuation: subtle reduction while reading project/article cards
     float scrollDofFade = 1.0 - smoothstep(0.15, 0.85, uScrollProgress) * 0.14;
 
-    vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow * 1.25 + vTwinkle * 0.45) * uOpacity * heroAttenuation * dofAlphaMod * scrollDofFade, 0.0, 1.0);
+    vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow * 1.25 + vTwinkle * 0.45 + rocketFlame * 0.70) * uOpacity * heroAttenuation * dofAlphaMod * scrollDofFade, 0.0, 1.0);
 
     // =========================================================================
     // 7. COLOR PALETTE: MONOCHROME SILVER + SPARSE WARM-ORANGE ACCENTS
@@ -564,6 +657,7 @@ const fragmentShader = `
   varying float vTwinkle;
   varying float vIsOrange;
   varying float vDofBlur;
+  varying float vRocketFlame;
 
   void main() {
     // Coordinate normalized to [-0.5, 0.5] from center of point sprite
@@ -610,6 +704,23 @@ const fragmentShader = `
     vec3 pureWhite = vec3(1.0, 1.0, 1.0);
     float coreWhiteness = clamp(core * 0.75 + vTwinkle * 0.70, 0.0, 1.0);
     vec3 finalColor = mix(vColor, pureWhite, coreWhiteness * 0.88);
+
+    // 8. Incandescent rocket propulsion fire colors
+    if (vRocketFlame > 0.01) {
+      vec3 flameCore = vec3(1.0, 1.0, 1.0);       // Superheated blinding white nozzle
+      vec3 flameGold = vec3(1.0, 0.88, 0.28);     // Radiant golden plasma
+      vec3 flameAmber = vec3(1.0, 0.44, 0.06);    // Rich amber rocket flame
+      vec3 flameSmoke = vec3(0.90, 0.35, 0.05);   // Incandescent flame trail
+
+      vec3 flameCol = mix(flameSmoke, flameAmber, clamp(vRocketFlame * 0.8, 0.0, 1.0));
+      if (vRocketFlame > 0.8) {
+        flameCol = mix(flameAmber, flameGold, clamp((vRocketFlame - 0.8) * 1.2, 0.0, 1.0));
+      }
+      if (vRocketFlame > 1.5) {
+        flameCol = mix(flameGold, flameCore, clamp((vRocketFlame - 1.5) * 1.4, 0.0, 1.0));
+      }
+      finalColor = mix(finalColor, flameCol, clamp(vRocketFlame * 1.2, 0.0, 1.0));
+    }
 
     float finalAlpha = clamp(vAlpha * (luminousIntensity * 0.75 + edgeMask * 0.40) * uOpacity, 0.0, 1.0);
 
@@ -713,23 +824,23 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
         formationId = 0; // Left Ribbon
       }
 
-      // Layer Distribution (+25% Scaled Presence):
-      // - Distant / Ambient (~65%): 1.44–1.85 CSS px, Alpha: 0.28–0.40
-      // - Main Ribbon Spine (~27%): 1.94–2.57 CSS px, Alpha: 0.46–0.66
-      // - Highlight Stars & Nucleus (~8%): 2.69–3.57 CSS px, Alpha: 0.72–0.92
+      // Layer Distribution (+50% Scaled Presence):
+      // - Distant / Ambient (~65%): 2.16–2.78 CSS px, Alpha: 0.28–0.40
+      // - Main Ribbon Spine (~27%): 2.91–3.86 CSS px, Alpha: 0.46–0.66
+      // - Highlight Stars & Nucleus (~8%): 4.04–5.36 CSS px, Alpha: 0.72–0.92
       let layer = 0;
-      let cssSize = 1.44 + Math.random() * 0.41;   // 1.44 – 1.85 CSS px (+25%)
+      let cssSize = 2.16 + Math.random() * 0.62;   // 2.16 – 2.78 CSS px (+50%)
       let alphaBase = 0.28 + Math.random() * 0.12; // 0.28 – 0.40 opacity
 
       if (seedVal > 0.92) {
         // HIGHLIGHT STAR & RADIANT NUCLEUS (~8%)
         layer = 2;
-        cssSize = 2.69 + Math.random() * 0.88;     // 2.69 – 3.57 CSS px (+25%)
+        cssSize = 4.04 + Math.random() * 1.32;     // 4.04 – 5.36 CSS px (+50%)
         alphaBase = 0.72 + Math.random() * 0.20;   // 0.72 – 0.92 opacity
       } else if (seedVal > 0.65) {
         // MAIN RIBBON SPINE & ORBITAL ARMS (~27%)
         layer = 1;
-        cssSize = 1.94 + Math.random() * 0.63;     // 1.94 – 2.57 CSS px (+25%)
+        cssSize = 2.91 + Math.random() * 0.95;     // 2.91 – 3.86 CSS px (+50%)
         alphaBase = 0.46 + Math.random() * 0.20;   // 0.46 – 0.66 opacity
       }
 
@@ -790,6 +901,9 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       uScrollSpeedNorm: { value: 0 },
       uShockTime: { value: -1 },
       uShockOrigin: { value: new THREE.Vector2(0, 0) },
+      uRocketTime: { value: -1.0 },
+      uRocketOrigin: { value: new THREE.Vector2(0, -0.92) },
+      uRocketActive: { value: 0.0 },
       uPixelRatio: { value: pixelRatio },  // DPR calibrated
       uThemeColor: { value: new THREE.Color(0xbcc5d2) }, // Radiant platinum
       uOpacity: { value: opacityRef.current },
@@ -829,6 +943,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
     let smoothScrollSpeedNorm = 0;
 
     let shockStartTime = -1;
+    let rocketStartTime = -1;
     const targetColor = new THREE.Color(0xbcc5d2);
 
     // Window pointer activity listeners
@@ -859,6 +974,14 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       if (state.lastClickTime > 0) {
         shockStartTime = state.lastClickTime / 1000;
         uniforms.uShockOrigin.value.set(state.ndcX, state.ndcY);
+      }
+
+      if (state.lastRocketLaunchTime > 0) {
+        rocketStartTime = state.lastRocketLaunchTime / 1000;
+        uniforms.uRocketOrigin.value.set(
+          state.rocketLaunchOrigin.ndcX,
+          state.rocketLaunchOrigin.ndcY
+        );
       }
 
       // Restrained section theme adaptation (subtle titanium/silver nuances)
@@ -972,6 +1095,18 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
           uniforms.uShockTime.value = -1;
         } else {
           uniforms.uShockTime.value = shockElapsed;
+        }
+      }
+
+      // Rocket launch timing
+      if (rocketStartTime > 0) {
+        const rocketElapsed = seconds - rocketStartTime;
+        if (rocketElapsed > 4.8) {
+          uniforms.uRocketTime.value = -1.0;
+          uniforms.uRocketActive.value = 0.0;
+        } else {
+          uniforms.uRocketTime.value = rocketElapsed;
+          uniforms.uRocketActive.value = 1.0;
         }
       }
 

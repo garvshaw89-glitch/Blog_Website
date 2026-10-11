@@ -45,6 +45,10 @@ export interface SingularityInteractionState {
   clickOrigin: { x: number; y: number; worldX: number; worldY: number };
   clickCount: number;
 
+  // Rocket launch particle effect state
+  lastRocketLaunchTime: number;
+  rocketLaunchOrigin: { ndcX: number; ndcY: number };
+
   // Active section palette
   sectionTheme: {
     primary: number;
@@ -91,6 +95,8 @@ class InteractionEngine {
     lastClickTime: 0,
     clickOrigin: { x: 0, y: 0, worldX: 0, worldY: 0 },
     clickCount: 0,
+    lastRocketLaunchTime: 0,
+    rocketLaunchOrigin: { ndcX: 0, ndcY: -0.92 },
     sectionTheme: {
       name: 'hero',
       primary: 0x06b6d4, // Cyan
@@ -117,6 +123,12 @@ class InteractionEngine {
       InteractionEngine.instance = new InteractionEngine();
     }
     return InteractionEngine.instance;
+  }
+
+  public triggerRocketLaunch(ndcX = 0, ndcY = -0.92) {
+    this.state.lastRocketLaunchTime = performance.now();
+    this.state.rocketLaunchOrigin = { ndcX, ndcY };
+    this.notify();
   }
 
   private init() {
