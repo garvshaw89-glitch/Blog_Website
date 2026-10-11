@@ -86,6 +86,31 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     return () => unsubscribe();
   }, []);
 
+  // Automatic rocket liftoff on page load & periodic cinematic launch
+  useEffect(() => {
+    // Initial cinematic appearance after page elements settle
+    const initialLaunchTimer = setTimeout(() => {
+      interactionEngine.triggerRocketLaunch(0, -0.92);
+    }, 1600);
+
+    // Periodic automatic launch every 24s so the particle rocket is a living signature feature
+    const recurringLaunchTimer = setInterval(() => {
+      // Only auto-launch if not currently active and user is near top of page
+      if (
+        !interactionEngine.state.rocketEmitter.isActive &&
+        typeof window !== 'undefined' &&
+        window.scrollY < window.innerHeight * 0.8
+      ) {
+        interactionEngine.triggerRocketLaunch(0, -0.92);
+      }
+    }, 24000);
+
+    return () => {
+      clearTimeout(initialLaunchTimer);
+      clearInterval(recurringLaunchTimer);
+    };
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
