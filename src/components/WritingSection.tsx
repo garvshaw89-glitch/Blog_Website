@@ -1,7 +1,29 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowUpRight, BookOpen } from 'lucide-react';
+import { ArrowUpRight, BookOpen, Clock } from 'lucide-react';
 import { ArticleModal, ArticleData } from './ArticleModal';
+
+// Helper to calculate reading time based on word count (approx 200 WPM)
+export const calculateReadingTimeMinutes = (text: string): number => {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 200));
+};
+
+export const getArticleEstimatedTime = (article: ArticleData): { totalMin: number; sectionTimes: { heading: string; minutes: number }[] } => {
+  let allText = article.title + ' ' + article.excerpt + ' ' + article.content.introduction + ' ' + article.content.conclusion;
+  const sectionTimes = article.content.sections.map((sec) => {
+    const secText = sec.heading + ' ' + sec.body.join(' ') + (sec.callout ? ' ' + sec.callout : '') + (sec.codeSnippet ? ' ' + sec.codeSnippet.code : '');
+    allText += ' ' + secText;
+    return {
+      heading: sec.heading,
+      minutes: calculateReadingTimeMinutes(secText),
+    };
+  });
+  return {
+    totalMin: calculateReadingTimeMinutes(allText),
+    sectionTimes,
+  };
+};
 
 const ARTICLES: ArticleData[] = [
   {
@@ -218,9 +240,25 @@ export const WritingSection: React.FC<WritingSectionProps> = ({ id = 'writing' }
                   <span>{article.date}</span>
                 </div>
 
-                <h3 className="font-editorial text-2xl sm:text-3xl md:text-4xl font-bold text-[#F2F3F5] tracking-tight group-hover:text-white transition-colors leading-[1.12]">
-                  {article.title}
-                </h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h3 className="font-editorial text-2xl sm:text-3xl md:text-4xl font-bold text-[#F2F3F5] tracking-tight group-hover:text-white transition-colors leading-[1.12]">
+                    {article.title}
+                  </h3>
+                  {(() => {
+                    const { totalMin, sectionTimes } = getArticleEstimatedTime(article);
+                    return (
+                      <span
+                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono tracking-wide bg-cyan-500/10 text-cyan-400 border border-cyan-500/25 shadow-sm group-hover:border-cyan-400/40 transition-colors whitespace-nowrap self-center"
+                        title={`Estimated reading breakdown: ${sectionTimes.map((s, i) => `Part ${i + 1} (${s.minutes}m)`).join(', ')}`}
+                      >
+                        <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
+                        <span>~{totalMin}m read</span>
+                        <span className="text-cyan-500/60 font-light">·</span>
+                        <span className="text-[10px] text-cyan-300/80">{sectionTimes.length} parts</span>
+                      </span>
+                    );
+                  })()}
+                </div>
 
                 <p className="mt-3.5 font-sans text-[#A7ADB5] text-sm sm:text-base font-light leading-relaxed">
                   {article.excerpt}

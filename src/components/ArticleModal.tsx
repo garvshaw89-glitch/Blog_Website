@@ -180,11 +180,27 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose }) 
 
               {/* Core Sections */}
               <div className="space-y-10 font-sans text-[#A7ADB5] leading-relaxed font-light text-base">
-                {article.content.sections.map((section, idx) => (
-                  <div key={idx} className="space-y-4">
-                    <h2 className="font-editorial text-xl sm:text-2xl font-bold text-[#F2F3F5] tracking-tight pt-4 border-t border-white/[0.06]">
-                      {section.heading}
-                    </h2>
+                {article.content.sections.map((section, idx) => {
+                  const sectionWords = (
+                    section.heading +
+                    ' ' +
+                    section.body.join(' ') +
+                    (section.callout ? ' ' + section.callout : '') +
+                    (section.codeSnippet ? ' ' + section.codeSnippet.code : '')
+                  ).trim().split(/\s+/).filter(Boolean).length;
+                  const sectionMinutes = Math.max(1, Math.ceil(sectionWords / 200));
+
+                  return (
+                    <div key={idx} className="space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/[0.06]">
+                        <h2 className="font-editorial text-xl sm:text-2xl font-bold text-[#F2F3F5] tracking-tight">
+                          {section.heading}
+                        </h2>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono tracking-wider bg-white/[0.04] text-cyan-400 border border-cyan-500/20">
+                          <Clock className="w-3 h-3 text-cyan-400" />
+                          <span>~{sectionMinutes} MIN SECTION</span>
+                        </span>
+                      </div>
 
                     {section.body.map((p, pIdx) => (
                       <p key={pIdx} className="leading-relaxed text-[#A7ADB5]">
@@ -210,8 +226,9 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose }) 
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
+                );
+              })}
+            </div>
 
               {/* Conclusion */}
               <div className="pt-8 border-t border-white/[0.08]">
