@@ -44,7 +44,7 @@ export interface MotionParticleWorldProps {
   className?: string;
 }
 
-const PARTICLE_COUNT = 9600;
+const PARTICLE_COUNT = 14500;
 
 const vertexShader = `
   uniform float uTime;
@@ -78,6 +78,7 @@ const vertexShader = `
   varying vec3 vColor;
   varying float vTwinkle;
   varying float vIsOrange;
+  varying float vDofBlur;
 
   // 3D Simplex noise helper
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -163,27 +164,29 @@ const vertexShader = `
 
   // =========================================================================
   // FORMATION A: LEFT RIBBON (DIAGONAL FLOWING STREAM)
-  // Enters from lower-left/mid-left edge and arches diagonally toward upper-middle.
+  // Enters from the left edge and arches diagonally toward the upper-middle region.
+  // Stretches into a wider curve as user scrolls.
   // =========================================================================
   vec3 getLeftRibbon(vec3 seed, float t) {
     float flowSpeed = 0.038 * (0.85 + seed.z * 0.30);
     float u = fract(seed.x + t * flowSpeed); // Parametric progression [0..1]
     float v = (seed.y - 0.5) * 2.0;          // Transverse ribbon coordinate [-1..1]
 
-    // Diagonal trajectory: from (-58, -24) curving up to (-12, 25)
-    float startX = -58.0;
+    // Diagonal trajectory: from left edge (-62, -22) curving up toward (-8, 26)
+    float startX = -62.0;
     float endX   = -8.0;
-    float startY = -24.0;
+    float startY = -22.0;
     float endY   = 26.0;
 
-    // Smooth arched spline curve
-    float posX = mix(startX, endX, u) + sin(u * 3.14159) * 5.5;
+    // Scroll stretches the ribbon into a wider, more expansive curve
+    float scrollStretch = uScrollProgress * 8.5 * sin(u * 3.14159);
+    float posX = mix(startX, endX, u) + sin(u * 3.14159) * 5.5 + scrollStretch;
     float posY = mix(startY, endY, pow(u, 0.92)) + sin(u * 2.6) * 4.0;
     float posZ = -12.0 + sin(u * 3.14159) * 16.0;
 
-    // Ribbon width and 3D twist
-    float ribbonWidth = 14.0 + sin(u * 3.0) * 5.0;
-    float twistAngle  = 0.55 + u * 1.35;
+    // Ribbon width expands subtly on scroll
+    float ribbonWidth = (14.0 + sin(u * 3.0) * 5.0) * (1.0 + uScrollProgress * 0.40);
+    float twistAngle  = 0.55 + u * 1.35 + uScrollProgress * 0.50;
 
     // Transverse offset along ribbon plane
     float normalX = -sin(twistAngle) * 0.6;
@@ -202,7 +205,7 @@ const vertexShader = `
   // =========================================================================
   // FORMATION B: UPPER-RIGHT SPIRAL (CELESTIAL LOGARITHMIC VORTEX)
   // Delicate golden-ratio spiral of fine discrete orbital filaments.
-  // Nucleus has a warm-orange focal glint, outer arms sweep toward right & lower field.
+  // Nucleus has a warm-orange focal glint; rotates and unfolds subtly on scroll.
   // =========================================================================
   vec3 getUpperRightSpiral(vec3 seed, float t) {
     // Spiral center in 3D space (upper right quadrant, matching reference)
@@ -217,12 +220,14 @@ const vertexShader = `
     float tProgress = seed.y;
     float theta = 1.2 + tProgress * 11.6;
 
-    // Differential Keplerian rotation: inner eye rotates faster, outer rim drifts gently
+    // Differential Keplerian rotation + scroll-driven subtle orbital rotation
     float orbitalSpeed = 0.040 / (0.45 + tProgress * 0.95);
-    float currentAngle = theta + armOffset + t * orbitalSpeed;
+    float scrollRotation = uScrollProgress * 1.6;
+    float currentAngle = theta + armOffset + t * orbitalSpeed + scrollRotation;
 
-    // Logarithmic radial curve
-    float radius = 2.4 * pow(theta, 1.22);
+    // Logarithmic radial curve + scroll unfolding
+    float scrollUnfold = 1.0 + uScrollProgress * 0.32;
+    float radius = 2.4 * pow(theta, 1.22) * scrollUnfold;
 
     // Transverse filament spread across orbital arm
     float filamentSpread = (seed.z - 0.5) * (1.2 + radius * 0.08);
@@ -241,8 +246,9 @@ const vertexShader = `
   }
 
   // =========================================================================
-  // FORMATION C: LOWER WAVE (BROAD UNDULATING PARTICLE SWEEP)
-  // Sweeps across bottom edge, dips under center hero text & scroll indicator.
+  // FORMATION C: LOWER WAVE (BROAD FLOWING WAVE CURVING UPWARD RIGHT)
+  // Sweeps across bottom edge, dips under center hero text & scroll indicator,
+  // and gradually curves upward toward the right edge.
   // =========================================================================
   vec3 getLowerWave(vec3 seed, float t) {
     float waveSpeed = 0.028 * (0.85 + seed.z * 0.30);
@@ -251,16 +257,19 @@ const vertexShader = `
 
     float posX = u * 68.0;
 
-    // Vertical crests & troughs:
-    // Natural dip in center (u ~ 0) to clear hero text & scroll indicator,
-    // gracefully rising on left and right flanks.
+    // Natural dip in center (u ~ 0) to clear hero text & scroll indicator
     float centerDip = -6.5 * exp(-u * u * 4.2);
-    float waveY = -24.0 + sin(u * 2.6 - 0.4) * 6.5 + cos(u * 4.8) * 3.2 + centerDip;
+    // Signature upward right sweep: u * 5.2 elevates the wave by ~10 units toward the right
+    float upwardRightSweep = u * 5.2;
+
+    // Dynamic curvature variation with scroll progress
+    float scrollWaveMod = sin(u * 3.2 + uScrollProgress * 3.14159) * (3.0 * uScrollProgress);
+    float waveY = -24.0 + upwardRightSweep + sin(u * 2.6 - 0.4) * 6.5 + cos(u * 4.8) * 3.2 + centerDip + scrollWaveMod;
 
     // Ribbon thickness and stratification
-    float width = 11.5 + cos(u * 2.2) * 4.0;
+    float width = (11.5 + cos(u * 2.2) * 4.0) * (1.0 + uScrollProgress * 0.25);
     float posY = waveY + v * width * 0.75 + sin(u * 3.5 + t * 0.35) * 1.8;
-    float posZ = cos(u * 2.2) * 12.0 + (seed.z - 0.5) * 12.0 - 10.0;
+    float posZ = cos(u * 2.2) * 12.0 + (seed.z - 0.5) * 12.0 - 10.0 + sin(u * 2.5 + uScrollProgress * 2.0) * 4.0;
 
     vec3 curl = curlNoise(vec3(u * 2.0, v * 1.5, t * 0.03), t * 0.015);
     return vec3(posX + curl.x * 2.0, posY + curl.y * 2.2, posZ + curl.z * 2.0);
@@ -464,34 +473,54 @@ const vertexShader = `
     gl_Position = projectionMatrix * mvPosition;
 
     // =========================================================================
-    // 5. PRECISE PARTICLE APPEARANCE (SECTION 4 SPECIFICATIONS)
-    // - Fine particles (~70%): 0.8–1.1 CSS px
-    // - Main particles (~25%): 1.1–1.6 CSS px
-    // - Highlights (~5%): 1.6–2.2 CSS px
+    // 5. DEPTH-OF-FIELD (DoF) & SCROLL PROGRESS MODULATION
+    // Dynamically modulates point size and opacity based on vertical scroll
+    // progress, creating a shifting cinematic focal plane where particles appear
+    // more distant or tightly clustered depending on viewport position.
     // =========================================================================
     float distanceCam = -mvPosition.z;
+
+    // Dynamic focal plane: sweeps through 3D depth strata based on vertical scroll
+    // - Hero (0.0): focal plane locked at ~67.0 (hero ribbons & spiral in sharp focus)
+    // - Mid-scroll (0.5): sweeps toward ~83.0 (sharpening deep constellation clusters)
+    // - Footer (1.0): settles to ~73.0 (broad ambient starlight)
+    float focalPlane = 67.0 + sin(uScrollProgress * 3.14159) * 16.0 + uScrollProgress * 6.0;
+    float depthDelta = abs(distanceCam - focalPlane);
+    float dofBlurFactor = clamp(depthDelta / 34.0, 0.0, 1.0);
+    vDofBlur = dofBlurFactor;
+
+    // DoF Size Modulation:
+    // In-focus particles stay crisp and pinpoint; out-of-focus background particles scale down slightly
+    float dofSizeMod = 1.0 - dofBlurFactor * 0.18 + (1.0 - dofBlurFactor) * 0.10 * aLayer;
+    // Micro clustering pulsation across scroll progress
+    float clusterMod = 1.0 + 0.08 * sin(uScrollProgress * 6.28318 + aSeed.z * 5.0) * (1.0 - dofBlurFactor);
+
     float perspectiveScale = clamp(68.0 / max(distanceCam, 10.0), 0.78, 1.22);
     float speedSizeBoost = 1.0 + clamp(uScrollSpeedNorm * 0.06, 0.0, 0.10);
 
-    float cssDiameter = aSize * perspectiveScale * uSizeVariation * speedSizeBoost;
-    cssDiameter = clamp(cssDiameter, 0.82, 2.22);
+    float cssDiameter = aSize * perspectiveScale * uSizeVariation * speedSizeBoost * dofSizeMod * clusterMod;
+    cssDiameter = clamp(cssDiameter, 1.05, 3.10);
 
     float physicalSize = cssDiameter * uPixelRatio;
-    // Guaranteed crisp rendering: clamped between 1.0px physical and 2.25 * uPixelRatio
-    gl_PointSize = clamp(physicalSize, 1.0, 2.25 * uPixelRatio * uSizeVariation);
+    // Guaranteed crisp rendering with enhanced presence: clamped between 1.35px physical and 3.20 * uPixelRatio
+    gl_PointSize = clamp(physicalSize, 1.35, 3.20 * uPixelRatio * uSizeVariation);
 
     // =========================================================================
-    // 6. OPACITY AND VISIBILITY (SECTION 5 SPECIFICATIONS)
-    // Distant: 0.18–0.32, Main: 0.35–0.58, Highlights: 0.55–0.78
+    // 6. RADIANT OPACITY & SCINTILLATING SHINE (ENHANCED SPECULAR GLINT)
     // =========================================================================
-    float twinklePhase = effectiveTime * (1.8 + aSeed.y * 3.0) + aSeed.x * 62.83;
-    float twinkle = pow(max(0.0, sin(twinklePhase)), 6.0);
-    vTwinkle = twinkle * (0.60 + aSeed.z * 0.40);
+    float twinklePhase = effectiveTime * (2.2 + aSeed.y * 3.4) + aSeed.x * 62.83;
+    float twinkle = pow(max(0.0, sin(twinklePhase)), 4.0);
+    vTwinkle = twinkle * (0.85 + aSeed.z * 0.45);
 
-    float depthAlpha = 0.75 + 0.25 * smoothstep(-110.0, -30.0, mvPosition.z);
-    float pulse = 0.95 + 0.05 * sin(effectiveTime * 0.50 + aSeed.z * 10.0);
+    float depthAlpha = 0.78 + 0.22 * smoothstep(-110.0, -30.0, mvPosition.z);
+    float pulse = 0.94 + 0.06 * sin(effectiveTime * 0.65 + aSeed.z * 10.0);
 
-    vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow + vTwinkle * 0.30) * uOpacity * heroAttenuation, 0.0, 1.0);
+    // DoF Alpha modulation: in-focus particles are luminous; defocused particles soften
+    float dofAlphaMod = mix(1.12, 0.78, smoothstep(0.12, 0.85, dofBlurFactor));
+    // Content section attenuation: subtle reduction while reading project/article cards
+    float scrollDofFade = 1.0 - smoothstep(0.15, 0.85, uScrollProgress) * 0.14;
+
+    vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow * 1.25 + vTwinkle * 0.45) * uOpacity * heroAttenuation * dofAlphaMod * scrollDofFade, 0.0, 1.0);
 
     // =========================================================================
     // 7. COLOR PALETTE: MONOCHROME SILVER + SPARSE WARM-ORANGE ACCENTS
@@ -534,6 +563,7 @@ const fragmentShader = `
   varying vec3 vColor;
   varying float vTwinkle;
   varying float vIsOrange;
+  varying float vDofBlur;
 
   void main() {
     // Coordinate normalized to [-0.5, 0.5] from center of point sprite
@@ -546,41 +576,42 @@ const fragmentShader = `
     }
 
     // =========================================================================
-    // REFINED CIRCULAR FRAGMENT DISCIPLINE (NO BUBBLES, NO SQUARES)
+    // REFINED CIRCULAR FRAGMENT DISCIPLINE WITH INTENSE SPECULAR SHINE
     // =========================================================================
     // 1. Sub-pixel anti-aliased edge mask for clean circular discipline
-    float edgeMask = smoothstep(0.50, 0.22, dist);
+    float edgeMask = smoothstep(0.50, 0.25, dist);
 
-    // 2. Needle-point specular core (instantaneous falloff, brilliant center)
-    float core = exp(-dist * 8.5) * 1.45;
+    // 2. Needle-point specular core (instantaneous falloff, brilliant diamond center)
+    float coreSharpness = mix(9.2, 6.8, vDofBlur);
+    float core = exp(-dist * coreSharpness) * mix(1.85, 1.35, vDofBlur);
 
-    // 3. Subtle radial falloff glow halo (controlled luminous warmth)
-    float radialFalloff = exp(-dist * 4.6) * (0.55 * uGlowIntensity);
-    float glowAura = pow(max(0.0, 1.0 - dist * 2.0), 2.2) * (0.35 * uGlowIntensity);
+    // 3. Subtle radial falloff glow halo (controlled luminous warmth and ethereal shine)
+    float radialFalloff = exp(-dist * 4.2) * (mix(0.72, 0.88, vDofBlur) * uGlowIntensity);
+    float glowAura = pow(max(0.0, 1.0 - dist * 2.0), 2.0) * (0.45 * uGlowIntensity);
     float totalRadialGlow = radialFalloff + glowAura;
 
     // 4. Optical 4-point diamond star cross rays (scintillation glint)
-    float rayH = exp(-abs(coord.y) * 22.0) * max(0.0, 1.0 - abs(coord.x) * 2.2);
-    float rayV = exp(-abs(coord.x) * 22.0) * max(0.0, 1.0 - abs(coord.y) * 2.2);
-    float starFlare = (rayH + rayV) * 0.38;
+    float rayH = exp(-abs(coord.y) * 20.0) * max(0.0, 1.0 - abs(coord.x) * 2.0);
+    float rayV = exp(-abs(coord.x) * 20.0) * max(0.0, 1.0 - abs(coord.y) * 2.0);
+    float starFlare = (rayH + rayV) * 0.52;
 
     // 5. Faceted diagonal glint (crystalline facet)
     vec2 diag = vec2(coord.x + coord.y, coord.x - coord.y) * 0.7071;
-    float diagRay1 = exp(-abs(diag.y) * 26.0) * max(0.0, 1.0 - abs(diag.x) * 2.4);
-    float diagRay2 = exp(-abs(diag.x) * 26.0) * max(0.0, 1.0 - abs(diag.y) * 2.4);
-    float diamondGlint = (diagRay1 + diagRay2) * 0.20;
+    float diagRay1 = exp(-abs(diag.y) * 24.0) * max(0.0, 1.0 - abs(diag.x) * 2.2);
+    float diagRay2 = exp(-abs(diag.x) * 24.0) * max(0.0, 1.0 - abs(diag.y) * 2.2);
+    float diamondGlint = (diagRay1 + diagRay2) * 0.30;
 
-    // 6. Total combined luminous intensity
+    // 6. Total combined radiant luminous intensity (extra shiner)
     float luminousIntensity = core 
                             + totalRadialGlow 
-                            + (starFlare + diamondGlint) * (0.60 + vTwinkle * 1.30);
+                            + (starFlare + diamondGlint) * (0.85 + vTwinkle * 1.65);
 
-    // 7. Core whiteness: pure white needle center even on orange particles for specular shine
+    // 7. Core whiteness: pure white needle center for brilliant specular shine
     vec3 pureWhite = vec3(1.0, 1.0, 1.0);
-    float coreWhiteness = clamp(core * 0.65 + vTwinkle * 0.60, 0.0, 1.0);
-    vec3 finalColor = mix(vColor, pureWhite, coreWhiteness * 0.75);
+    float coreWhiteness = clamp(core * 0.75 + vTwinkle * 0.70, 0.0, 1.0);
+    vec3 finalColor = mix(vColor, pureWhite, coreWhiteness * 0.88);
 
-    float finalAlpha = clamp(vAlpha * (luminousIntensity * 0.68 + edgeMask * 0.35) * uOpacity, 0.0, 1.0);
+    float finalAlpha = clamp(vAlpha * (luminousIntensity * 0.75 + edgeMask * 0.40) * uOpacity, 0.0, 1.0);
 
     if (finalAlpha < 0.005) {
       discard;
@@ -682,24 +713,24 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
         formationId = 0; // Left Ribbon
       }
 
-      // Layer Distribution (Target Section 4 calibrations):
-      // - Distant / Ambient (~70%): 0.82–1.08 CSS px, Alpha: 0.22–0.32
-      // - Main Ribbon Spine (~25%): 1.12–1.55 CSS px, Alpha: 0.38–0.56
-      // - Highlight Star (~5%): 1.65–2.15 CSS px, Alpha: 0.60–0.78
+      // Layer Distribution (Enhanced Presence & Radiant Calibrations):
+      // - Distant / Ambient (~65%): 1.15–1.48 CSS px, Alpha: 0.28–0.40
+      // - Main Ribbon Spine (~27%): 1.55–2.05 CSS px, Alpha: 0.46–0.66
+      // - Highlight Stars & Nucleus (~8%): 2.15–2.85 CSS px, Alpha: 0.72–0.92
       let layer = 0;
-      let cssSize = 0.85 + Math.random() * 0.24;   // 0.85 – 1.09 CSS px
-      let alphaBase = 0.22 + Math.random() * 0.10; // 0.22 – 0.32 opacity
+      let cssSize = 1.15 + Math.random() * 0.33;   // 1.15 – 1.48 CSS px
+      let alphaBase = 0.28 + Math.random() * 0.12; // 0.28 – 0.40 opacity
 
-      if (seedVal > 0.95) {
-        // HIGHLIGHT STAR (~5%)
+      if (seedVal > 0.92) {
+        // HIGHLIGHT STAR & RADIANT NUCLEUS (~8%)
         layer = 2;
-        cssSize = 1.65 + Math.random() * 0.48;     // 1.65 – 2.13 CSS px
-        alphaBase = 0.60 + Math.random() * 0.18;   // 0.60 – 0.78 opacity
-      } else if (seedVal > 0.70) {
-        // MAIN RIBBON SPINE (~25%)
+        cssSize = 2.15 + Math.random() * 0.70;     // 2.15 – 2.85 CSS px
+        alphaBase = 0.72 + Math.random() * 0.20;   // 0.72 – 0.92 opacity
+      } else if (seedVal > 0.65) {
+        // MAIN RIBBON SPINE & ORBITAL ARMS (~27%)
         layer = 1;
-        cssSize = 1.12 + Math.random() * 0.42;     // 1.12 – 1.54 CSS px
-        alphaBase = 0.38 + Math.random() * 0.18;   // 0.38 – 0.56 opacity
+        cssSize = 1.55 + Math.random() * 0.50;     // 1.55 – 2.05 CSS px
+        alphaBase = 0.46 + Math.random() * 0.20;   // 0.46 – 0.66 opacity
       }
 
       // Initial parametric base seeds
