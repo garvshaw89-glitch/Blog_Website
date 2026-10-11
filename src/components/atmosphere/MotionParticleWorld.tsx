@@ -3,35 +3,38 @@ import * as THREE from 'three';
 import { interactionEngine } from '../../context/SingularityInteractionEngine';
 
 /**
- * SIGNATURE DIAGONAL PARTICLE CURRENTS — DIGITAL SILK
+ * MASTER CINEMATIC PARTICLE UNIVERSE
  * 
- * An original, luxury generative particle environment inspired by fine digital silk
- * flowing diagonally through deep black space.
+ * An art-directed, luxury digital-experience particle background designed
+ * to match the reference composition:
  * 
- * Visual Architecture:
- * 1. Layered Diagonal Silk Currents:
- *    - Primary Flowing Current: Wide, undulating ribbon of fine silver points with
- *      3D twisting folds, sweeping from mid-left down under the hero and arching into
- *      a majestic crest on the right.
- *    - Secondary Braided Currents: Delicate upper and lower filaments intertwining
- *      along the main body with subtle phase offsets and parabolic curves.
- *    - Ambient Drifting Points: Sparse, fine particles drifting between currents into
- *      deep negative space.
- * 2. Precise Micro-Particle Sizing (Target Calibrations):
- *    - Fine particles (~78%): 0.8–1.2 CSS pixels (main silk texture)
- *    - Secondary particles (~18%): 1.2–1.7 CSS pixels (ribbon spines & depth)
- *    - Highlight stars (~4%): 1.7–2.2 CSS pixels (rare crystalline accents)
- *    - Physical pixel clamp ensuring crisp rasterization on all displays.
- * 3. Hero Text Protection:
- *    - Spatially varying reduction around the central headline text
- *    - Natural ribbon dip below the typography
- *    - Concentrated brighter formations toward the outer flanks (asymmetrical crest on the right)
- * 4. Fluid Cursor Disturbance:
- *    - Gentle localized bending, tangential streamline curvature, and directional wake
- *    - Smooth damped recovery back to original trajectories (no permanent drift, no size increase)
- * 5. Continuous Scroll-Driven Morphing:
- *    - Diagonal currents -> flowing waves -> 3D spirals -> loosened starlight -> new curved currents
- *    - Fully reversible on scroll up, synchronized with native scrolling.
+ * 1. LEFT RIBBON (Formation A):
+ *    A flowing, curved stream of tiny silver dots entering from the lower-left / mid-left
+ *    and sweeping diagonally upward toward the upper-middle region.
+ * 
+ * 2. UPPER-RIGHT SPIRAL (Formation B):
+ *    A celestial logarithmic vortex in the upper-right quadrant. Discrete orbital filaments
+ *    swirl around a concentrated nucleus with a warm-orange / amber core glint.
+ *    Outer arms sweep downward to connect with the lower field.
+ * 
+ * 3. LOWER WAVE (Formation C):
+ *    A broad, undulating multi-layered wave ribbon spanning the bottom of the viewport.
+ *    Dips gracefully beneath the hero typography and "SCROLL DOWN" indicator, with
+ *    subtle crests featuring sparse warm-orange glints.
+ * 
+ * 4. CENTRAL NEGATIVE SPACE:
+ *    Natural routing of formations around the center, plus shader-level attenuation
+ *    behind the hero headline ("AI TO INNOVATION.") for pristine text readability.
+ * 
+ * 5. SPARSE WARM-ORANGE ACCENTS:
+ *    ~6% of particles carry muted warm-amber / golden-orange hues, concentrated at the
+ *    spiral nucleus and sprinkled along the lower wave crests and left ribbon.
+ * 
+ * 6. PRECISE PARTICLE SIZING & OPACITY:
+ *    - ~70% Fine particles: 0.8–1.1 CSS px (effective alpha: 0.18–0.32)
+ *    - ~25% Main particles: 1.1–1.6 CSS px (effective alpha: 0.35–0.58)
+ *    - ~5% Highlights: 1.6–2.2 CSS px (effective alpha: 0.55–0.78)
+ *    - Circular anti-aliased fragment discipline, needle specular core, zero bubbles.
  */
 
 export interface MotionParticleWorldProps {
@@ -41,7 +44,7 @@ export interface MotionParticleWorldProps {
   className?: string;
 }
 
-const PARTICLE_COUNT = 9500; // Increased by ~26.7% (within 20-30% target) with scaled Float32Array buffers
+const PARTICLE_COUNT = 9600;
 
 const vertexShader = `
   uniform float uTime;
@@ -49,7 +52,7 @@ const vertexShader = `
   uniform vec2 uPointer;          // Normalized [-1, 1] screen coordinates
   uniform vec2 uPointerVel;       // Cursor velocity vector
   uniform float uPointerRadius;   // Influence radius (~125px)
-  uniform float uPointerForce;    // Gentle repulsion force
+  uniform float uPointerForce;    // Gentle localized repulsion force
   uniform float uPointerActive;   // Smooth fade factor [0..1] for cursor presence
   uniform float uScrollOffset;    // Smooth vertical scroll parallax
   uniform float uScrollVel;       // Scroll momentum impulse
@@ -66,15 +69,17 @@ const vertexShader = `
   attribute float aSize;          // Pre-calibrated CSS pixel diameter (0.8 to 2.2)
   attribute float aLayer;         // 0 = DISTANT, 1 = MAIN, 2 = HIGHLIGHT
   attribute vec3 aSeed;           // Deterministic unique particle seeds
-  attribute float aAlpha;         // Base target alpha (0.35 to 0.88)
-  attribute float aCurrentId;     // 0 = Primary Ribbon, 1 = Upper Wisp, 2 = Lower Wisp, 3 = Ambient
+  attribute float aAlpha;         // Base target alpha
+  attribute float aFormationId;   // 0 = Left Ribbon, 1 = Spiral, 2 = Lower Wave, 3 = Ambient
+  attribute float aIsOrange;      // 1.0 = Orange accent, 0.0 = Silver-white
 
   varying float vAlpha;
   varying float vLayer;
   varying vec3 vColor;
   varying float vTwinkle;
+  varying float vIsOrange;
 
-  // 3D Simplex-like noise helper for smooth organic currents
+  // 3D Simplex noise helper
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
   vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -157,100 +162,165 @@ const vertexShader = `
   }
 
   // =========================================================================
-  // STATE 0: SIGNATURE DIAGONAL PARTICLE CURRENTS (DIGITAL SILK)
-  // Formed from a parametric 3D space ribbon with undulating folds & twists
+  // FORMATION A: LEFT RIBBON (DIAGONAL FLOWING STREAM)
+  // Enters from lower-left/mid-left edge and arches diagonally toward upper-middle.
   // =========================================================================
-  vec3 getDiagonalSilkCurrent(vec3 baseSeed, float currentId, float t) {
-    // Flow speed along the diagonal trajectory
-    float speed = (0.045 + aLayer * 0.025) * (0.85 + baseSeed.z * 0.30);
-    // u: longitudinal parameter along diagonal path [-1.0, 1.0]
-    float u = fract(baseSeed.x + t * speed) * 2.0 - 1.0;
-    // v: transverse coordinate across ribbon width [-1.0, 1.0]
-    float v = (baseSeed.y - 0.5) * 2.0;
+  vec3 getLeftRibbon(vec3 seed, float t) {
+    float flowSpeed = 0.038 * (0.85 + seed.z * 0.30);
+    float u = fract(seed.x + t * flowSpeed); // Parametric progression [0..1]
+    float v = (seed.y - 0.5) * 2.0;          // Transverse ribbon coordinate [-1..1]
 
-    float spreadX = 92.0;
-    float posX = u * spreadX;
+    // Diagonal trajectory: from (-58, -24) curving up to (-12, 25)
+    float startX = -58.0;
+    float endX   = -8.0;
+    float startY = -24.0;
+    float endY   = 26.0;
 
-    // 1. PRIMARY FLOWING SILK CURRENT (currentId < 0.5)
-    if (currentId < 0.5) {
-      // Base diagonal spine with undulating crests:
-      // Ascends on the left, dips smoothly under the center hero headline, arches high on right
-      float spineY = 12.0 * u + sin(u * 2.6 - 0.3) * 11.0 + cos(u * 4.2) * 4.5 - 4.5 * exp(-u * u * 8.0);
-      float spineZ = cos(u * 2.2) * 14.0 + sin(u * 4.8) * 5.0 - 12.0;
+    // Smooth arched spline curve
+    float posX = mix(startX, endX, u) + sin(u * 3.14159) * 5.5;
+    float posY = mix(startY, endY, pow(u, 0.92)) + sin(u * 2.6) * 4.0;
+    float posZ = -12.0 + sin(u * 3.14159) * 16.0;
 
-      // Ribbon width varies across the stream: broader flanks, sleeker center
-      float ribbonWidth = 14.0 + sin(u * 2.0 + 1.2) * 6.5 + cos(u * 3.4) * 4.0;
-      // 3D twist angle of the silk ribbon
-      float twist = 0.80 * u + sin(u * 2.8) * 0.65;
+    // Ribbon width and 3D twist
+    float ribbonWidth = 14.0 + sin(u * 3.0) * 5.0;
+    float twistAngle  = 0.55 + u * 1.35;
 
-      // Harmonic folds (simulates draped silk sheets)
-      float fold1 = sin(v * 3.14159 + u * 3.5) * 4.0;
-      float fold2 = cos(v * 6.28318 + u * 5.5) * 2.0;
-      float totalFold = fold1 + fold2;
+    // Transverse offset along ribbon plane
+    float normalX = -sin(twistAngle) * 0.6;
+    float normalY = cos(twistAngle);
+    float normalZ = sin(twistAngle * 1.4);
 
-      float posY = spineY + v * ribbonWidth * cos(twist) - totalFold * sin(twist);
-      float posZ = spineZ + v * ribbonWidth * sin(twist) + totalFold * cos(twist);
+    posX += v * ribbonWidth * normalX;
+    posY += v * ribbonWidth * normalY;
+    posZ += v * ribbonWidth * normalZ;
 
-      // Micro laminar drift along the silk threads
-      vec3 curl = curlNoise(vec3(u * 2.5, v * 1.5, t * 0.05), t * 0.02);
-      return vec3(posX + curl.x * 2.5, posY + curl.y * 3.0, posZ + curl.z * 2.5);
-    }
-    // 2. SECONDARY UPPER BRAIDED FILAMENT (currentId < 1.5)
-    else if (currentId < 1.5) {
-      float spineY = 15.0 * u + sin(u * 2.4 + 1.2) * 13.0 + cos(u * 5.0) * 4.0 + 6.0;
-      float spineZ = sin(u * 2.5) * 12.0 - 8.0;
-      float width = 8.5 + sin(u * 3.0) * 3.0;
-      float twist = 1.1 * u + 0.5;
+    // Subtle laminar curl breathing
+    vec3 curl = curlNoise(vec3(u * 2.2, v * 1.2, t * 0.04), t * 0.015);
+    return vec3(posX + curl.x * 2.2, posY + curl.y * 2.5, posZ + curl.z * 2.0);
+  }
 
-      float posY = spineY + v * width * cos(twist);
-      float posZ = spineZ + v * width * sin(twist);
-      return vec3(posX, posY, posZ);
-    }
-    // 3. SECONDARY LOWER PEELING WISP (currentId < 2.5)
-    else if (currentId < 2.5) {
-      float spineY = 10.0 * u + sin(u * 3.2 - 0.8) * 9.0 - 10.0;
-      float spineZ = cos(u * 2.0) * 10.0 - 18.0;
-      float width = 7.0 + cos(u * 2.5) * 2.5;
+  // =========================================================================
+  // FORMATION B: UPPER-RIGHT SPIRAL (CELESTIAL LOGARITHMIC VORTEX)
+  // Delicate golden-ratio spiral of fine discrete orbital filaments.
+  // Nucleus has a warm-orange focal glint, outer arms sweep toward right & lower field.
+  // =========================================================================
+  vec3 getUpperRightSpiral(vec3 seed, float t) {
+    // Spiral center in 3D space (upper right quadrant, matching reference)
+    vec2 center = vec2(36.0, 18.0);
 
-      float posY = spineY + v * width * 0.8;
-      float posZ = spineZ + v * width * 0.6;
-      return vec3(posX, posY, posZ);
-    }
-    // 4. AMBIENT DRIFTING PARTICLES (currentId >= 2.5)
-    else {
-      float ambX = u * spreadX;
-      float ambY = (baseSeed.y - 0.5) * 65.0 + sin(u * 1.8 + t * 0.1) * 6.0;
-      float ambZ = (baseSeed.z - 0.5) * 40.0 - 16.0;
-      vec3 curl = curlNoise(vec3(u * 1.8, baseSeed.y * 2.0, t * 0.04), t * 0.015);
-      return vec3(ambX + curl.x * 4.0, ambY + curl.y * 4.0, ambZ + curl.z * 3.0);
+    // Orbital parameters
+    float armCount = 4.0;
+    float armIndex = floor(seed.x * armCount);
+    float armOffset = armIndex * (6.283185 / armCount);
+
+    // Theta: windings from inner core (~1.2 rad) to outer rim (~12.8 rad)
+    float tProgress = seed.y;
+    float theta = 1.2 + tProgress * 11.6;
+
+    // Differential Keplerian rotation: inner eye rotates faster, outer rim drifts gently
+    float orbitalSpeed = 0.040 / (0.45 + tProgress * 0.95);
+    float currentAngle = theta + armOffset + t * orbitalSpeed;
+
+    // Logarithmic radial curve
+    float radius = 2.4 * pow(theta, 1.22);
+
+    // Transverse filament spread across orbital arm
+    float filamentSpread = (seed.z - 0.5) * (1.2 + radius * 0.08);
+
+    float posX = center.x + radius * cos(currentAngle) + filamentSpread * cos(currentAngle + 1.5708);
+    float posY = center.y + radius * sin(currentAngle) * 0.88 + filamentSpread * sin(currentAngle + 1.5708);
+    float posZ = -6.0 - radius * 0.18 + sin(theta * 1.8) * 3.5;
+
+    // Subtle gravitational turbulence near core
+    float coreProximity = 1.0 - smoothstep(1.5, 6.0, radius);
+    vec3 curl = curlNoise(vec3(posX * 0.05, posY * 0.05, t * 0.03), t * 0.02);
+
+    return vec3(posX + curl.x * (1.5 + coreProximity * 2.0),
+                 posY + curl.y * (1.5 + coreProximity * 2.0),
+                 posZ + curl.z * 1.5);
+  }
+
+  // =========================================================================
+  // FORMATION C: LOWER WAVE (BROAD UNDULATING PARTICLE SWEEP)
+  // Sweeps across bottom edge, dips under center hero text & scroll indicator.
+  // =========================================================================
+  vec3 getLowerWave(vec3 seed, float t) {
+    float waveSpeed = 0.028 * (0.85 + seed.z * 0.30);
+    float u = fract(seed.x + t * waveSpeed) * 2.0 - 1.0; // [-1.0 .. 1.0] across viewport
+    float v = (seed.y - 0.5) * 2.0;                      // [-1.0 .. 1.0] transverse
+
+    float posX = u * 68.0;
+
+    // Vertical crests & troughs:
+    // Natural dip in center (u ~ 0) to clear hero text & scroll indicator,
+    // gracefully rising on left and right flanks.
+    float centerDip = -6.5 * exp(-u * u * 4.2);
+    float waveY = -24.0 + sin(u * 2.6 - 0.4) * 6.5 + cos(u * 4.8) * 3.2 + centerDip;
+
+    // Ribbon thickness and stratification
+    float width = 11.5 + cos(u * 2.2) * 4.0;
+    float posY = waveY + v * width * 0.75 + sin(u * 3.5 + t * 0.35) * 1.8;
+    float posZ = cos(u * 2.2) * 12.0 + (seed.z - 0.5) * 12.0 - 10.0;
+
+    vec3 curl = curlNoise(vec3(u * 2.0, v * 1.5, t * 0.03), t * 0.015);
+    return vec3(posX + curl.x * 2.0, posY + curl.y * 2.2, posZ + curl.z * 2.0);
+  }
+
+  // =========================================================================
+  // FORMATION D: AMBIENT DRIFTING SPACE POINTS
+  // Sparse, serene dust floating between primary formations in deep space.
+  // =========================================================================
+  vec3 getAmbientField(vec3 seed, float t) {
+    float ambX = (seed.x - 0.5) * 140.0;
+    float ambY = (seed.y - 0.5) * 85.0;
+    float ambZ = (seed.z - 0.5) * 45.0 - 16.0;
+
+    vec3 curl = curlNoise(vec3(seed.x * 2.0, seed.y * 2.0, t * 0.02), t * 0.01);
+    return vec3(ambX + curl.x * 4.0, ambY + curl.y * 4.0, ambZ + curl.z * 3.0);
+  }
+
+  // =========================================================================
+  // STATE 0: MASTER HERO CINEMATIC COMPOSITION
+  // Assembles Formation A (Left Ribbon), B (Upper-Right Spiral), C (Lower Wave),
+  // and D (Ambient Space) into one unified coordinate system.
+  // =========================================================================
+  vec3 getMasterHeroComposition(vec3 seed, float formationId, float t) {
+    if (formationId < 0.5) {
+      return getLeftRibbon(seed, t);
+    } else if (formationId < 1.5) {
+      return getUpperRightSpiral(seed, t);
+    } else if (formationId < 2.5) {
+      return getLowerWave(seed, t);
+    } else {
+      return getAmbientField(seed, t);
     }
   }
 
   // =========================================================================
-  // SCROLL STATES 1-4: CONTINUOUS MORPHING FLOWS
+  // SCROLL STATES 1-4: CONTINUOUS REVERSIBLE TRANSITIONS
   // =========================================================================
 
-  // STATE 1: Flowing Waves (Undulating harmonic contours)
+  // STATE 1: Flowing Harmonized Waves (About & Capabilities)
   vec3 getFlowingWaves(vec3 seed, float t) {
-    float waveX = (seed.x - 0.5) * 140.0;
+    float waveX = (seed.x - 0.5) * 145.0;
     float waveFreq1 = 0.032;
     float waveFreq2 = 0.064;
-    float waveY = sin(waveX * waveFreq1 + t * 0.50 + seed.z * 2.2) * 13.0 
-                + sin(waveX * waveFreq2 - t * 0.35) * 5.0 
-                + (seed.y - 0.5) * 24.0;
-    float waveZ = cos(waveX * waveFreq1 + t * 0.45 + seed.y * 2.2) * 11.0 
+    float waveY = sin(waveX * waveFreq1 + t * 0.45 + seed.z * 2.2) * 12.0 
+                + sin(waveX * waveFreq2 - t * 0.30) * 4.5 
+                + (seed.y - 0.5) * 26.0;
+    float waveZ = cos(waveX * waveFreq1 + t * 0.40 + seed.y * 2.2) * 10.0 
                 + (seed.z - 0.5) * 14.0 - 12.0;
     return vec3(waveX, waveY, waveZ);
   }
 
-  // STATE 2: 3D Spatial Spirals (Waves gain depth and form spiral ribbons)
+  // STATE 2: 3D Spatial Constellation Spirals (Work & Projects)
   vec3 getSpatialSpirals(vec3 seed, float t) {
     float ringIndex = floor(seed.x * 4.0);
-    float baseR = 15.0 + ringIndex * 8.5 + seed.y * 5.0;
+    float baseR = 16.0 + ringIndex * 9.0 + seed.y * 5.0;
     float direction = (seed.z > 0.5) ? 1.0 : -0.8;
-    float speed = (0.22 / (1.0 + ringIndex * 0.20)) * direction;
+    float speed = (0.20 / (1.0 + ringIndex * 0.20)) * direction;
     float theta = seed.y * 6.283185 + t * speed;
-    float tilt = 0.26 * (ringIndex - 1.5);
+    float tilt = 0.25 * (ringIndex - 1.5);
 
     float orbX = baseR * cos(theta);
     float orbY = baseR * sin(theta) * cos(tilt) + (seed.z - 0.5) * 6.0;
@@ -258,49 +328,47 @@ const vertexShader = `
     return vec3(orbX, orbY, orbZ);
   }
 
-  // STATE 3: Loosened Starlight & Fine Celestial Filaments
+  // STATE 3: Loosened Celestial Filaments (Writing & Lab)
   vec3 getLoosenedFilaments(vec3 seed, float t) {
     float angle = seed.x * 6.283185;
-    float radius = 18.0 + seed.y * 24.0;
+    float radius = 18.0 + seed.y * 25.0;
     float tunnelLength = 100.0;
-    float tunnelZ = mod((seed.z - 0.5) * tunnelLength + t * 12.0, tunnelLength) - (tunnelLength * 0.5);
-    float twist = tunnelZ * 0.016;
+    float tunnelZ = mod((seed.z - 0.5) * tunnelLength + t * 10.0, tunnelLength) - (tunnelLength * 0.5);
+    float twist = tunnelZ * 0.015;
     float tunnelX = radius * cos(angle + twist);
-    float tunnelY = radius * sin(angle + twist) * 0.72;
+    float tunnelY = radius * sin(angle + twist) * 0.75;
     return vec3(tunnelX, tunnelY, tunnelZ);
   }
 
-  // STATE 4: Reorganized Curved Currents (Atmospheric regrouping)
-  vec3 getCurvedCurrents(vec3 seed, float t) {
-    float expansion = 1.0 + (seed.x + seed.y) * 0.32;
-    float dissX = (seed.x - 0.5) * 150.0 * expansion + sin(t * 0.15 + seed.z * 4.0) * 6.0;
-    float dissY = (seed.y - 0.5) * 105.0 * expansion + cos(t * 0.13 + seed.x * 4.0) * 6.0;
-    float dissZ = (seed.z - 0.5) * 60.0 - 14.0;
+  // STATE 4: Quiet Atmospheric Dispersal (Contact & Footer)
+  vec3 getQuietField(vec3 seed, float t) {
+    float expansion = 1.0 + (seed.x + seed.y) * 0.35;
+    float dissX = (seed.x - 0.5) * 155.0 * expansion + sin(t * 0.12 + seed.z * 4.0) * 5.0;
+    float dissY = (seed.y - 0.5) * 110.0 * expansion + cos(t * 0.10 + seed.x * 4.0) * 5.0;
+    float dissZ = (seed.z - 0.5) * 60.0 - 16.0;
     return vec3(dissX, dissY, dissZ);
   }
 
   void main() {
     vLayer = aLayer;
+    vIsOrange = aIsOrange;
     float effectiveTime = uTime;
 
     // 1. CALCULATE 5 CONTINUOUS STATES
-    vec3 pos0 = getDiagonalSilkCurrent(aSeed, aCurrentId, effectiveTime);
+    vec3 pos0 = getMasterHeroComposition(aSeed, aFormationId, effectiveTime);
     vec3 pos1 = getFlowingWaves(aSeed, effectiveTime);
     vec3 pos2 = getSpatialSpirals(aSeed, effectiveTime);
     vec3 pos3 = getLoosenedFilaments(aSeed, effectiveTime);
-    vec3 pos4 = getCurvedCurrents(aSeed, effectiveTime);
+    vec3 pos4 = getQuietField(aSeed, effectiveTime);
 
     // 2. SMOOTH C-INFINITY MORPHING ACROSS SCROLL PROGRESS
-    // State 0: 0.00 - 0.20 (Hero Signature Diagonal Currents)
-    // State 1: 0.35 (About & Capabilities Waves)
-    // State 2: 0.55 (Work & Projects Spirals)
-    // State 3: 0.75 (Writing & Constellation Filaments)
-    // State 4: 0.95 (Lab & Contact Currents)
+    // State 0: Hero Master Composition (Left Ribbon + Right Spiral + Lower Wave + Orange)
+    // States 1-4: Smoothly morph into calmer section configurations
     float p = clamp(uScrollProgress, 0.0, 1.0);
-    float dist0 = abs(p - 0.04);
-    float dist1 = abs(p - 0.30);
-    float dist2 = abs(p - 0.55);
-    float dist3 = abs(p - 0.78);
+    float dist0 = abs(p - 0.03);
+    float dist1 = abs(p - 0.28);
+    float dist2 = abs(p - 0.52);
+    float dist3 = abs(p - 0.76);
     float dist4 = abs(p - 0.98);
 
     float w0 = exp(-dist0 * dist0 * 36.0);
@@ -319,39 +387,34 @@ const vertexShader = `
     vec3 pos = pos0 * w0 + pos1 * w1 + pos2 * w2 + pos3 * w3 + pos4 * w4;
 
     // Vertical scroll parallax & momentum impulse
-    pos.y += uScrollOffset * (0.026 + aLayer * 0.035);
-    pos.y += uScrollVel * (0.045 + aLayer * 0.060);
+    pos.y += uScrollOffset * (0.024 + aLayer * 0.032);
+    pos.y += uScrollVel * (0.040 + aLayer * 0.055);
 
     // Screen-space NDC projection
     vec4 projected = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
     vec2 ndc = projected.xy / projected.w;
 
     // =========================================================================
-    // 3. HERO HEADLINE PROTECTION & ASYMMETRICAL FLANK LUMINANCE
-    // Sized to softly attenuate particles directly behind headline typography
-    // while keeping outer left and right flanks bright and sparkling!
+    // 3. CENTRAL NEGATIVE SPACE & HERO TEXT PROTECTION
+    // Keeps the region behind the hero title ("AI TO INNOVATION.") dark and uncluttered.
     // =========================================================================
-    vec2 heroCenter = vec2(0.0, 0.06);
-    vec2 heroDelta = (ndc - heroCenter) / vec2(0.58, 0.28);
+    vec2 heroCenter = vec2(0.0, 0.04);
+    vec2 heroDelta = (ndc - heroCenter) / vec2(0.56, 0.28);
     float heroDist = length(heroDelta);
-    // Soft, localized reduction (0.64 directly behind letters, 1.0 outside)
-    float heroClearance = smoothstep(0.30, 1.20, heroDist);
+    // Soft, localized attenuation (0.50 directly behind letters, 1.0 outside)
+    float heroClearance = smoothstep(0.32, 1.15, heroDist);
     float heroScrollWeight = 1.0 - smoothstep(0.0, 0.20, uScrollProgress);
-    float heroAttenuation = mix(1.0, mix(0.64, 1.0, heroClearance), heroScrollWeight);
-
-    // Asymmetrical flank emphasis: right wave crest is slightly brighter
-    float flankBoost = (ndc.x > 0.35) ? 1.15 : ((ndc.x < -0.35) ? 1.05 : 1.0);
+    float heroAttenuation = mix(1.0, mix(0.50, 1.0, heroClearance), heroScrollWeight);
 
     // =========================================================================
     // 4. FLUID CURSOR INTERACTION (LOCALIZED STREAMLINE BENDING)
-    // Cursor acts like an aerodynamic obstacle: streamlines bend smoothly around it
-    // with a subtle directional wake, returning gracefully without permanent drift.
+    // Particles deflect gently around the pointer like a smooth physical medium.
     // =========================================================================
     vec2 aspectVec = vec2(uResolution.x / uResolution.y, 1.0);
     vec2 pointerDiff = (ndc - uPointer) * aspectVec;
     float distToPointer = length(pointerDiff);
 
-    float radius = uPointerRadius; // Controlled localized radius (~125px)
+    float radius = uPointerRadius; // Controlled radius (~125px)
     float cursorGlow = 0.0;
 
     if (distToPointer < radius && distToPointer > 0.0001 && uPointerActive > 0.001) {
@@ -367,18 +430,18 @@ const vertexShader = `
 
       // Tangential streamline curvature: current bends around the pointer
       vec2 tangent = vec2(-repulseDir.y, repulseDir.x) * sign(uPointerVel.x + 0.001);
-      vec2 streamCurve = tangent * (falloff * 0.08 * depthFactor);
+      vec2 streamCurve = tangent * (falloff * 0.07 * depthFactor);
 
       // Directional velocity wake
       float velMag = length(uPointerVel);
       vec2 velDir = velMag > 0.001 ? normalize(uPointerVel) : vec2(0.0);
-      vec2 velWake = velDir * (falloff * clamp(velMag * 0.22, 0.0, 0.14) * depthFactor);
+      vec2 velWake = velDir * (falloff * clamp(velMag * 0.20, 0.0, 0.12) * depthFactor);
 
-      // Apply in projected world coordinates (no particle size increase!)
-      pos.xy += (repulseDisp + streamCurve + velWake) * (projected.w * 0.34);
-      pos.z -= falloff * 4.5 * depthFactor;
+      // Apply displacement in projected world coordinates
+      pos.xy += (repulseDisp + streamCurve + velWake) * (projected.w * 0.32);
+      pos.z -= falloff * 4.0 * depthFactor;
 
-      cursorGlow = falloff * 0.22;
+      cursorGlow = falloff * 0.20;
     }
 
     // Click shockwave pulse
@@ -391,8 +454,8 @@ const vertexShader = `
       if (waveDelta < waveThickness) {
         float waveStrength = (1.0 - waveDelta / waveThickness) * (1.0 - uShockTime / 1.0);
         vec2 waveDir = normalize(shockDiff + 0.0001);
-        pos.xy += waveDir * (waveStrength * 4.5 * (0.50 + aLayer * 0.35));
-        cursorGlow += waveStrength * 0.35;
+        pos.xy += waveDir * (waveStrength * 4.0 * (0.50 + aLayer * 0.35));
+        cursorGlow += waveStrength * 0.30;
       }
     }
 
@@ -401,65 +464,76 @@ const vertexShader = `
     gl_Position = projectionMatrix * mvPosition;
 
     // =========================================================================
-    // 5. PRECISE PARTICLE APPEARANCE (SECTION 2 SPECIFICATIONS)
-    // - Most particles (~78%): 0.8–1.2 CSS px
-    // - Secondary particles (~18%): 1.2–1.7 CSS px
-    // - Rare highlights (~4%): 1.7–2.2 CSS px
-    // - Strict physical clamp (>= 1.0 physical pixel on 1x, capped <= 2.25 CSS px)
+    // 5. PRECISE PARTICLE APPEARANCE (SECTION 4 SPECIFICATIONS)
+    // - Fine particles (~70%): 0.8–1.1 CSS px
+    // - Main particles (~25%): 1.1–1.6 CSS px
+    // - Highlights (~5%): 1.6–2.2 CSS px
     // =========================================================================
     float distanceCam = -mvPosition.z;
-    float perspectiveScale = clamp(68.0 / max(distanceCam, 10.0), 0.75, 1.25);
-    float speedSizeBoost = 1.0 + clamp(uScrollSpeedNorm * 0.08, 0.0, 0.12);
+    float perspectiveScale = clamp(68.0 / max(distanceCam, 10.0), 0.78, 1.22);
+    float speedSizeBoost = 1.0 + clamp(uScrollSpeedNorm * 0.06, 0.0, 0.10);
 
     float cssDiameter = aSize * perspectiveScale * uSizeVariation * speedSizeBoost;
-    // Minimal subtle size calibration (0.90 to 2.50 CSS px)
-    cssDiameter = clamp(cssDiameter, 0.90, 2.50);
+    cssDiameter = clamp(cssDiameter, 0.82, 2.22);
 
     float physicalSize = cssDiameter * uPixelRatio;
-    // Guaranteed crisp rendering: clamp between 1.2px physical and 2.55 * uPixelRatio
-    gl_PointSize = clamp(physicalSize, 1.2, 2.55 * uPixelRatio * uSizeVariation);
+    // Guaranteed crisp rendering: clamped between 1.0px physical and 2.25 * uPixelRatio
+    gl_PointSize = clamp(physicalSize, 1.0, 2.25 * uPixelRatio * uSizeVariation);
 
     // =========================================================================
-    // 6. RADIANT SILVER OPACITY & SCINTILLATION (ENHANCED SHINE)
+    // 6. OPACITY AND VISIBILITY (SECTION 5 SPECIFICATIONS)
+    // Distant: 0.18–0.32, Main: 0.35–0.58, Highlights: 0.55–0.78
     // =========================================================================
-    float twinklePhase = effectiveTime * (2.0 + aSeed.y * 3.2) + aSeed.x * 62.83;
+    float twinklePhase = effectiveTime * (1.8 + aSeed.y * 3.0) + aSeed.x * 62.83;
     float twinkle = pow(max(0.0, sin(twinklePhase)), 6.0);
-    vTwinkle = twinkle * (0.65 + aSeed.z * 0.45);
+    vTwinkle = twinkle * (0.60 + aSeed.z * 0.40);
 
-    float depthAlpha = 0.72 + 0.28 * smoothstep(-110.0, -30.0, mvPosition.z);
-    float pulse = 0.94 + 0.06 * sin(effectiveTime * 0.55 + aSeed.z * 10.0);
+    float depthAlpha = 0.75 + 0.25 * smoothstep(-110.0, -30.0, mvPosition.z);
+    float pulse = 0.95 + 0.05 * sin(effectiveTime * 0.50 + aSeed.z * 10.0);
 
-    vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow + vTwinkle * 0.35) * uOpacity * heroAttenuation * flankBoost, 0.0, 1.0);
+    vAlpha = clamp((aAlpha * depthAlpha * pulse + cursorGlow + vTwinkle * 0.30) * uOpacity * heroAttenuation, 0.0, 1.0);
 
     // =========================================================================
-    // 7. MONOCHROME SILVER-WHITE & TITANIUM PALETTE
-    // Fine digital silk aesthetic: muted silver-grey, radiant platinum, diamond white
+    // 7. COLOR PALETTE: MONOCHROME SILVER + SPARSE WARM-ORANGE ACCENTS
     // =========================================================================
-    vec3 silverGrey   = vec3(0.65, 0.70, 0.78);  // Crisp cool silver-grey
-    vec3 platinumMid  = vec3(0.85, 0.89, 0.96);  // Radiant silk platinum
-    vec3 pureWhite    = vec3(0.99, 1.00, 1.00);  // Pure crystalline white highlight
+    vec3 silverGrey   = vec3(0.68, 0.72, 0.80);  // Crisp cool silver-grey
+    vec3 platinumMid  = vec3(0.88, 0.91, 0.96);  // Radiant silk platinum
+    vec3 pureWhite    = vec3(1.00, 1.00, 1.00);  // Pure crystalline white
 
-    vec3 baseCol;
+    vec3 baseSilver;
     if (aLayer < 0.5) {
-      baseCol = silverGrey;
+      baseSilver = silverGrey;
     } else if (aLayer < 1.5) {
-      baseCol = mix(silverGrey, platinumMid, 0.75);
+      baseSilver = mix(silverGrey, platinumMid, 0.75);
     } else {
-      baseCol = mix(platinumMid, pureWhite, 0.85);
+      baseSilver = mix(platinumMid, pureWhite, 0.85);
     }
 
-    vColor = mix(baseCol, uThemeColor, 0.05);
+    if (aIsOrange > 0.5) {
+      // Warm orange / amber palette matching reference screenshot
+      vec3 amberOrange = vec3(1.00, 0.48, 0.10); // Vibrant warm amber orange
+      vec3 goldenWarm  = vec3(1.00, 0.65, 0.22); // Radiant golden accent
+      vec3 deepFlame   = vec3(0.96, 0.38, 0.06); // Deep rich amber
+      vec3 orangeCol = mix(deepFlame, amberOrange, aSeed.x);
+      if (aLayer > 1.5) {
+        orangeCol = mix(amberOrange, goldenWarm, 0.80);
+      }
+      vColor = orangeCol;
+    } else {
+      vColor = mix(baseSilver, uThemeColor, 0.04);
+    }
   }
 `;
 
 const fragmentShader = `
   uniform float uOpacity;
-  uniform float uGlowIntensity; // Radial falloff and luminous glow intensity uniform
+  uniform float uGlowIntensity;
 
   varying float vAlpha;
   varying float vLayer;
   varying vec3 vColor;
   varying float vTwinkle;
+  varying float vIsOrange;
 
   void main() {
     // Coordinate normalized to [-0.5, 0.5] from center of point sprite
@@ -472,8 +546,7 @@ const fragmentShader = `
     }
 
     // =========================================================================
-    // LUMINOUS DIGITAL SILK SHADER (SUBTLE RADIAL FALLOFF & RADIANT GLOW)
-    // Anti-aliased circular disc + needle specular core + soft radial falloff glow
+    // REFINED CIRCULAR FRAGMENT DISCIPLINE (NO BUBBLES, NO SQUARES)
     // =========================================================================
     // 1. Sub-pixel anti-aliased edge mask for clean circular discipline
     float edgeMask = smoothstep(0.50, 0.22, dist);
@@ -481,34 +554,33 @@ const fragmentShader = `
     // 2. Needle-point specular core (instantaneous falloff, brilliant center)
     float core = exp(-dist * 8.5) * 1.45;
 
-    // 3. Subtle radial falloff glow halo (exponential-gaussian luminous aura)
-    // Infuses the particle with authentic luminous warmth and ethereal presence
-    float radialFalloff = exp(-dist * 4.6) * (0.62 * uGlowIntensity);
-    float glowAura = pow(max(0.0, 1.0 - dist * 2.0), 2.2) * (0.38 * uGlowIntensity);
+    // 3. Subtle radial falloff glow halo (controlled luminous warmth)
+    float radialFalloff = exp(-dist * 4.6) * (0.55 * uGlowIntensity);
+    float glowAura = pow(max(0.0, 1.0 - dist * 2.0), 2.2) * (0.35 * uGlowIntensity);
     float totalRadialGlow = radialFalloff + glowAura;
 
-    // 4. Optical 4-point diamond star cross rays (crystalline glint & shine)
+    // 4. Optical 4-point diamond star cross rays (scintillation glint)
     float rayH = exp(-abs(coord.y) * 22.0) * max(0.0, 1.0 - abs(coord.x) * 2.2);
     float rayV = exp(-abs(coord.x) * 22.0) * max(0.0, 1.0 - abs(coord.y) * 2.2);
-    float starFlare = (rayH + rayV) * 0.40;
+    float starFlare = (rayH + rayV) * 0.38;
 
-    // 5. Faceted diagonal glint (scintillation facet)
+    // 5. Faceted diagonal glint (crystalline facet)
     vec2 diag = vec2(coord.x + coord.y, coord.x - coord.y) * 0.7071;
     float diagRay1 = exp(-abs(diag.y) * 26.0) * max(0.0, 1.0 - abs(diag.x) * 2.4);
     float diagRay2 = exp(-abs(diag.x) * 26.0) * max(0.0, 1.0 - abs(diag.y) * 2.4);
-    float diamondGlint = (diagRay1 + diagRay2) * 0.22;
+    float diamondGlint = (diagRay1 + diagRay2) * 0.20;
 
-    // 6. Total combined radiant luminous intensity
+    // 6. Total combined luminous intensity
     float luminousIntensity = core 
                             + totalRadialGlow 
-                            + (starFlare + diamondGlint) * (0.65 + vTwinkle * 1.35);
+                            + (starFlare + diamondGlint) * (0.60 + vTwinkle * 1.30);
 
-    // 7. Brilliant pure white diamond center fading into luminous silver aura
+    // 7. Core whiteness: pure white needle center even on orange particles for specular shine
     vec3 pureWhite = vec3(1.0, 1.0, 1.0);
-    float coreWhiteness = clamp(core * 0.72 + vTwinkle * 0.65, 0.0, 1.0);
-    vec3 finalColor = mix(vColor, pureWhite, coreWhiteness);
+    float coreWhiteness = clamp(core * 0.65 + vTwinkle * 0.60, 0.0, 1.0);
+    vec3 finalColor = mix(vColor, pureWhite, coreWhiteness * 0.75);
 
-    float finalAlpha = clamp(vAlpha * (luminousIntensity * 0.72 + edgeMask * 0.32) * uOpacity, 0.0, 1.0);
+    float finalAlpha = clamp(vAlpha * (luminousIntensity * 0.68 + edgeMask * 0.35) * uOpacity, 0.0, 1.0);
 
     if (finalAlpha < 0.005) {
       discard;
@@ -525,15 +597,13 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
   className = '',
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
-  const opacityRef = useRef(opacity);
-  const sizeVariationRef = useRef(sizeVariation);
-  const glowIntensityRef = useRef(glowIntensity);
 
-  useEffect(() => {
-    opacityRef.current = opacity;
-    sizeVariationRef.current = sizeVariation;
-    glowIntensityRef.current = glowIntensity;
-  }, [opacity, sizeVariation, glowIntensity]);
+  const opacityRef = useRef(opacity);
+  opacityRef.current = opacity;
+  const sizeVariationRef = useRef(sizeVariation);
+  sizeVariationRef.current = sizeVariation;
+  const glowIntensityRef = useRef(glowIntensity);
+  glowIntensityRef.current = glowIntensity;
 
   useEffect(() => {
     const container = mountRef.current;
@@ -556,7 +626,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
     const camera = new THREE.PerspectiveCamera(46, width / height, 1, 300);
     camera.position.set(0, 0, 70);
 
-    // 2. Crisp WebGL Renderer Setup
+    // 2. High-Performance WebGL Renderer Setup (antialias: false for optimal PointSprite fillrate)
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: false,
@@ -580,7 +650,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
     container.appendChild(domCanvas);
 
     // =========================================================================
-    // 3. GENERATIVE BUFFERGEOMETRY: STRUCTURED DIAGONAL SILK CURRENTS
+    // 3. GENERATIVE BUFFERGEOMETRY: STRUCTURED CINEMATIC FORMATIONS
     // =========================================================================
     const geometry = new THREE.BufferGeometry();
 
@@ -589,50 +659,66 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
     const layers = new Float32Array(PARTICLE_COUNT);
     const seeds = new Float32Array(PARTICLE_COUNT * 3);
     const alphas = new Float32Array(PARTICLE_COUNT);
-    const currentIds = new Float32Array(PARTICLE_COUNT);
+    const formationIds = new Float32Array(PARTICLE_COUNT);
+    const isOranges = new Float32Array(PARTICLE_COUNT);
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const i3 = i * 3;
       const seedVal = Math.random();
 
-      // Current Stream Assignment:
-      // ~55% Primary Ribbon (0)
-      // ~20% Upper Intertwined Wisp (1)
-      // ~15% Lower Peeling Wisp (2)
-      // ~10% Ambient Drifting Constellation (3)
-      let currentId = 0;
+      // Formation Assignment:
+      // ~30% Left Ribbon (0)
+      // ~35% Upper-Right Spiral (1)
+      // ~25% Lower Wave (2)
+      // ~10% Ambient Space Field (3)
+      let formationId = 0;
       if (seedVal > 0.90) {
-        currentId = 3; // Ambient
-      } else if (seedVal > 0.75) {
-        currentId = 2; // Lower wisp
-      } else if (seedVal > 0.55) {
-        currentId = 1; // Upper wisp
+        formationId = 3; // Ambient
+      } else if (seedVal > 0.65) {
+        formationId = 2; // Lower Wave
+      } else if (seedVal > 0.30) {
+        formationId = 1; // Upper-Right Spiral
+      } else {
+        formationId = 0; // Left Ribbon
       }
 
-      // Layer Distribution (Minimal Subtle Size Increase for Luminous Radial Falloff):
-      // - Distant / Ambient (~78%): 0.98–1.36 CSS px, Alpha: 0.42–0.58
-      // - Main Ribbon Spine (~18%): 1.42–1.88 CSS px, Alpha: 0.65–0.83
-      // - Highlight Star (~4%): 1.95–2.45 CSS px, Alpha: 0.85–0.97
+      // Layer Distribution (Target Section 4 calibrations):
+      // - Distant / Ambient (~70%): 0.82–1.08 CSS px, Alpha: 0.22–0.32
+      // - Main Ribbon Spine (~25%): 1.12–1.55 CSS px, Alpha: 0.38–0.56
+      // - Highlight Star (~5%): 1.65–2.15 CSS px, Alpha: 0.60–0.78
       let layer = 0;
-      let cssSize = 0.98 + Math.random() * 0.38;   // 0.98 – 1.36 CSS px
-      let alphaBase = 0.42 + Math.random() * 0.16; // 0.42 – 0.58 opacity
+      let cssSize = 0.85 + Math.random() * 0.24;   // 0.85 – 1.09 CSS px
+      let alphaBase = 0.22 + Math.random() * 0.10; // 0.22 – 0.32 opacity
 
-      if (seedVal > 0.96) {
-        // HIGHLIGHT STAR (4%)
+      if (seedVal > 0.95) {
+        // HIGHLIGHT STAR (~5%)
         layer = 2;
-        cssSize = 1.95 + Math.random() * 0.50;     // 1.95 – 2.45 CSS px
-        alphaBase = 0.85 + Math.random() * 0.12;   // 0.85 – 0.97 opacity
-      } else if (seedVal > 0.78) {
-        // MAIN RIBBON SPINE (18%)
+        cssSize = 1.65 + Math.random() * 0.48;     // 1.65 – 2.13 CSS px
+        alphaBase = 0.60 + Math.random() * 0.18;   // 0.60 – 0.78 opacity
+      } else if (seedVal > 0.70) {
+        // MAIN RIBBON SPINE (~25%)
         layer = 1;
-        cssSize = 1.42 + Math.random() * 0.46;     // 1.42 – 1.88 CSS px
-        alphaBase = 0.65 + Math.random() * 0.18;   // 0.65 – 0.83 opacity
+        cssSize = 1.12 + Math.random() * 0.42;     // 1.12 – 1.54 CSS px
+        alphaBase = 0.38 + Math.random() * 0.18;   // 0.38 – 0.56 opacity
       }
 
       // Initial parametric base seeds
-      const seedX = Math.random(); // Longitudinal position parameter
-      const seedY = Math.random(); // Transverse ribbon coordinate
+      const seedX = Math.random(); // Longitudinal / orbital parameter
+      const seedY = Math.random(); // Transverse / radial parameter
       const seedZ = Math.random(); // Speed & phase variance
+
+      // Warm-orange accent determination (~6% of total particles):
+      // 1. Spiral core nucleus (tight inner windings where seedY < 0.22)
+      // 2. Lower wave crest accents (seedX crest regions)
+      // 3. Rare Left Ribbon accents
+      let isOrange = 0.0;
+      if (formationId === 1 && seedY < 0.22 && Math.random() < 0.75) {
+        isOrange = 1.0; // Radiant golden spiral nucleus
+      } else if (formationId === 2 && Math.sin(seedX * 6.28) > 0.55 && Math.random() < 0.12) {
+        isOrange = 1.0; // Lower wave crest sparks
+      } else if (formationId === 0 && Math.random() < 0.03) {
+        isOrange = 1.0; // Left ribbon golden accent
+      }
 
       seeds[i3] = seedX;
       seeds[i3 + 1] = seedY;
@@ -646,7 +732,8 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       layers[i] = layer;
       sizes[i] = cssSize;
       alphas[i] = alphaBase;
-      currentIds[i] = currentId;
+      formationIds[i] = formationId;
+      isOranges[i] = isOrange;
     }
 
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -654,7 +741,8 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
     geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
     geometry.setAttribute('aAlpha', new THREE.BufferAttribute(alphas, 1));
     geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 3));
-    geometry.setAttribute('aCurrentId', new THREE.BufferAttribute(currentIds, 1));
+    geometry.setAttribute('aFormationId', new THREE.BufferAttribute(formationIds, 1));
+    geometry.setAttribute('aIsOrange', new THREE.BufferAttribute(isOranges, 1));
 
     // 4. Custom Shader Material with Additive Blending
     const uniforms = {
@@ -690,13 +778,14 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
     const particles = new THREE.Points(geometry, material);
     scene.add(particles);
 
-    // 5. Interaction Tracking & Physics State
-    let targetPointerX = 0;
-    let targetPointerY = 0;
+    // 5. Physics & Dynamic State Interpolators
     let smoothPointerX = 0;
     let smoothPointerY = 0;
+    let targetPointerX = 0;
+    let targetPointerY = 0;
     let pointerVelX = 0;
     let pointerVelY = 0;
+
     let targetPointerActive = 0.0;
     let smoothPointerActive = 0.0;
 

@@ -57,12 +57,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onExploreClick,
   id = 'hero-section',
 }) => {
-  const [rotationIndex, setRotationIndex] = useState(0);
+  const [rotationIndex, setRotationIndex] = useState(2);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setRotationIndex((prev) => (prev + 1) % HEADLINE_ROTATIONS.length);
-    }, 4500);
+    }, 5500);
     return () => clearInterval(timer);
   }, []);
 
@@ -92,7 +92,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 }`}
               >
                 <span>{`0${i + 1}`}</span>
-                {i === rotationIndex && <span className="w-1 h-1 rounded-full bg-[#7EA7FF]" />}
+                {i === rotationIndex && <span className="w-1 h-1 rounded-full bg-[#FF9D38]" />}
               </button>
             ))}
           </div>
@@ -108,10 +108,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                 className="flex flex-col items-center justify-center w-full px-2"
               >
-                {/* Micro Category Eyebrow */}
-                <span className="font-mono text-[10px] sm:text-xs font-medium text-[#7EA7FF] uppercase tracking-[0.25em] mb-2 sm:mb-3 block">
-                  {currentRotation.prefix}
-                </span>
+                {/* Micro Category Eyebrow with Editorial Dashes */}
+                <div className="flex items-center gap-2.5 sm:gap-3 mb-2.5 sm:mb-3">
+                  <span className="w-6 sm:w-10 h-[1px] bg-white/20" />
+                  <span className="font-mono text-[10px] sm:text-xs font-medium uppercase tracking-[0.25em] text-[#A7ADB5]">
+                    {currentRotation.id === 'turning-ai' ? (
+                      <>
+                        <span className="text-[#FF9D38] font-semibold">03</span> // LAB EXPERIMENTS
+                      </>
+                    ) : (
+                      currentRotation.prefix
+                    )}
+                  </span>
+                  <span className="w-6 sm:w-10 h-[1px] bg-white/20" />
+                </div>
 
                 {/* Oversized Sharp Editorial Headline */}
                 <h1
