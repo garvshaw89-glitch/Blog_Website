@@ -499,11 +499,11 @@ const vertexShader = `
     float speedSizeBoost = 1.0 + clamp(uScrollSpeedNorm * 0.06, 0.0, 0.10);
 
     float cssDiameter = aSize * perspectiveScale * uSizeVariation * speedSizeBoost * dofSizeMod * clusterMod;
-    cssDiameter = clamp(cssDiameter, 1.05, 3.10);
+    cssDiameter = clamp(cssDiameter, 1.30, 3.90);
 
     float physicalSize = cssDiameter * uPixelRatio;
-    // Guaranteed crisp rendering with enhanced presence: clamped between 1.35px physical and 3.20 * uPixelRatio
-    gl_PointSize = clamp(physicalSize, 1.35, 3.20 * uPixelRatio * uSizeVariation);
+    // Guaranteed crisp rendering with +25% size presence: clamped between 1.70px physical and 4.00 * uPixelRatio
+    gl_PointSize = clamp(physicalSize, 1.70, 4.00 * uPixelRatio * uSizeVariation);
 
     // =========================================================================
     // 6. RADIANT OPACITY & SCINTILLATING SHINE (ENHANCED SPECULAR GLINT)
@@ -713,23 +713,23 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
         formationId = 0; // Left Ribbon
       }
 
-      // Layer Distribution (Enhanced Presence & Radiant Calibrations):
-      // - Distant / Ambient (~65%): 1.15–1.48 CSS px, Alpha: 0.28–0.40
-      // - Main Ribbon Spine (~27%): 1.55–2.05 CSS px, Alpha: 0.46–0.66
-      // - Highlight Stars & Nucleus (~8%): 2.15–2.85 CSS px, Alpha: 0.72–0.92
+      // Layer Distribution (+25% Scaled Presence):
+      // - Distant / Ambient (~65%): 1.44–1.85 CSS px, Alpha: 0.28–0.40
+      // - Main Ribbon Spine (~27%): 1.94–2.57 CSS px, Alpha: 0.46–0.66
+      // - Highlight Stars & Nucleus (~8%): 2.69–3.57 CSS px, Alpha: 0.72–0.92
       let layer = 0;
-      let cssSize = 1.15 + Math.random() * 0.33;   // 1.15 – 1.48 CSS px
+      let cssSize = 1.44 + Math.random() * 0.41;   // 1.44 – 1.85 CSS px (+25%)
       let alphaBase = 0.28 + Math.random() * 0.12; // 0.28 – 0.40 opacity
 
       if (seedVal > 0.92) {
         // HIGHLIGHT STAR & RADIANT NUCLEUS (~8%)
         layer = 2;
-        cssSize = 2.15 + Math.random() * 0.70;     // 2.15 – 2.85 CSS px
+        cssSize = 2.69 + Math.random() * 0.88;     // 2.69 – 3.57 CSS px (+25%)
         alphaBase = 0.72 + Math.random() * 0.20;   // 0.72 – 0.92 opacity
       } else if (seedVal > 0.65) {
         // MAIN RIBBON SPINE & ORBITAL ARMS (~27%)
         layer = 1;
-        cssSize = 1.55 + Math.random() * 0.50;     // 1.55 – 2.05 CSS px
+        cssSize = 1.94 + Math.random() * 0.63;     // 1.94 – 2.57 CSS px (+25%)
         alphaBase = 0.46 + Math.random() * 0.20;   // 0.46 – 0.66 opacity
       }
 
