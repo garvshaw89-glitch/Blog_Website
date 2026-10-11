@@ -59,15 +59,32 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   id = 'hero-section',
 }) => {
   const [rotationIndex, setRotationIndex] = useState(2);
-  const [isLaunchingRocket, setIsLaunchingRocket] = useState(false);
+  const [rocketTelemetry, setRocketTelemetry] = useState<{
+    isActive: boolean;
+    stage: string;
+    speed: number;
+  }>({
+    isActive: false,
+    stage: 'IDLE',
+    speed: 0,
+  });
 
   const handleLaunchRocket = () => {
     interactionEngine.triggerRocketLaunch(0, -0.92);
-    setIsLaunchingRocket(true);
-    setTimeout(() => {
-      setIsLaunchingRocket(false);
-    }, 4600);
   };
+
+  useEffect(() => {
+    const unsubscribe = interactionEngine.subscribe((state) => {
+      if (state.rocketEmitter) {
+        setRocketTelemetry({
+          isActive: state.rocketEmitter.isActive,
+          stage: state.rocketEmitter.stage,
+          speed: Math.round(state.rocketEmitter.speed),
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -242,19 +259,31 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             data-cursor="button"
             data-cursor-label="ROCKET"
             className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-lg border font-mono text-xs tracking-wider transition-all cursor-pointer ${
-              isLaunchingRocket
-                ? 'bg-[#FF9D38]/15 border-[#FF9D38] text-[#FF9D38] shadow-[0_0_20px_rgba(255,157,56,0.35)]'
+              rocketTelemetry.isActive
+                ? 'bg-[#FF9D38]/20 border-[#FF9D38] text-[#FF9D38] shadow-[0_0_24px_rgba(255,157,56,0.4)]'
                 : 'bg-[#11151A] hover:bg-[#191F26] border-amber-500/30 hover:border-amber-400/70 text-amber-200 hover:text-white'
             }`}
           >
             <Rocket
               className={`w-3.5 h-3.5 transition-transform duration-300 ${
-                isLaunchingRocket
+                rocketTelemetry.isActive
                   ? '-translate-y-1 text-[#FF9D38] animate-bounce'
                   : 'group-hover:-translate-y-0.5 text-amber-400'
               }`}
             />
-            <span>{isLaunchingRocket ? 'T+02 // LIFTOFF' : 'LAUNCH ROCKET [R]'}</span>
+            <span>
+              {rocketTelemetry.isActive
+                ? rocketTelemetry.stage === 'IGNITION'
+                  ? 'T-00 // IGNITION'
+                  : rocketTelemetry.stage === 'LIFTOFF'
+                  ? `LIFTOFF // ${rocketTelemetry.speed}U/S`
+                  : rocketTelemetry.stage === 'MAX_Q'
+                  ? `MAX-Q // ${rocketTelemetry.speed}U/S`
+                  : rocketTelemetry.stage === 'SUPERSONIC'
+                  ? `MACH-3 // ${rocketTelemetry.speed}U/S`
+                  : 'ORBIT INSERTION'
+                : 'LAUNCH ROCKET [R]'}
+            </span>
           </button>
         </div>
 

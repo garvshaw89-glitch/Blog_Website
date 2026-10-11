@@ -1,6 +1,29 @@
 import * as THREE from 'three';
 
 /**
+ * RocketEmitterTelemetry
+ * High-velocity rocket particle emitter state computed in real-time
+ * to drive dynamic trail, supersonic Mach diamonds, and exhaust plume
+ * using existing WebGL particle buffers without memory re-allocation.
+ */
+export interface RocketEmitterTelemetry {
+  isActive: boolean;
+  stage: 'IDLE' | 'IGNITION' | 'LIFTOFF' | 'MAX_Q' | 'SUPERSONIC' | 'ORBIT';
+  progress: number; // 0.0 to 1.0
+  elapsedTime: number; // in seconds
+  position: THREE.Vector3; // Current 3D rocket coordinates
+  velocity: THREE.Vector3; // High-velocity motion vector (units/sec)
+  speed: number;
+  exhaustVelocity: number; // Ejection speed of expelled particles (60 to 140)
+  thrust: number; // Current normalized engine thrust (0.0 to 1.0)
+  exhaustSpread: number; // Plume expansion radius
+  machPulse: number; // Supersonic diamond compression wave
+  wakeIntensity: number; // Shockwave displacement force
+  particleTrailRatio: number; // Percentage of existing particles harnessed for trail
+  origin: { ndcX: number; ndcY: number };
+}
+
+/**
  * SingularityInteractionState
  * Centralized, unified real-time interaction metrics used by both
  * the WebGL 3D living environment and the desktop Custom Cursor.
@@ -45,9 +68,10 @@ export interface SingularityInteractionState {
   clickOrigin: { x: number; y: number; worldX: number; worldY: number };
   clickCount: number;
 
-  // Rocket launch particle effect state
+  // High-velocity rocket particle emitter state
   lastRocketLaunchTime: number;
   rocketLaunchOrigin: { ndcX: number; ndcY: number };
+  rocketEmitter: RocketEmitterTelemetry;
 
   // Active section palette
   sectionTheme: {
@@ -97,6 +121,22 @@ class InteractionEngine {
     clickCount: 0,
     lastRocketLaunchTime: 0,
     rocketLaunchOrigin: { ndcX: 0, ndcY: -0.92 },
+    rocketEmitter: {
+      isActive: false,
+      stage: 'IDLE',
+      progress: 0,
+      elapsedTime: 0,
+      position: new THREE.Vector3(0, -28, -5),
+      velocity: new THREE.Vector3(0, 0, 0),
+      speed: 0,
+      exhaustVelocity: 0,
+      thrust: 0,
+      exhaustSpread: 0.5,
+      machPulse: 1.0,
+      wakeIntensity: 0,
+      particleTrailRatio: 0.20,
+      origin: { ndcX: 0, ndcY: -0.92 },
+    },
     sectionTheme: {
       name: 'hero',
       primary: 0x06b6d4, // Cyan
@@ -111,6 +151,7 @@ class InteractionEngine {
   private prevClientX = 0;
   private prevClientY = 0;
   private initialized = false;
+  private rocketRafPending = false;
 
   private constructor() {
     if (typeof window !== 'undefined') {
@@ -126,9 +167,118 @@ class InteractionEngine {
   }
 
   public triggerRocketLaunch(ndcX = 0, ndcY = -0.92) {
-    this.state.lastRocketLaunchTime = performance.now();
+    const now = performance.now();
+    this.state.lastRocketLaunchTime = now;
     this.state.rocketLaunchOrigin = { ndcX, ndcY };
+    this.state.rocketEmitter.isActive = true;
+    this.state.rocketEmitter.elapsedTime = 0;
+    this.state.rocketEmitter.progress = 0;
+    this.state.rocketEmitter.stage = 'IGNITION';
+    this.state.rocketEmitter.origin = { ndcX, ndcY };
+
+    const padX = ndcX * 48.0;
+    const padY = -28.0 + ndcY * 12.0;
+    const padZ = -5.0;
+
+    this.state.rocketEmitter.position.set(padX, padY, padZ);
+    this.state.rocketEmitter.velocity.set(0, 0, 0);
+    this.state.rocketEmitter.speed = 0;
+    this.state.rocketEmitter.thrust = 0.25;
+    this.state.rocketEmitter.exhaustVelocity = 45;
+    this.state.rocketEmitter.exhaustSpread = 0.6;
+    this.state.rocketEmitter.machPulse = 1.0;
+    this.state.rocketEmitter.wakeIntensity = 0.2;
+
     this.notify();
+    this.startRocketEmitterLoop();
+  }
+
+  private startRocketEmitterLoop() {
+    if (this.rocketRafPending) return;
+    this.rocketRafPending = true;
+
+    const tickEmitter = () => {
+      const now = performance.now();
+      const elapsed = (now - this.state.lastRocketLaunchTime) / 1000;
+      const totalDuration = 4.8;
+
+      if (elapsed > totalDuration) {
+        this.state.rocketEmitter.isActive = false;
+        this.state.rocketEmitter.stage = 'IDLE';
+        this.state.rocketEmitter.progress = 1.0;
+        this.state.rocketEmitter.thrust = 0.0;
+        this.state.rocketEmitter.speed = 0;
+        this.state.rocketEmitter.velocity.set(0, 0, 0);
+        this.rocketRafPending = false;
+        this.notify();
+        return;
+      }
+
+      this.state.rocketEmitter.elapsedTime = elapsed;
+      const progress = Math.min(elapsed / totalDuration, 1.0);
+      this.state.rocketEmitter.progress = progress;
+
+      // Base pad coordinates
+      const padX = this.state.rocketEmitter.origin.ndcX * 48.0;
+      const padY = -28.0 + this.state.rocketEmitter.origin.ndcY * 12.0;
+      const padZ = -5.0;
+
+      if (elapsed < 0.40) {
+        // 1. Ignition Phase: pad rumble, thrust spooling up
+        this.state.rocketEmitter.stage = 'IGNITION';
+        this.state.rocketEmitter.thrust = 0.25 + (elapsed / 0.40) * 0.75;
+        this.state.rocketEmitter.exhaustVelocity = 45 + (elapsed / 0.40) * 45;
+        const rumble = Math.sin(elapsed * 80.0) * 0.7;
+        this.state.rocketEmitter.position.set(padX + rumble, padY + Math.cos(elapsed * 70.0) * 0.4, padZ);
+        this.state.rocketEmitter.velocity.set(0, 0, 0);
+        this.state.rocketEmitter.speed = 0;
+        this.state.rocketEmitter.exhaustSpread = 1.1;
+        this.state.rocketEmitter.wakeIntensity = 0.35;
+      } else {
+        // 2. High-Velocity Flight Physics
+        const tFlight = elapsed - 0.40;
+        const currentY = padY + tFlight * 16.5 + tFlight * tFlight * 10.2;
+        const currentX = padX + Math.sin(tFlight * 1.5) * 2.2;
+        const currentZ = padZ + Math.cos(tFlight * 1.1) * 2.5;
+
+        // Instantaneous high-velocity vector
+        const vy = 16.5 + 20.4 * tFlight;
+        const vx = 2.2 * 1.5 * Math.cos(tFlight * 1.5);
+        const vz = -2.5 * 1.1 * Math.sin(tFlight * 1.1);
+
+        this.state.rocketEmitter.position.set(currentX, currentY, currentZ);
+        this.state.rocketEmitter.velocity.set(vx, vy, vz);
+        this.state.rocketEmitter.speed = Math.hypot(vx, vy, vz);
+
+        // Stage classification based on velocity and trajectory
+        if (elapsed < 1.4) {
+          this.state.rocketEmitter.stage = 'LIFTOFF';
+          this.state.rocketEmitter.thrust = 1.0;
+          this.state.rocketEmitter.wakeIntensity = 0.65;
+        } else if (elapsed < 2.6) {
+          this.state.rocketEmitter.stage = 'MAX_Q';
+          this.state.rocketEmitter.thrust = 1.0;
+          this.state.rocketEmitter.wakeIntensity = 1.0;
+        } else if (elapsed < 4.2) {
+          this.state.rocketEmitter.stage = 'SUPERSONIC';
+          this.state.rocketEmitter.thrust = 0.95;
+          this.state.rocketEmitter.wakeIntensity = 0.85;
+        } else {
+          this.state.rocketEmitter.stage = 'ORBIT';
+          this.state.rocketEmitter.thrust = Math.max(0.0, 1.0 - (elapsed - 4.2) / 0.6);
+          this.state.rocketEmitter.wakeIntensity = 0.4;
+        }
+
+        this.state.rocketEmitter.exhaustVelocity = 70.0 + this.state.rocketEmitter.thrust * 50.0;
+        this.state.rocketEmitter.exhaustSpread = 0.60 + tFlight * 0.16;
+        this.state.rocketEmitter.machPulse = 1.0 + 0.45 * Math.sin(elapsed * 32.0);
+      }
+
+      this.notify();
+      requestAnimationFrame(tickEmitter);
+    };
+
+    requestAnimationFrame(tickEmitter);
   }
 
   private init() {

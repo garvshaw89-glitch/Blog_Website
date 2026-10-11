@@ -47,14 +47,8 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
 
-    // Initial cinematic rocket launch showcase on landing (after brief intro)
-    const initialLaunchTimer = setTimeout(() => {
-      interactionEngine.triggerRocketLaunch(0, -0.92);
-    }, 2800);
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      clearTimeout(initialLaunchTimer);
     };
   }, []);
 

@@ -63,6 +63,12 @@ const vertexShader = `
   uniform float uRocketTime;      // Elapsed seconds since rocket liftoff (-1 = inactive)
   uniform vec2 uRocketOrigin;     // Rocket launch origin in NDC
   uniform float uRocketActive;    // 1.0 if rocket is currently firing
+  uniform vec3 uRocketEmitterPos; // Emitter instantaneous 3D position
+  uniform vec3 uRocketEmitterVel; // Emitter instantaneous high-velocity vector
+  uniform float uRocketThrust;    // Engine normalized thrust output (0.0 to 1.0)
+  uniform float uExhaustVelocity; // Particle ejection velocity
+  uniform float uMachPulse;       // Supersonic diamond compression wave
+  uniform float uWakeIntensity;   // Supersonic bow shockwave force
   uniform float uPixelRatio;      // Device pixel ratio (1x, 2x, 3x)
   uniform vec3 uThemeColor;       // Subtly blended ambient section tone
   uniform float uOpacity;         // Global opacity uniform
@@ -404,87 +410,85 @@ const vertexShader = `
     pos.y += uScrollVel * (0.040 + aLayer * 0.055);
 
     // =========================================================================
-    // 2B. ROCKET LAUNCH EFFECT (CINEMATIC ASCENT & FLUID THRUSTER EXHAUST PLUME)
+    // 2B. HIGH-VELOCITY PARTICLE EMITTER (ROCKET LAUNCH TRAIL & EXHAUST DYNAMICS)
+    // Reuses existing particle buffers (aSeed.x < 0.20) as the ascending rocket vehicle,
+    // hypersonic propulsion exhaust stream, supersonic Mach diamonds, and billowing wake.
     // =========================================================================
     float rocketFlame = 0.0;
-    if (uRocketTime >= 0.0 && uRocketTime < 4.8) {
+    if (uRocketActive > 0.01) {
+      vec3 rocketPos = uRocketEmitterPos;
+      vec3 rocketVel = uRocketEmitterVel;
+      float thrust = uRocketThrust;
       float tLaunch = uRocketTime;
-      // Pad origin in 3D world space
       vec3 padPos = vec3(uRocketOrigin.x * 48.0, -28.0 + uRocketOrigin.y * 12.0, -5.0);
 
-      // Rocket physics trajectory:
-      // [0.0..0.40]: Ignition spool-up & pad vibration
-      // [0.40..4.8]: Liftoff & vertical supersonic acceleration
-      float tFlight = max(0.0, tLaunch - 0.40);
-      float rocketY = padPos.y + tFlight * 16.5 + tFlight * tFlight * 10.2;
-      float rocketX = padPos.x + sin(tFlight * 1.5) * 2.2;
-      float rocketZ = padPos.z + cos(tFlight * 1.1) * 2.5;
-      vec3 rocketPos = vec3(rocketX, rocketY, rocketZ);
+      // 1. DEDICATED HIGH-VELOCITY TRAIL EMITTER PARTICLES (~20% of existing buffer)
+      if (aSeed.x < 0.20) {
+        float rocketFrac = aSeed.x / 0.20; // [0.0 .. 1.0]
 
-      // Pad ignition rumble
-      if (tLaunch < 0.40) {
-        float rumble = sin(tLaunch * 80.0) * 0.7;
-        rocketPos.x += rumble;
-        rocketPos.y += cos(tLaunch * 70.0) * 0.5;
-      }
-
-      // 1. DEDICATED ROCKET VESSEL & THRUSTER EXHAUST PLUME (~18% of particles)
-      if (aSeed.x < 0.18) {
-        float rocketFrac = aSeed.x / 0.18; // [0.0 .. 1.0]
-
-        if (rocketFrac < 0.12) {
-          // A. ROCKET NOSE CONE & AERODYNAMIC HULL
-          float coneT = rocketFrac / 0.12; // 0 at tip, 1 at nozzle
+        if (rocketFrac < 0.10) {
+          // A. ROCKET NOSE CONE & HULL (Leading aerodynamic needle tip)
+          float coneT = rocketFrac / 0.10; // 0 at tip, 1 at nozzle
           float coneHeight = 4.2;
           float coneRadius = (1.0 - coneT * 0.65) * 1.1;
           float coneAngle = aSeed.y * 6.283185 + effectiveTime * 8.0;
 
-          pos.x = rocketX + cos(coneAngle) * coneRadius;
-          pos.y = rocketY + (1.0 - coneT) * coneHeight - 0.5;
-          pos.z = rocketZ + sin(coneAngle) * coneRadius * 0.9;
-          rocketFlame = 0.35; // Pure white crystalline needle tip
+          pos.x = rocketPos.x + cos(coneAngle) * coneRadius;
+          pos.y = rocketPos.y + (1.0 - coneT) * coneHeight - 0.5;
+          pos.z = rocketPos.z + sin(coneAngle) * coneRadius * 0.9;
+          rocketFlame = 0.40; // Needle crystalline tip gleam
         } else {
-          // B. SUPERHEATED THRUSTER EXHAUST PLUME & SUPERSONIC MACH DIAMONDS
-          float plumeFrac = (rocketFrac - 0.12) / 0.88; // 0..1 along plume length
-          float plumeDist = plumeFrac * 50.0; // Trails 50 units downward
+          // B. HIGH-VELOCITY EXHAUST TRAIL & SUPERSONIC MACH DIAMONDS
+          float plumeFrac = (rocketFrac - 0.10) / 0.90; // [0.0 .. 1.0]
+          // The trail length scales with current rocket speed & thrust
+          float maxTrailLen = 28.0 + clamp(length(rocketVel) * 0.35, 0.0, 36.0);
+          float plumeDist = plumeFrac * maxTrailLen;
 
-          // Aerodynamic nozzle expansion
-          float plumeRadius = 0.60 + plumeDist * 0.18 + sin(plumeDist * 3.0 - effectiveTime * 28.0) * 0.35;
+          // Parabolic nozzle expansion modulated by thrust
+          float plumeRadius = (0.50 + plumeDist * 0.16) * (0.80 + thrust * 0.40) 
+                            + sin(plumeDist * 3.0 - effectiveTime * 30.0) * 0.32;
 
-          // Mach diamond periodic pressure nodes
-          float machPulse = 1.0 + 0.45 * sin(plumeDist * 2.2 - effectiveTime * 32.0);
-          float plumeAngle = aSeed.y * 6.283185 + effectiveTime * 38.0;
+          // Supersonic Mach diamond pressure nodes (periodic acoustic nodes)
+          float machPulse = 1.0 + 0.45 * sin(plumeDist * 2.2 - effectiveTime * 34.0) * (uMachPulse * 0.5 + 0.5);
+          float plumeAngle = aSeed.y * 6.283185 + effectiveTime * 40.0;
 
-          float pX = rocketX + cos(plumeAngle) * plumeRadius * machPulse + (aSeed.z - 0.5) * 1.5;
-          float pY = rocketY - 1.2 - plumeDist;
-          float pZ = rocketZ + sin(plumeAngle) * plumeRadius * 0.9;
+          // High-velocity ejection: particles stream downward behind the accelerating rocket
+          float pX = rocketPos.x + cos(plumeAngle) * plumeRadius * machPulse + (aSeed.z - 0.5) * 1.4;
+          float pY = rocketPos.y - 1.2 - plumeDist;
+          float pZ = rocketPos.z + sin(plumeAngle) * plumeRadius * 0.85;
+
+          // Add subtle high-speed trail turbulence
+          vec3 trailTurb = curlNoise(vec3(pX * 0.1, pY * 0.05, effectiveTime * 0.1), effectiveTime * 0.05);
+          pX += trailTurb.x * (plumeDist * 0.04);
+          pZ += trailTurb.z * (plumeDist * 0.04);
 
           pos = vec3(pX, pY, pZ);
-          // Flame intensity fades from blinding white at nozzle to amber smoke
-          rocketFlame = clamp(1.0 - (plumeDist / 46.0), 0.0, 1.0) * 2.2;
+
+          // Incandescent thermal emission: highest at nozzle, cools along trail length
+          rocketFlame = clamp(1.0 - (plumeDist / maxTrailLen), 0.0, 1.0) * (1.6 + thrust * 0.8);
         }
       } else {
-        // 2. LAUNCH PAD BLAST WAVE & BILLOWING SMOKE (tLaunch < 2.2)
+        // 2. LAUNCH PAD BLAST CLOUD (tLaunch < 2.2, expanding smoke ring)
         if (tLaunch < 2.2 && pos.y < (padPos.y + 16.0)) {
           float padDist = length(pos.xy - padPos.xy);
-          float padBlast = smoothstep(24.0, 0.0, padDist) * (1.0 - tLaunch / 2.2);
+          float padBlast = smoothstep(25.0, 0.0, padDist) * (1.0 - tLaunch / 2.2);
           vec2 blastDir = normalize(pos.xy - padPos.xy + vec2(0.001, -2.0));
           pos.xy += blastDir * (padBlast * 14.0 * sin(tLaunch * 3.14159));
           rocketFlame = max(rocketFlame, padBlast * 0.75);
         }
 
-        // 3. SUPERSONIC MACH CONE & AERODYNAMIC BOW SHOCKWAVE ACROSS THE UNIVERSE
+        // 3. SUPERSONIC MACH BOW CONE & WAKE TURBULENCE (Displaces existing ribbon particles)
         vec3 deltaRocket = pos - rocketPos;
         float trailDistY = rocketPos.y - pos.y;
-        if (trailDistY > 0.0 && trailDistY < 60.0) {
+        if (trailDistY > 0.0 && trailDistY < 65.0) {
           float radialDist = length(deltaRocket.xz);
-          float machConeRadius = trailDistY * 0.70; // Mach cone angle
+          float machConeRadius = trailDistY * 0.68; // Aerodynamic Mach cone angle
           float coneDist = abs(radialDist - machConeRadius);
-          if (coneDist < 9.5) {
-            float shockStrength = (1.0 - coneDist / 9.5) * smoothstep(60.0, 6.0, trailDistY);
+          if (coneDist < 10.0) {
+            float shockStrength = (1.0 - coneDist / 10.0) * smoothstep(65.0, 5.0, trailDistY) * uWakeIntensity;
             vec3 shockPush = normalize(vec3(deltaRocket.x, 0.0, deltaRocket.z) + vec3(0.001));
-            pos += shockPush * (shockStrength * 4.5);
-            rocketFlame = max(rocketFlame, shockStrength * 0.65);
+            pos += shockPush * (shockStrength * 4.6);
+            rocketFlame = max(rocketFlame, shockStrength * 0.70);
           }
         }
       }
@@ -904,6 +908,12 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       uRocketTime: { value: -1.0 },
       uRocketOrigin: { value: new THREE.Vector2(0, -0.92) },
       uRocketActive: { value: 0.0 },
+      uRocketEmitterPos: { value: new THREE.Vector3(0, -28, -5) },
+      uRocketEmitterVel: { value: new THREE.Vector3(0, 0, 0) },
+      uRocketThrust: { value: 0.0 },
+      uExhaustVelocity: { value: 0.0 },
+      uMachPulse: { value: 1.0 },
+      uWakeIntensity: { value: 0.0 },
       uPixelRatio: { value: pixelRatio },  // DPR calibrated
       uThemeColor: { value: new THREE.Color(0xbcc5d2) }, // Radiant platinum
       uOpacity: { value: opacityRef.current },
@@ -982,6 +992,17 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
           state.rocketLaunchOrigin.ndcX,
           state.rocketLaunchOrigin.ndcY
         );
+      }
+
+      if (state.rocketEmitter) {
+        uniforms.uRocketActive.value = state.rocketEmitter.isActive ? 1.0 : 0.0;
+        uniforms.uRocketTime.value = state.rocketEmitter.elapsedTime;
+        uniforms.uRocketEmitterPos.value.copy(state.rocketEmitter.position);
+        uniforms.uRocketEmitterVel.value.copy(state.rocketEmitter.velocity);
+        uniforms.uRocketThrust.value = state.rocketEmitter.thrust;
+        uniforms.uExhaustVelocity.value = state.rocketEmitter.exhaustVelocity;
+        uniforms.uMachPulse.value = state.rocketEmitter.machPulse;
+        uniforms.uWakeIntensity.value = state.rocketEmitter.wakeIntensity;
       }
 
       // Restrained section theme adaptation (subtle titanium/silver nuances)
@@ -1098,16 +1119,22 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
         }
       }
 
-      // Rocket launch timing
-      if (rocketStartTime > 0) {
-        const rocketElapsed = seconds - rocketStartTime;
-        if (rocketElapsed > 4.8) {
-          uniforms.uRocketTime.value = -1.0;
-          uniforms.uRocketActive.value = 0.0;
-        } else {
-          uniforms.uRocketTime.value = rocketElapsed;
-          uniforms.uRocketActive.value = 1.0;
-        }
+      // High-velocity rocket particle emitter state sync
+      const emitter = interactionEngine.state.rocketEmitter;
+      if (emitter && emitter.isActive) {
+        uniforms.uRocketActive.value = 1.0;
+        uniforms.uRocketTime.value = emitter.elapsedTime;
+        uniforms.uRocketEmitterPos.value.copy(emitter.position);
+        uniforms.uRocketEmitterVel.value.copy(emitter.velocity);
+        uniforms.uRocketThrust.value = emitter.thrust;
+        uniforms.uExhaustVelocity.value = emitter.exhaustVelocity;
+        uniforms.uMachPulse.value = emitter.machPulse;
+        uniforms.uWakeIntensity.value = emitter.wakeIntensity;
+      } else {
+        uniforms.uRocketActive.value = 0.0;
+        uniforms.uRocketTime.value = -1.0;
+        uniforms.uRocketThrust.value = 0.0;
+        uniforms.uWakeIntensity.value = 0.0;
       }
 
       uniforms.uThemeColor.value.lerp(targetColor, 0.03);
