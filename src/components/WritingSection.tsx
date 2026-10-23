@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { ArrowUpRight, BookOpen, Clock } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowUpRight, BookOpen, Clock, Search, X, Tag } from 'lucide-react';
 import { ArticleModal, ArticleData } from './ArticleModal';
 
 // Helper to calculate reading time based on word count (approx 200 WPM)
@@ -184,6 +184,42 @@ interface WritingSectionProps {
 
 export const WritingSection: React.FC<WritingSectionProps> = ({ id = 'writing' }) => {
   const [selectedArticle, setSelectedArticle] = useState<ArticleData | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTopic, setActiveTopic] = useState<string | null>(null);
+
+  // Extract all distinct technical topics/tags
+  const allTopics = useMemo(() => {
+    const set = new Set<string>();
+    ARTICLES.forEach((a) => a.tags.forEach((t) => set.add(t)));
+    return Array.from(set);
+  }, []);
+
+  // Filter articles by search query (title, topic, tag, category, excerpt) and optional active topic tag
+  const filteredArticles = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return ARTICLES.filter((article) => {
+      // Topic tag filter
+      if (activeTopic && !article.tags.includes(activeTopic)) {
+        return false;
+      }
+
+      // If no text query, article matches
+      if (!q) return true;
+
+      // Match against title, category, tags, and excerpt
+      const matchesTitle = article.title.toLowerCase().includes(q);
+      const matchesCategory = article.category.toLowerCase().includes(q);
+      const matchesTags = article.tags.some((tag) => tag.toLowerCase().includes(q));
+      const matchesExcerpt = article.excerpt.toLowerCase().includes(q);
+
+      return matchesTitle || matchesCategory || matchesTags || matchesExcerpt;
+    });
+  }, [searchQuery, activeTopic]);
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setActiveTopic(null);
+  };
 
   return (
     <section
@@ -203,7 +239,7 @@ export const WritingSection: React.FC<WritingSectionProps> = ({ id = 'writing' }
         </div>
 
         {/* Section Headline */}
-        <div className="max-w-2xl mb-16">
+        <div className="max-w-2xl mb-12">
           <h2 className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-white mb-4">
             WRITING.
           </h2>
@@ -212,77 +248,196 @@ export const WritingSection: React.FC<WritingSectionProps> = ({ id = 'writing' }
           </p>
         </div>
 
-        {/* Editorial Articles List */}
-        <div className="flex flex-col gap-6">
-          {ARTICLES.map((article) => (
-            <motion.article
-              key={article.id}
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              onClick={() => setSelectedArticle(article)}
-              data-cursor="link"
-              data-cursor-label="READ"
-              className="group relative cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-8 rounded-xl bg-[#0B0E12]/50 hover:bg-[#11151A] border border-white/[0.06] hover:border-white/[0.16] hover:-translate-y-1.5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] shadow-sm hover:shadow-[0_12px_40px_rgba(0,0,0,0.6)]"
+        {/* Search & Topic Filter Bar */}
+        <div className="mb-10 flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            {/* Search Input Bar */}
+            <div className="relative flex-1 max-w-xl group">
+              <div className="relative flex items-center bg-[#0B0E12]/80 backdrop-blur-md rounded-lg border border-white/[0.1] focus-within:border-cyan-400/50 focus-within:ring-1 focus-within:ring-cyan-400/20 transition-all duration-300 shadow-inner">
+                <Search className="w-4 h-4 text-neutral-500 group-focus-within:text-cyan-400 ml-3.5 shrink-0 transition-colors" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filter articles by title or technical topic..."
+                  aria-label="Filter articles by title or technical topic"
+                  className="w-full bg-transparent text-white placeholder:text-neutral-500 font-sans text-sm px-3 py-2.5 focus:outline-none"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search query"
+                    className="mr-3 p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Results Counter & Clear all */}
+            <div className="flex items-center gap-3 self-end sm:self-center font-mono text-xs">
+              <span className="text-neutral-400">
+                Showing <span className="text-white font-medium">{filteredArticles.length}</span> of {ARTICLES.length}
+              </span>
+              {(searchQuery || activeTopic) && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors ml-1"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Technical Topic Pills for Instant Filtering */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="font-mono text-[11px] text-neutral-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+              <Tag className="w-3 h-3 text-cyan-400" />
+              Topics:
+            </span>
+            <button
+              type="button"
+              onClick={() => setActiveTopic(null)}
+              className={`px-2.5 py-1 rounded text-[11px] font-mono tracking-wide transition-all ${
+                activeTopic === null
+                  ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/40'
+                  : 'bg-white/[0.03] text-neutral-400 border border-white/[0.06] hover:bg-white/[0.08] hover:text-neutral-200'
+              }`}
             >
-              {/* Thin Left Accent Line on Hover */}
-              <div className="absolute left-0 top-6 bottom-6 w-[2px] bg-[#7EA7FF] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-r" />
-
-              <div className="max-w-3xl">
-                <div className="flex items-center gap-3 font-mono text-[11px] text-[#626A73] mb-3 tracking-wider uppercase">
-                  <span className="text-[#FF9D38] font-bold">{article.number}</span>
-                  <span>/</span>
-                  <span className="text-[#7EA7FF] font-medium">{article.category}</span>
-                  <span>/</span>
-                  <span>{article.readTime}</span>
-                  <span>/</span>
-                  <span>{article.date}</span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="font-editorial text-2xl sm:text-3xl md:text-4xl font-bold text-[#F2F3F5] tracking-tight group-hover:text-white transition-colors leading-[1.12]">
-                    {article.title}
-                  </h3>
-                  {(() => {
-                    const { totalMin, sectionTimes } = getArticleEstimatedTime(article);
-                    return (
-                      <span
-                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono tracking-wide bg-cyan-500/10 text-cyan-400 border border-cyan-500/25 shadow-sm group-hover:border-cyan-400/40 transition-colors whitespace-nowrap self-center"
-                        title={`Estimated reading breakdown: ${sectionTimes.map((s, i) => `Part ${i + 1} (${s.minutes}m)`).join(', ')}`}
-                      >
-                        <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
-                        <span>~{totalMin}m read</span>
-                        <span className="text-cyan-500/60 font-light">·</span>
-                        <span className="text-[10px] text-cyan-300/80">{sectionTimes.length} parts</span>
-                      </span>
-                    );
-                  })()}
-                </div>
-
-                <p className="mt-3.5 font-sans text-[#A7ADB5] text-sm sm:text-base font-light leading-relaxed">
-                  {article.excerpt}
-                </p>
-
-                <div className="flex flex-wrap items-center gap-2 mt-4 font-mono text-[11px] text-[#626A73]">
-                  {article.tags.map((tag, idx) => (
-                    <React.Fragment key={tag}>
-                      {idx > 0 && <span aria-hidden="true">·</span>}
-                      <span>{tag}</span>
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 self-start md:self-center shrink-0 pt-2 md:pt-0">
-                <span className="font-mono text-xs uppercase tracking-wider text-[#626A73] group-hover:text-[#F2F3F5] transition-colors">
-                  READ ESSAY
-                </span>
-                <ArrowUpRight className="w-4 h-4 text-[#626A73] group-hover:text-[#7EA7FF] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-              </div>
-            </motion.article>
-          ))}
+              All
+            </button>
+            {allTopics.map((topic) => {
+              const isActive = activeTopic === topic;
+              return (
+                <button
+                  key={topic}
+                  type="button"
+                  onClick={() => setActiveTopic(isActive ? null : topic)}
+                  className={`px-2.5 py-1 rounded text-[11px] font-mono tracking-wide transition-all ${
+                    isActive
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm'
+                      : 'bg-white/[0.03] text-neutral-400 border border-white/[0.06] hover:bg-white/[0.08] hover:text-neutral-200'
+                  }`}
+                >
+                  {topic}
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Editorial Articles List */}
+        {filteredArticles.length > 0 ? (
+          <div className="flex flex-col gap-6">
+            <AnimatePresence mode="popLayout">
+              {filteredArticles.map((article) => (
+                <motion.article
+                  key={article.id}
+                  layout
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  onClick={() => setSelectedArticle(article)}
+                  data-cursor="link"
+                  data-cursor-label="READ"
+                  className="group relative cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-8 rounded-xl bg-[#0B0E12]/50 hover:bg-[#11151A] border border-white/[0.06] hover:border-white/[0.16] hover:-translate-y-1.5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] shadow-sm hover:shadow-[0_12px_40px_rgba(0,0,0,0.6)]"
+                >
+                  {/* Thin Left Accent Line on Hover */}
+                  <div className="absolute left-0 top-6 bottom-6 w-[2px] bg-[#7EA7FF] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-r" />
+
+                  <div className="max-w-3xl">
+                    <div className="flex items-center gap-3 font-mono text-[11px] text-[#626A73] mb-3 tracking-wider uppercase">
+                      <span className="text-[#FF9D38] font-bold">{article.number}</span>
+                      <span>/</span>
+                      <span className="text-[#7EA7FF] font-medium">{article.category}</span>
+                      <span>/</span>
+                      <span>{article.readTime}</span>
+                      <span>/</span>
+                      <span>{article.date}</span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="font-editorial text-2xl sm:text-3xl md:text-4xl font-bold text-[#F2F3F5] tracking-tight group-hover:text-white transition-colors leading-[1.12]">
+                        {article.title}
+                      </h3>
+                      {(() => {
+                        const { totalMin, sectionTimes } = getArticleEstimatedTime(article);
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono tracking-wide bg-cyan-500/10 text-cyan-400 border border-cyan-500/25 shadow-sm group-hover:border-cyan-400/40 transition-colors whitespace-nowrap self-center"
+                            title={`Estimated reading breakdown: ${sectionTimes.map((s, i) => `Part ${i + 1} (${s.minutes}m)`).join(', ')}`}
+                          >
+                            <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
+                            <span>~{totalMin}m read</span>
+                            <span className="text-cyan-500/60 font-light">·</span>
+                            <span className="text-[10px] text-cyan-300/80">{sectionTimes.length} parts</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
+
+                    <p className="mt-3.5 font-sans text-[#A7ADB5] text-sm sm:text-base font-light leading-relaxed">
+                      {article.excerpt}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2 mt-4 font-mono text-[11px] text-[#626A73]">
+                      {article.tags.map((tag, idx) => (
+                        <React.Fragment key={tag}>
+                          {idx > 0 && <span aria-hidden="true">·</span>}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveTopic(activeTopic === tag ? null : tag);
+                            }}
+                            className={`transition-colors hover:text-cyan-400 ${
+                              activeTopic === tag ? 'text-cyan-400 font-bold underline' : ''
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start md:self-center shrink-0 pt-2 md:pt-0">
+                    <span className="font-mono text-xs uppercase tracking-wider text-[#626A73] group-hover:text-[#F2F3F5] transition-colors">
+                      READ ESSAY
+                    </span>
+                    <ArrowUpRight className="w-4 h-4 text-[#626A73] group-hover:text-[#7EA7FF] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                  </div>
+                </motion.article>
+              ))}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center p-12 text-center rounded-xl bg-[#0B0E12]/40 border border-white/[0.08] my-4">
+            <div className="w-12 h-12 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4 text-cyan-400">
+              <Search className="w-5 h-5" />
+            </div>
+            <h3 className="font-editorial text-xl sm:text-2xl font-bold text-white mb-2">
+              No matching publications found
+            </h3>
+            <p className="font-sans text-neutral-400 text-sm max-w-md mb-6 leading-relaxed">
+              We couldn't find any articles matching &ldquo;
+              <span className="text-cyan-300 font-mono">{searchQuery || activeTopic}</span>
+              &rdquo;. Try searching for topics like Architecture, Generative AI, or Performance.
+            </p>
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              className="px-4 py-2 rounded-lg font-mono text-xs uppercase tracking-wider bg-white/10 hover:bg-white/15 text-white border border-white/10 transition-colors"
+            >
+              Reset Filters
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Reader Modal */}
