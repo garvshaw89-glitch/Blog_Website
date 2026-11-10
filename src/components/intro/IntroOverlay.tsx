@@ -20,36 +20,35 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
   onToggleAudio,
   isTransitioning,
 }) => {
-  // Timeline thresholds matching the 5 distinct scenes:
-  // Scene 01: 0.0 – 2.0s (The Void)
-  // Scene 02: 2.0 – 5.0s (The Digital Core formation)
-  // Scene 03: 5.0 – 8.0s (The Name Reveal)
-  // Scene 04: 8.0s onward (The Interactive Portal & CTA)
-  // Scene 05: Transition triggered on Enter
-  const showScene2Kicker = elapsedTime >= 2.2 && elapsedTime < 4.9 && !isTransitioning;
-  const showNameReveal = elapsedTime >= 4.9 && !isTransitioning;
-  const showCTA = elapsedTime >= 7.8 && !isTransitioning;
+  // Timeline thresholds matching the user's 4 distinct scenes:
+  // Scene 01: 0.0 – 2.8s (Typography takeover: Massive GARV enters from beyond screen edges)
+  // Scene 02: 2.8 – 5.8s (Visual transformation: typography stretches, fragments, liquid distortion)
+  // Scene 03: 5.8 – 8.8s (Identity composition: refined editorial composition, asymmetric alignment)
+  // Scene 04: 8.8s onward (Enter: elegant button appears, cinematic light sweep passes)
+  const isScene01 = elapsedTime < 2.8 && !isTransitioning;
+  const isScene02 = elapsedTime >= 2.8 && elapsedTime < 5.8 && !isTransitioning;
+  const isScene03 = elapsedTime >= 5.8 && elapsedTime < 8.8 && !isTransitioning;
+  const isScene04 = elapsedTime >= 8.8 && !isTransitioning;
 
-  // Track light sweep trigger in Scene 03
-  const [sweepActive, setSweepActive] = useState(false);
+  // Track cinematic light sweep beam across screen
+  const [lightSweepTriggered, setLightSweepTriggered] = useState(false);
 
   useEffect(() => {
-    if (elapsedTime >= 5.6 && !sweepActive) {
-      setSweepActive(true);
+    if (elapsedTime >= 8.6 && !lightSweepTriggered) {
+      setLightSweepTriggered(true);
     }
-  }, [elapsedTime, sweepActive]);
-
-  const firstName = ['G', 'A', 'R', 'V'];
-  const lastName = ['S', 'H', 'A', 'W'];
+  }, [elapsedTime, lightSweepTriggered]);
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col justify-between p-6 sm:p-10 pointer-events-none select-none overflow-hidden">
-      {/* 1. TOP HEADER: Archive Brand & Minimal Controls */}
+      {/* ---------------------------------------------------------------- */}
+      {/* TOP BAR: Clean Minimal Header (Visible across scenes)            */}
+      {/* ---------------------------------------------------------------- */}
       <motion.header
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1.0, delay: 0.3 }}
-        className="w-full flex items-center justify-between text-xs tracking-[0.25em] text-[#8E9299]"
+        transition={{ duration: 0.8, delay: 0.2 }}
+        className="w-full flex items-center justify-between text-xs tracking-[0.25em] text-[#8E9299] z-20"
       >
         <div className="flex items-center gap-3">
           <span className="relative flex h-2 w-2">
@@ -59,15 +58,15 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
           <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-[#E4E4E7]">
             GARV SHAW
           </span>
-          <span className="text-neutral-600">/</span>
+          <span className="text-neutral-600 hidden sm:inline">/</span>
           <span className="font-mono text-[10px] text-[#A5A7AC] tracking-[0.25em] hidden sm:inline">
-            DIGITAL IDENTITY
+            SYSTEM 2026
           </span>
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-2.5 pointer-events-auto">
-          {/* Subtle Ambient Sound Toggle (Web Audio API Synthesizer) */}
+          {/* Audio Synthesizer Toggle */}
           <button
             type="button"
             onClick={onToggleAudio}
@@ -89,224 +88,254 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
             )}
           </button>
 
-          {/* Minimal Skip Intro Button */}
+          {/* Skip Button */}
           <button
             type="button"
             onClick={onSkip}
             tabIndex={0}
-            aria-label="Skip intro and enter directly"
+            aria-label="Skip entrance experience"
             className="px-3.5 py-1.5 text-[11px] font-mono tracking-[0.22em] text-[#A1A1AA] hover:text-[#F4F4F5] transition-colors rounded-full border border-white/10 hover:border-white/20 bg-neutral-950/60 backdrop-blur-md cursor-pointer"
           >
-            SKIP INTRO [ESC]
+            SKIP [ESC]
           </button>
         </div>
       </motion.header>
 
-      {/* 2. CENTER STAGE: SCENE 02 & SCENE 03 REVEALS */}
-      <div className="w-full max-w-5xl mx-auto flex flex-col items-center text-center my-auto px-4 relative">
-        {/* Scene 02: Subtle Digital Core Formation Indicator */}
-        <AnimatePresence>
-          {showScene2Kicker && (
-            <motion.div
-              key="scene-02-kicker"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 0.8, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.8 }}
-              className="flex flex-col items-center"
-            >
-              <div className="flex items-center gap-2 mb-2 font-mono text-[10px] text-cyan-400 uppercase tracking-[0.35em]">
-                <Sparkles className="w-3 h-3 text-cyan-400 animate-spin" />
-                <span>SCENE 02 // THE DIGITAL CORE</span>
-              </div>
-              <span className="font-mono text-[11px] tracking-[0.38em] uppercase text-[#8E9299]">
-                MATERIALIZING IDENTITY MATRICES
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* ---------------------------------------------------------------- */}
+      {/* SCENE 01 — TYPOGRAPHY TAKEOVER                                   */}
+      {/* Full black screen. Massive GARV typography enters from beyond    */}
+      {/* the screen edges. Letters move horizontally with slow, precise    */}
+      {/* kinetic motion, occupying almost the entire viewport.            */}
+      {/* ---------------------------------------------------------------- */}
+      <AnimatePresence>
+        {isScene01 && (
+          <motion.div
+            key="scene-01-typography-takeover"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.08, filter: 'blur(12px)' }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute inset-0 flex items-center justify-center overflow-hidden z-10 pointer-events-none"
+          >
+            <div className="w-full flex items-center justify-between px-2 sm:px-6 md:px-12">
+              {/* G: Enters from far left */}
+              <motion.span
+                initial={{ x: '-120vw', opacity: 0 }}
+                animate={{ x: '0vw', opacity: 1 }}
+                transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
+                className="font-['Space_Grotesk',sans-serif] font-bold text-[22vw] leading-none text-[#F4F4F5] tracking-tighter drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] select-none"
+              >
+                G
+              </motion.span>
 
-        {/* Scene 03: THE NAME REVEAL (GARV SHAW) */}
-        <AnimatePresence>
-          {showNameReveal && (
-            <motion.div
-              key="master-name-reveal"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col items-center relative"
-            >
-              {/* Massive Oversized Name Composition with Staggered Letter Emergence */}
-              <div className="relative overflow-visible py-2">
-                <h1
-                  className="relative flex flex-wrap justify-center items-center gap-x-6 sm:gap-x-10 text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-light tracking-[0.2em] sm:tracking-[0.25em] text-[#F5F5F0] font-['Space_Grotesk',sans-serif] uppercase leading-none drop-shadow-[0_20px_50px_rgba(0,0,0,0.95)]"
-                  aria-label="Garv Shaw"
-                >
-                  {/* First Name: GARV */}
-                  <span className="inline-flex">
-                    {firstName.map((char, i) => (
-                      <motion.span
-                        key={`fn-${char}-${i}`}
-                        initial={{
-                          opacity: 0,
-                          y: 28,
-                          filter: 'blur(10px)',
-                          scale: 1.15,
-                        }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                          filter: 'blur(0px)',
-                          scale: 1.0,
-                        }}
-                        transition={{
-                          duration: 0.8,
-                          delay: 0.05 + i * 0.09,
-                          ease: [0.16, 1, 0.3, 1],
-                        }}
-                        className="inline-block"
-                      >
-                        {char}
-                      </motion.span>
-                    ))}
-                  </span>
+              {/* A: Enters with slight delayed kinetic glide */}
+              <motion.span
+                initial={{ x: '-80vw', opacity: 0 }}
+                animate={{ x: '0vw', opacity: 1 }}
+                transition={{ duration: 1.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                className="font-['Space_Grotesk',sans-serif] font-bold text-[22vw] leading-none text-[#E2E8F0] tracking-tighter drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] select-none"
+              >
+                A
+              </motion.span>
 
-                  {/* Last Name: SHAW */}
-                  <span className="inline-flex">
-                    {lastName.map((char, i) => (
-                      <motion.span
-                        key={`ln-${char}-${i}`}
-                        initial={{
-                          opacity: 0,
-                          y: 28,
-                          filter: 'blur(10px)',
-                          scale: 1.15,
-                        }}
-                        animate={{
-                          opacity: 1,
-                          y: 0,
-                          filter: 'blur(0px)',
-                          scale: 1.0,
-                        }}
-                        transition={{
-                          duration: 0.8,
-                          delay: 0.45 + i * 0.09,
-                          ease: [0.16, 1, 0.3, 1],
-                        }}
-                        className="inline-block"
-                      >
-                        {char}
-                      </motion.span>
-                    ))}
-                  </span>
-                </h1>
+              {/* R: Enters from right with parallax counter-motion */}
+              <motion.span
+                initial={{ x: '80vw', opacity: 0 }}
+                animate={{ x: '0vw', opacity: 1 }}
+                transition={{ duration: 1.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                className="font-['Space_Grotesk',sans-serif] font-bold text-[22vw] leading-none text-[#CBD5E1] tracking-tighter drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] select-none"
+              >
+                R
+              </motion.span>
 
-                {/* Horizontal Light Sweep / Shimmer across lettering (Scene 03 step 3) */}
-                <motion.div
-                  initial={{ x: '-100%', opacity: 0 }}
-                  animate={
-                    sweepActive
-                      ? { x: '180%', opacity: [0, 0.8, 1, 0.8, 0] }
-                      : { x: '-100%', opacity: 0 }
-                  }
-                  transition={{
-                    duration: 1.8,
-                    delay: 0.2,
-                    ease: [0.25, 1, 0.5, 1],
-                  }}
-                  className="absolute inset-y-0 w-36 sm:w-56 bg-gradient-to-r from-transparent via-cyan-400/35 to-transparent pointer-events-none mix-blend-screen skew-x-[-24deg]"
-                />
-              </div>
+              {/* V: Enters from far right */}
+              <motion.span
+                initial={{ x: '120vw', opacity: 0 }}
+                animate={{ x: '0vw', opacity: 1 }}
+                transition={{ duration: 1.9, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                className="font-['Space_Grotesk',sans-serif] font-bold text-[22vw] leading-none text-[#94A3B8] tracking-tighter drop-shadow-[0_20px_60px_rgba(0,0,0,0.9)] select-none"
+              >
+                V
+              </motion.span>
+            </div>
 
-              {/* Elegant Hairline Divider */}
+            {/* Subtle hairline edge tracking coordinates */}
+            <div className="absolute bottom-16 left-12 font-mono text-[10px] text-neutral-500 tracking-[0.3em] uppercase">
+              TYPOGRAPHY TAKEOVER // LATENT VELOCITY
+            </div>
+            <div className="absolute bottom-16 right-12 font-mono text-[10px] text-cyan-400 tracking-[0.3em] uppercase">
+              SCALE: 100VW
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* SCENE 02 — VISUAL TRANSFORMATION                                 */}
+      {/* The typography stretches, fragments and transforms into an        */}
+      {/* abstract metallic liquid visual.                                 */}
+      {/* ---------------------------------------------------------------- */}
+      <AnimatePresence>
+        {isScene02 && (
+          <motion.div
+            key="scene-02-fragmentation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10"
+          >
+            {/* Chromatic Liquid Dispersion Slits */}
+            <div className="w-full max-w-4xl px-8 flex flex-col gap-2 opacity-40">
               <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 110, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.95 }}
-                className="h-[1px] bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent my-4 sm:my-5"
+                initial={{ scaleX: 1, filter: 'blur(0px)' }}
+                animate={{ scaleX: [1, 2.2, 0.2], filter: ['blur(0px)', 'blur(8px)', 'blur(20px)'] }}
+                transition={{ duration: 2.6, ease: 'easeInOut' }}
+                className="h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent"
               />
+              <motion.div
+                initial={{ scaleX: 1 }}
+                animate={{ scaleX: [1, 1.8, 0], filter: ['blur(0px)', 'blur(12px)', 'blur(24px)'] }}
+                transition={{ duration: 2.8, delay: 0.1, ease: 'easeInOut' }}
+                className="h-[1px] w-3/4 mx-auto bg-gradient-to-r from-transparent via-slate-200 to-transparent"
+              />
+            </div>
 
-              {/* Subtitle 1: AI & CLOUD DEVELOPER */}
-              <motion.h2
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 1.1, ease: [0.16, 1, 0.3, 1] }}
-                className="text-xs sm:text-sm md:text-base font-mono tracking-[0.38em] text-[#E4E4E7] uppercase font-normal mb-1.5"
-              >
-                AI &amp; CLOUD DEVELOPER
-              </motion.h2>
+            {/* Minimal Sub-Indicator */}
+            <div className="mt-8 flex items-center gap-2 font-mono text-[10px] text-cyan-400 uppercase tracking-[0.35em]">
+              <Sparkles className="w-3 h-3 text-cyan-400 animate-spin" />
+              <span>METALLIC LIQUID TRANSFORMATION</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-              {/* Subtitle 2: CREATIVE TECHNOLOGIST · DIGITAL BUILDER */}
-              <motion.p
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 0.85, y: 0 }}
-                transition={{ duration: 0.7, delay: 1.25, ease: [0.16, 1, 0.3, 1] }}
-                className="text-[11px] sm:text-xs tracking-[0.34em] text-[#A5A7AC] font-['Space_Grotesk',sans-serif] uppercase font-light"
-              >
-                CREATIVE TECHNOLOGIST <span className="text-cyan-400/80 mx-1">·</span> DIGITAL BUILDER
-              </motion.p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      {/* ---------------------------------------------------------------- */}
+      {/* SCENE 03 & 04 — REFINED EDITORIAL IDENTITY & ENTER CTA           */}
+      {/* GARV SHAW resolves into a refined editorial composition.         */}
+      {/* Small identity text, asymmetric alignment & balanced whitespace. */}
+      {/* ---------------------------------------------------------------- */}
+      <AnimatePresence>
+        {(isScene03 || isScene04) && (
+          <motion.div
+            key="scene-03-editorial-identity"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full max-w-6xl mx-auto my-auto px-6 sm:px-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center z-10 pointer-events-auto"
+          >
+            {/* Left Column: Asymmetrical Editorial Typography */}
+            <div className="lg:col-span-7 flex flex-col text-left">
+              {/* Category / Chapter Kicker */}
+              <div className="flex items-center gap-3 mb-4 font-mono text-[11px] text-[#8E9299] tracking-[0.35em] uppercase">
+                <span className="text-cyan-400 font-semibold">01 //</span>
+                <span>IDENTITY ARCHIVE</span>
+                <span className="text-neutral-600">·</span>
+                <span className="text-neutral-400">INDEX 2026</span>
+              </div>
 
-      {/* 3. BOTTOM CTA: SCENE 04 THE INTERACTIVE PORTAL CTA */}
-      <footer className="w-full flex flex-col items-center justify-center pb-4 sm:pb-8">
+              {/* Master Name: GARV SHAW */}
+              <h1 className="font-['Space_Grotesk',sans-serif] font-bold text-5xl sm:text-7xl md:text-8xl text-[#F5F5F0] uppercase tracking-tight leading-[0.95] drop-shadow-[0_12px_40px_rgba(0,0,0,0.9)]">
+                GARV SHAW
+              </h1>
+
+              {/* Hairline Divider */}
+              <div className="w-24 h-[1px] bg-gradient-to-r from-cyan-400/80 to-transparent my-6" />
+
+              {/* Primary Role & Creative Identity */}
+              <h2 className="font-mono text-sm sm:text-base text-[#E2E8F0] tracking-[0.25em] uppercase font-medium mb-2">
+                AI &amp; CLOUD ARCHITECT
+              </h2>
+
+              <p className="font-['Space_Grotesk',sans-serif] text-xs sm:text-sm text-[#A0A5AD] tracking-[0.2em] uppercase font-light leading-relaxed max-w-lg">
+                CREATIVE TECHNOLOGIST <span className="text-cyan-400 mx-1">·</span> SOFTWARE ENGINEER <span className="text-cyan-400 mx-1">·</span> DIGITAL SYSTEMS BUILDER
+              </p>
+
+              {/* Curated Editorial Metadata Tags */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-8 font-mono text-[10px] text-[#6B7280] tracking-[0.28em] uppercase">
+                <span>NEW DELHI // GLOBAL</span>
+                <span className="text-neutral-700">/</span>
+                <span>B.TECH CSE</span>
+                <span className="text-neutral-700">/</span>
+                <span>HIGH PERFORMANCE WEB</span>
+              </div>
+            </div>
+
+            {/* Right Column: Generous balanced whitespace allowing 3D Liquid Chrome to shine */}
+            <div className="lg:col-span-5 hidden lg:block" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* SCENE 04 — ENTER CTA & CINEMATIC LIGHT SWEEP                     */}
+      {/* An elegant ENTER button appears. A cinematic light sweep passes   */}
+      {/* through the screen.                                              */}
+      {/* ---------------------------------------------------------------- */}
+      <footer className="w-full flex flex-col items-center justify-center pb-6 sm:pb-10 z-20">
         <AnimatePresence>
-          {showCTA && (
+          {isScene04 && (
             <motion.div
-              key="enter-experience-cta"
-              initial={{ opacity: 0, y: 20 }}
+              key="scene-04-enter-cta"
+              initial={{ opacity: 0, y: 22 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
               className="pointer-events-auto flex flex-col items-center"
             >
-              {/* Magnetic CTA Wrapper on Desktop */}
-              <Magnet padding={80} strength={2.4}>
+              {/* Magnetic Luxury CTA Button */}
+              <Magnet padding={90} strength={2.4}>
                 <button
                   type="button"
                   onClick={onEnter}
                   tabIndex={0}
-                  aria-label="Enter the digital experience"
-                  className="group relative flex items-center gap-3 px-8 sm:px-10 py-4 rounded-full bg-gradient-to-b from-[#161a22]/80 to-[#0b0e14]/90 border border-white/15 hover:border-cyan-400/50 shadow-[0_0_30px_rgba(0,0,0,0.8)] hover:shadow-[0_0_35px_rgba(56,189,248,0.25)] backdrop-blur-md transition-all duration-300 cursor-pointer overflow-hidden active:scale-95"
+                  aria-label="Enter digital portfolio website"
+                  className="group relative flex items-center gap-4 px-9 sm:px-12 py-4 sm:py-4.5 rounded-full bg-gradient-to-b from-[#141820]/90 to-[#080b10]/95 border border-white/20 hover:border-cyan-400/60 shadow-[0_0_35px_rgba(0,0,0,0.85)] hover:shadow-[0_0_40px_rgba(56,189,248,0.3)] backdrop-blur-md transition-all duration-300 cursor-pointer overflow-hidden active:scale-95"
                 >
                   {/* Subtle Light Reflection sweep on button */}
-                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
 
-                  <span className="font-['Space_Grotesk',sans-serif] text-xs sm:text-sm font-medium tracking-[0.26em] text-[#F5F5F0] group-hover:text-white uppercase transition-colors">
-                    ENTER EXPERIENCE
+                  <span className="font-['Space_Grotesk',sans-serif] text-xs sm:text-sm font-semibold tracking-[0.3em] text-[#F5F5F0] group-hover:text-white uppercase transition-colors">
+                    ENTER
                   </span>
 
-                  <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:text-cyan-300 group-hover:translate-x-1.5 transition-all duration-300" />
+                  <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:text-cyan-300 group-hover:translate-x-2 transition-all duration-300" />
                 </button>
               </Magnet>
 
-              <span className="text-[10px] font-mono tracking-[0.24em] text-neutral-500 mt-3 opacity-70">
+              <span className="text-[10px] font-mono tracking-[0.26em] text-neutral-500 mt-3.5 opacity-70">
                 PRESS ENTER OR CLICK TO EXPLORE
               </span>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Scene 05: Warp Portal Transition Flare Effect */}
+        {/* Cinematic Light Sweep Beam (Scene 04 Requirement) */}
+        {lightSweepTriggered && !isTransitioning && (
+          <motion.div
+            initial={{ x: '-120vw', opacity: 0 }}
+            animate={{ x: '120vw', opacity: [0, 0.9, 1, 0.8, 0] }}
+            transition={{ duration: 2.2, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-y-0 w-48 sm:w-80 bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent pointer-events-none mix-blend-screen skew-x-[-22deg] z-30"
+          />
+        )}
+
+        {/* Warp Transition on Click */}
         {isTransitioning && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1.4 }}
-            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1.3 }}
+            transition={{ duration: 0.95, ease: [0.16, 1, 0.3, 1] }}
             className="fixed inset-0 bg-[#050505] z-50 pointer-events-none flex items-center justify-center overflow-hidden"
           >
-            {/* Expanding radial beam */}
             <div
               className="w-full h-full animate-pulse"
               style={{
                 background:
-                  'radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.45) 0%, rgba(14, 165, 233, 0.15) 35%, rgba(5, 5, 5, 0.95) 75%)',
+                  'radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.5) 0%, rgba(14, 165, 233, 0.18) 35%, rgba(5, 5, 5, 0.98) 75%)',
               }}
             />
-            {/* Horizontal light flare beam */}
             <div className="absolute w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-300 to-transparent animate-pulse" />
           </motion.div>
         )}

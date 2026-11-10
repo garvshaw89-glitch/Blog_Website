@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { DigitalCore } from './DigitalCore';
+import { LiquidChromeCore } from './LiquidChromeCore';
 import { ParticleField } from './ParticleField';
 
 interface IntroSceneProps {
@@ -16,12 +16,11 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
-  const digitalCoreRef = useRef<DigitalCore | null>(null);
+  const liquidChromeRef = useRef<LiquidChromeCore | null>(null);
   const particleFieldRef = useRef<ParticleField | null>(null);
   const isTransitioningRef = useRef(isTransitioning);
   const elapsedTimeRef = useRef(elapsedTime);
 
-  // Keep refs in sync for the animation loop
   isTransitioningRef.current = isTransitioning;
   elapsedTimeRef.current = elapsedTime;
 
@@ -49,15 +48,15 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
 
     const isMobile = window.innerWidth < 768;
     const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
-    const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.0 : isTablet ? 1.4 : 1.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.0 : isTablet ? 1.3 : 1.5);
 
-    // 1. Three.js Scene with deep luxury atmosphere fog
+    // 1. Scene & Atmosphere Fog
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x050505, 0.04);
+    scene.fog = new THREE.FogExp2(0x050505, 0.038);
 
-    // 2. Camera Setup (Perspective camera with luxury cinematic framing)
-    const baseZ = isMobile ? 7.6 : 6.2;
-    const startZ = isMobile ? 12.0 : 10.5;
+    // 2. Camera Setup
+    const baseZ = isMobile ? 8.2 : 6.8;
+    const startZ = isMobile ? 12.0 : 10.2;
 
     const camera = new THREE.PerspectiveCamera(
       45,
@@ -85,51 +84,51 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     renderer.setPixelRatio(dpr);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.2;
 
     container.appendChild(renderer.domElement);
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.inset = '0';
     renderer.domElement.style.pointerEvents = 'none';
 
-    // 4. Lighting Rig
-    // A: Low-intensity environment ambient light
-    const ambientLight = new THREE.AmbientLight(0x0a0f1d, 0.1);
+    // 4. Lighting Rig tailored for Liquid Mercury
+    // Ambient fill
+    const ambientLight = new THREE.AmbientLight(0x080c14, 0.2);
     scene.add(ambientLight);
 
-    // B: Soft key light (cool metallic silver tone)
-    const keyLight = new THREE.DirectionalLight(0xf1f5f9, 0.05);
-    keyLight.position.set(4.2, 5.5, 4.5);
+    // Cool Key Light
+    const keyLight = new THREE.DirectionalLight(0xf8fafc, 0.2);
+    keyLight.position.set(5.0, 6.0, 5.0);
     scene.add(keyLight);
 
-    // C: Subtle rim light (titanium / midnight blue highlight)
-    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.05);
-    rimLight.position.set(-4.5, -2.8, -3.5);
+    // Electric Cyan Rim Light
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.2);
+    rimLight.position.set(-5.5, -3.0, -4.0);
     scene.add(rimLight);
 
-    // D: Delicate glint accent light from top-rear
-    const accentLight = new THREE.DirectionalLight(0x7dd3fc, 0.02);
-    accentLight.position.set(0, 4.0, -2.0);
+    // Top Specular Accent
+    const accentLight = new THREE.DirectionalLight(0xe0f2fe, 0.1);
+    accentLight.position.set(0, 5.0, -2.5);
     scene.add(accentLight);
 
-    // 5. Digital Core & Ambient Particle Field
-    const digitalCore = new DigitalCore();
-    digitalCoreRef.current = digitalCore;
-    scene.add(digitalCore.group);
+    // 5. 3D Systems
+    const liquidChrome = new LiquidChromeCore();
+    liquidChromeRef.current = liquidChrome;
+    scene.add(liquidChrome.group);
 
     const particleField = new ParticleField(isMobile);
     particleFieldRef.current = particleField;
     scene.add(particleField.points);
-    particleField.setOpacity(0);
+    particleField.setOpacity(0.35);
 
-    // 6. Smooth Mouse Parallax Tracking
+    // 6. Mouse Tracking
     const handleMouseMove = (e: MouseEvent) => {
       mouseRef.current.targetX = (e.clientX / window.innerWidth) * 2 - 1;
       mouseRef.current.targetY = -(e.clientY / window.innerHeight) * 2 + 1;
     };
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
 
-    // 7. Window Resize
+    // 7. Resize Handling
     const handleResize = () => {
       const w = window.innerWidth;
       const h = window.innerHeight;
@@ -139,7 +138,7 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     };
     window.addEventListener('resize', handleResize, { passive: true });
 
-    // 8. Animation & Timeline Progression Loop
+    // 8. Animation Loop
     let animId: number;
     const clock = new THREE.Clock();
 
@@ -151,76 +150,71 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
       const t = elapsedTimeRef.current;
       const isTrans = isTransitioningRef.current;
 
-      // Mouse smoothing interpolation (damped luxury lerp)
       mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.045;
       mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.045;
 
-      // ----------------------------------------------------
-      // CINEMATIC TIMELINE LIGHTING & CAMERA PROGRESSION
-      // ----------------------------------------------------
+      // Camera & Lighting timeline progression
       if (!isTrans) {
-        if (t < 2.0) {
-          // Scene 01 (0 – 2.0s): The Void
-          // Darkness, faint central spark expanding, very slow camera push
-          const p = Math.max(0, t / 2.0);
-          ambientLight.intensity = 0.05 + p * 0.1;
-          keyLight.intensity = 0.02 + p * 0.2;
-          rimLight.intensity = 0.02 + p * 0.15;
-          accentLight.intensity = 0.01 + p * 0.08;
-          camera.position.z = startZ - p * 0.6;
-          particleField.setOpacity(p * 0.25);
-        } else if (t < 5.0) {
-          // Scene 02 (2.0 – 5.0s): The Digital Core
-          // Metallic object forms in center, key & rim lights ramp up, camera moves to baseZ
-          const p = (t - 2.0) / 3.0;
+        if (t < 2.8) {
+          // Scene 01: Typography takeover
+          ambientLight.intensity = 0.15;
+          keyLight.intensity = 0.2;
+          rimLight.intensity = 0.2;
+          accentLight.intensity = 0.1;
+          camera.position.z = startZ;
+          particleField.setOpacity(0.4);
+        } else if (t < 5.8) {
+          // Scene 02: Transformation into Liquid Chrome
+          const p = (t - 2.8) / 3.0;
           const ease = 0.5 - 0.5 * Math.cos(p * Math.PI);
-
-          ambientLight.intensity = 0.15 + ease * 0.35;
-          keyLight.intensity = 0.22 + ease * 1.5;
-          rimLight.intensity = 0.17 + ease * 1.1;
-          accentLight.intensity = 0.09 + ease * 0.55;
-
-          const currentZ = startZ - 0.6;
-          camera.position.z = currentZ - ease * (currentZ - baseZ);
-          particleField.setOpacity(0.25 + ease * 0.45);
-        } else if (t < 8.0) {
-          // Scene 03 (5.0 – 8.0s): The Name Reveal
-          // Full balanced lighting showcasing metallic core behind typography
-          ambientLight.intensity = 0.5;
-          keyLight.intensity = 1.75;
-          rimLight.intensity = 1.3;
-          accentLight.intensity = 0.65;
-          camera.position.z = baseZ;
-          particleField.setOpacity(0.7);
-        } else {
-          // Scene 04 (8.0s onward): The Interactive Portal
-          // Radial glow & pulsing portal aura
-          const pulse = Math.sin((t - 8.0) * 2.0) * 0.15;
-          ambientLight.intensity = 0.5 + pulse * 0.1;
-          keyLight.intensity = 1.8 + pulse * 0.2;
-          rimLight.intensity = 1.35 + pulse * 0.25;
-          accentLight.intensity = 0.7;
+          ambientLight.intensity = 0.2 + ease * 0.35;
+          keyLight.intensity = 0.3 + ease * 2.2;
+          rimLight.intensity = 0.25 + ease * 1.8;
+          accentLight.intensity = 0.15 + ease * 0.8;
+          camera.position.z = startZ - ease * (startZ - baseZ);
+          particleField.setOpacity(0.5 + ease * 0.3);
+        } else if (t < 8.8) {
+          // Scene 03: Identity composition
+          ambientLight.intensity = 0.55;
+          keyLight.intensity = 2.4;
+          rimLight.intensity = 1.9;
+          accentLight.intensity = 0.95;
           camera.position.z = baseZ;
           particleField.setOpacity(0.75);
+
+          // Subtle right-hand offset for asymmetric balance matching editorial text on left
+          if (!isMobile) {
+            liquidChrome.group.position.x = 0.8;
+          }
+        } else {
+          // Scene 04: Enter stage
+          ambientLight.intensity = 0.6;
+          keyLight.intensity = 2.5;
+          rimLight.intensity = 2.0;
+          accentLight.intensity = 1.0;
+          camera.position.z = baseZ;
+          particleField.setOpacity(0.8);
+          if (!isMobile) {
+            liquidChrome.group.position.x = 0.6;
+          }
         }
 
-        // Camera subtle mouse parallax
-        const targetCamX = mouseRef.current.x * 0.35;
-        const targetCamY = mouseRef.current.y * 0.25;
-        camera.position.x += (targetCamX - camera.position.x) * 0.045;
-        camera.position.y += (targetCamY - camera.position.y) * 0.045;
-        camera.rotation.y = -mouseRef.current.x * 0.035;
-        camera.rotation.x = mouseRef.current.y * 0.025;
+        // Camera Parallax
+        const targetCamX = mouseRef.current.x * 0.3;
+        const targetCamY = mouseRef.current.y * 0.2;
+        camera.position.x += (targetCamX - camera.position.x) * 0.04;
+        camera.position.y += (targetCamY - camera.position.y) * 0.04;
+        camera.rotation.y = -mouseRef.current.x * 0.03;
+        camera.rotation.x = mouseRef.current.y * 0.02;
       } else {
-        // Scene 05: The Transition — Camera accelerates forward through the portal
-        camera.position.z = Math.max(0.3, camera.position.z - delta * 18.0);
+        // Scene 05: Transition
+        camera.position.z = Math.max(0.4, camera.position.z - delta * 16.0);
         keyLight.intensity += delta * 8.0;
         rimLight.intensity += delta * 6.0;
-        ambientLight.intensity += delta * 4.0;
       }
 
-      // Update 3D systems
-      digitalCore.update(
+      // Update liquid chrome sculpture & particles
+      liquidChrome.update(
         time,
         delta,
         t,
@@ -246,7 +240,7 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
 
-      digitalCore.dispose();
+      liquidChrome.dispose();
       particleField.dispose();
       renderer.dispose();
 

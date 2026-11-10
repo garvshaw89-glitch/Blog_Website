@@ -16,13 +16,12 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
   const [webGlFailed, setWebGlFailed] = useState(false);
   const [isAudioOn, setIsAudioOn] = useState(false);
 
-  // Check prefers-reduced-motion
+  // Check prefers-reduced-motion (only for the current instance, memory-only)
   useEffect(() => {
     try {
       const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (prefersReduced) {
         entrySequenceManager.completeImmediately();
-        sessionStorage.setItem('garv_journal_intro_completed', 'true');
         onComplete();
       }
     } catch {
@@ -53,27 +52,16 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     introAudio.triggerWarp();
     entrySequenceManager.completeImmediately();
 
-    try {
-      sessionStorage.setItem('garv_journal_intro_completed', 'true');
-    } catch {
-      // Ignore
-    }
-
-    // Target approximately 1–1.2 seconds for the cinematic portal warp transition
+    // Target approximately 1–1.1 seconds for the cinematic portal warp transition
     setTimeout(() => {
       introAudio.stop();
       onComplete();
-    }, 1150);
+    }, 1100);
   }, [isTransitioning, onComplete]);
 
   const handleSkip = useCallback(() => {
     introAudio.stop();
     entrySequenceManager.completeImmediately();
-    try {
-      sessionStorage.setItem('garv_journal_intro_completed', 'true');
-    } catch {
-      // Ignore
-    }
     onComplete();
   }, [onComplete]);
 
@@ -110,7 +98,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
         key="luxury-portal-entrance"
         initial={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
         className="fixed inset-0 z-50 bg-[#050505] overflow-hidden select-none"
       >
         {/* Foundation Deep Dark Vignette with subtle cyan/midnight atmosphere */}
@@ -122,7 +110,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
           }}
         />
 
-        {/* 3D WebGL Digital Core & Ambient Particle Field */}
+        {/* 3D WebGL Liquid Chrome & Ambient Particle Field */}
         <IntroScene
           elapsedTime={elapsed}
           isTransitioning={isTransitioning}

@@ -91,10 +91,10 @@ export const WebGlFallback: React.FC<WebGlFallbackProps> = ({ onEnter, onSkip })
               className="group flex items-center gap-3 px-8 py-3.5 rounded-full bg-gradient-to-b from-[#161a22]/80 to-[#0b0e14]/90 border border-white/15 hover:border-cyan-400/50 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-md transition-all duration-300 cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-cyan-400" />
-              <span className="text-xs sm:text-sm tracking-[0.26em] text-[#F5F5F0] group-hover:text-white uppercase transition-colors">
-                ENTER EXPERIENCE
+              <span className="text-xs sm:text-sm tracking-[0.3em] text-[#F5F5F0] group-hover:text-white uppercase transition-colors font-semibold">
+                ENTER
               </span>
-              <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1.5 transition-transform" />
             </button>
             <span className="text-[10px] font-mono tracking-[0.22em] text-neutral-500 mt-2">
               PRESS ENTER OR CLICK TO EXPLORE

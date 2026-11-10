@@ -31,15 +31,8 @@ import { interactionEngine } from './context/SingularityInteractionEngine';
 export default function App() {
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [showIntro, setShowIntro] = useState<boolean>(() => {
-    try {
-      if (typeof window === 'undefined') return false;
-      const completed = sessionStorage.getItem('garv_journal_intro_completed');
-      return completed !== 'true';
-    } catch {
-      return true;
-    }
-  });
+  // Fresh initialization on every page load / refresh — kept in React memory only
+  const [showIntro, setShowIntro] = useState<boolean>(true);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -61,20 +54,21 @@ export default function App() {
   }, []);
 
   const handleIntroComplete = () => {
-    try {
-      sessionStorage.setItem('garv_journal_intro_completed', 'true');
-    } catch {
-      // Ignore
-    }
     setShowIntro(false);
+
+    // Preserve original destination route / section hash if someone refreshed an internal section
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const targetId = window.location.hash.replace('#', '');
+      setTimeout(() => {
+        const el = document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 150);
+    }
   };
 
   const handleReplayIntro = () => {
-    try {
-      sessionStorage.removeItem('garv_journal_intro_completed');
-    } catch {
-      // Ignore
-    }
     setShowIntro(true);
   };
 
