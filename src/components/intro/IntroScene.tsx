@@ -49,18 +49,18 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
 
     const isMobile = window.innerWidth < 768;
     const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
-    const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.0 : isTablet ? 1.4 : 1.6);
+    const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.0 : isTablet ? 1.4 : 1.5);
 
     // 1. Three.js Scene with deep luxury atmosphere fog
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x050505, 0.045);
+    scene.fog = new THREE.FogExp2(0x050505, 0.04);
 
     // 2. Camera Setup (Perspective camera with luxury cinematic framing)
-    const baseZ = isMobile ? 7.8 : 6.2;
-    const startZ = isMobile ? 12.0 : 10.8;
+    const baseZ = isMobile ? 7.6 : 6.2;
+    const startZ = isMobile ? 12.0 : 10.5;
 
     const camera = new THREE.PerspectiveCamera(
-      46,
+      45,
       window.innerWidth / window.innerHeight,
       0.1,
       100
@@ -85,7 +85,7 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     renderer.setPixelRatio(dpr);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
+    renderer.toneMappingExposure = 1.15;
 
     container.appendChild(renderer.domElement);
     renderer.domElement.style.position = 'absolute';
@@ -94,22 +94,22 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
 
     // 4. Lighting Rig
     // A: Low-intensity environment ambient light
-    const ambientLight = new THREE.AmbientLight(0x0e1118, 0.1);
+    const ambientLight = new THREE.AmbientLight(0x0a0f1d, 0.1);
     scene.add(ambientLight);
 
-    // B: Soft key light (warm champagne tone)
-    const keyLight = new THREE.DirectionalLight(0xfff5ea, 0.05);
-    keyLight.position.set(3.8, 5.2, 4.0);
+    // B: Soft key light (cool metallic silver tone)
+    const keyLight = new THREE.DirectionalLight(0xf1f5f9, 0.05);
+    keyLight.position.set(4.2, 5.5, 4.5);
     scene.add(keyLight);
 
-    // C: Subtle rim light (cool titanium highlight)
-    const rimLight = new THREE.DirectionalLight(0xa5b4fc, 0.05);
-    rimLight.position.set(-4.2, -2.8, -3.2);
+    // C: Subtle rim light (titanium / midnight blue highlight)
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.05);
+    rimLight.position.set(-4.5, -2.8, -3.5);
     scene.add(rimLight);
 
     // D: Delicate glint accent light from top-rear
-    const accentLight = new THREE.DirectionalLight(0x7dd3fc, 0.05);
-    accentLight.position.set(0, 3.5, -2.5);
+    const accentLight = new THREE.DirectionalLight(0x7dd3fc, 0.02);
+    accentLight.position.set(0, 4.0, -2.0);
     scene.add(accentLight);
 
     // 5. Digital Core & Ambient Particle Field
@@ -159,44 +159,47 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
       // CINEMATIC TIMELINE LIGHTING & CAMERA PROGRESSION
       // ----------------------------------------------------
       if (!isTrans) {
-        if (t < 1.5) {
-          // Stage 1 (0 – 1.5s): Deep darkness, faint silhouette, subtle ambient glow
-          const p = Math.max(0, (t - 0.2) / 1.3);
-          ambientLight.intensity = 0.1 + p * 0.1;
-          keyLight.intensity = 0.05 + p * 0.35;
-          rimLight.intensity = 0.05 + p * 0.25;
-          accentLight.intensity = 0.02 + p * 0.15;
-          camera.position.z = startZ - p * 0.8;
-          particleField.setOpacity(0);
-        } else if (t < 3.5) {
-          // Stage 2 (1.5 – 3.5s): Key light & rim light slowly increase, camera glides forward
-          const p = (t - 1.5) / 2.0;
-          // Smooth cosine easing for luxury reveal
+        if (t < 2.0) {
+          // Scene 01 (0 – 2.0s): The Void
+          // Darkness, faint central spark expanding, very slow camera push
+          const p = Math.max(0, t / 2.0);
+          ambientLight.intensity = 0.05 + p * 0.1;
+          keyLight.intensity = 0.02 + p * 0.2;
+          rimLight.intensity = 0.02 + p * 0.15;
+          accentLight.intensity = 0.01 + p * 0.08;
+          camera.position.z = startZ - p * 0.6;
+          particleField.setOpacity(p * 0.25);
+        } else if (t < 5.0) {
+          // Scene 02 (2.0 – 5.0s): The Digital Core
+          // Metallic object forms in center, key & rim lights ramp up, camera moves to baseZ
+          const p = (t - 2.0) / 3.0;
           const ease = 0.5 - 0.5 * Math.cos(p * Math.PI);
 
-          ambientLight.intensity = 0.2 + ease * 0.25;
-          keyLight.intensity = 0.4 + ease * 1.35;
-          rimLight.intensity = 0.3 + ease * 0.95;
-          accentLight.intensity = 0.17 + ease * 0.45;
+          ambientLight.intensity = 0.15 + ease * 0.35;
+          keyLight.intensity = 0.22 + ease * 1.5;
+          rimLight.intensity = 0.17 + ease * 1.1;
+          accentLight.intensity = 0.09 + ease * 0.55;
 
-          const currentStartZ = startZ - 0.8;
-          camera.position.z = currentStartZ - ease * (currentStartZ - baseZ);
-          particleField.setOpacity(ease * 0.35);
-        } else if (t < 5.0) {
-          // Stage 3 (3.5 – 5.0s): Typography reveals, particle field gently fades into view
-          const p = (t - 3.5) / 1.5;
-          ambientLight.intensity = 0.45;
+          const currentZ = startZ - 0.6;
+          camera.position.z = currentZ - ease * (currentZ - baseZ);
+          particleField.setOpacity(0.25 + ease * 0.45);
+        } else if (t < 8.0) {
+          // Scene 03 (5.0 – 8.0s): The Name Reveal
+          // Full balanced lighting showcasing metallic core behind typography
+          ambientLight.intensity = 0.5;
           keyLight.intensity = 1.75;
-          rimLight.intensity = 1.25;
-          accentLight.intensity = 0.62;
+          rimLight.intensity = 1.3;
+          accentLight.intensity = 0.65;
           camera.position.z = baseZ;
-          particleField.setOpacity(0.35 + p * 0.4);
+          particleField.setOpacity(0.7);
         } else {
-          // Stage 4 (5.0s onward): Interactive idle state, calibrated luxury lighting
-          ambientLight.intensity = 0.45;
-          keyLight.intensity = 1.75;
-          rimLight.intensity = 1.25;
-          accentLight.intensity = 0.62;
+          // Scene 04 (8.0s onward): The Interactive Portal
+          // Radial glow & pulsing portal aura
+          const pulse = Math.sin((t - 8.0) * 2.0) * 0.15;
+          ambientLight.intensity = 0.5 + pulse * 0.1;
+          keyLight.intensity = 1.8 + pulse * 0.2;
+          rimLight.intensity = 1.35 + pulse * 0.25;
+          accentLight.intensity = 0.7;
           camera.position.z = baseZ;
           particleField.setOpacity(0.75);
         }
@@ -204,27 +207,30 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
         // Camera subtle mouse parallax
         const targetCamX = mouseRef.current.x * 0.35;
         const targetCamY = mouseRef.current.y * 0.25;
-        camera.position.x += (targetCamX - camera.position.x) * 0.04;
-        camera.position.y += (targetCamY - camera.position.y) * 0.04;
+        camera.position.x += (targetCamX - camera.position.x) * 0.045;
+        camera.position.y += (targetCamY - camera.position.y) * 0.045;
         camera.rotation.y = -mouseRef.current.x * 0.035;
         camera.rotation.x = mouseRef.current.y * 0.025;
       } else {
-        // Portal Transition: Rapid forward rush into the core
-        camera.position.z = Math.max(0.4, camera.position.z - delta * 15.0);
-        keyLight.intensity += delta * 6.0;
-        rimLight.intensity += delta * 4.0;
+        // Scene 05: The Transition — Camera accelerates forward through the portal
+        camera.position.z = Math.max(0.3, camera.position.z - delta * 18.0);
+        keyLight.intensity += delta * 8.0;
+        rimLight.intensity += delta * 6.0;
+        ambientLight.intensity += delta * 4.0;
       }
 
       // Update 3D systems
       digitalCore.update(
         time,
         delta,
+        t,
         mouseRef.current.x,
         mouseRef.current.y,
         isTrans
       );
       particleField.update(
         time,
+        delta,
         mouseRef.current.x,
         mouseRef.current.y,
         isTrans

@@ -31,7 +31,15 @@ import { interactionEngine } from './context/SingularityInteractionEngine';
 export default function App() {
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [showIntro, setShowIntro] = useState<boolean>(false);
+  const [showIntro, setShowIntro] = useState<boolean>(() => {
+    try {
+      if (typeof window === 'undefined') return false;
+      const completed = sessionStorage.getItem('garv_journal_intro_completed');
+      return completed !== 'true';
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -62,6 +70,11 @@ export default function App() {
   };
 
   const handleReplayIntro = () => {
+    try {
+      sessionStorage.removeItem('garv_journal_intro_completed');
+    } catch {
+      // Ignore
+    }
     setShowIntro(true);
   };
 

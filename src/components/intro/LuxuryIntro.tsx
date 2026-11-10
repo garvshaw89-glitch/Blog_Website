@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { IntroScene } from './IntroScene';
 import { IntroOverlay } from './IntroOverlay';
@@ -59,10 +59,11 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       // Ignore
     }
 
+    // Target approximately 1–1.2 seconds for the cinematic portal warp transition
     setTimeout(() => {
       introAudio.stop();
       onComplete();
-    }, 950);
+    }, 1150);
   }, [isTransitioning, onComplete]);
 
   const handleSkip = useCallback(() => {
@@ -81,7 +82,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     setIsAudioOn(newState);
   }, []);
 
-  // Global Keyboard Listener
+  // Global Keyboard Listener: Enter to enter, Escape to skip
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -109,15 +110,15 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
         key="luxury-portal-entrance"
         initial={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
         className="fixed inset-0 z-50 bg-[#050505] overflow-hidden select-none"
       >
-        {/* Foundation Deep Dark Vignette */}
+        {/* Foundation Deep Dark Vignette with subtle cyan/midnight atmosphere */}
         <div
-          className="absolute inset-0 pointer-events-none opacity-80"
+          className="absolute inset-0 pointer-events-none opacity-85"
           style={{
             background:
-              'radial-gradient(circle at 50% 50%, #0d0f14 0%, #050505 85%)',
+              'radial-gradient(circle at 50% 50%, #080d16 0%, #050505 85%)',
           }}
         />
 
@@ -138,7 +139,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
           isTransitioning={isTransitioning}
         />
 
-        {/* Film grain micro-filter */}
+        {/* Film grain micro-filter texture */}
         <div
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none opacity-[0.025] mix-blend-screen"

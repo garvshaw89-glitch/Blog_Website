@@ -28,7 +28,9 @@ class IntroAudioEngine {
 
   public start() {
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
 
       this.ctx = new AudioCtx();
@@ -37,12 +39,12 @@ class IntroAudioEngine {
       // Master low-pass filter for velvety luxury warmth
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 320;
+      filter.frequency.setValueAtTime(340, this.ctx.currentTime);
       filter.connect(this.ctx.destination);
 
       this.droneGain = this.ctx.createGain();
       this.droneGain.gain.setValueAtTime(0.001, this.ctx.currentTime);
-      this.droneGain.gain.exponentialRampToValueAtTime(0.12, this.ctx.currentTime + 2.0);
+      this.droneGain.gain.exponentialRampToValueAtTime(0.12, this.ctx.currentTime + 1.8);
       this.droneGain.connect(filter);
 
       // Deep 48Hz Sub-bass drone
@@ -52,7 +54,7 @@ class IntroAudioEngine {
       this.droneOsc1.connect(this.droneGain);
       this.droneOsc1.start();
 
-      // Warm 96Hz overtone
+      // Warm 96.4Hz overtone with subtle harmonic chorus
       this.droneOsc2 = this.ctx.createOscillator();
       this.droneOsc2.type = 'triangle';
       this.droneOsc2.frequency.setValueAtTime(96.4, this.ctx.currentTime);
@@ -92,18 +94,18 @@ class IntroAudioEngine {
       const gain = this.ctx.createGain();
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(60, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(380, this.ctx.currentTime + 0.8);
+      osc.frequency.setValueAtTime(55, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(420, this.ctx.currentTime + 0.85);
 
-      gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.2, this.ctx.currentTime + 0.5);
-      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.9);
+      gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.22, this.ctx.currentTime + 0.55);
+      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 1.05);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
       osc.start();
-      osc.stop(this.ctx.currentTime + 0.95);
+      osc.stop(this.ctx.currentTime + 1.1);
     } catch {
       // Ignore
     }
@@ -116,9 +118,13 @@ class IntroAudioEngine {
         this.droneGain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.5);
       }
       setTimeout(() => {
-        this.droneOsc1?.stop();
-        this.droneOsc2?.stop();
-        this.ctx?.close();
+        try {
+          this.droneOsc1?.stop();
+          this.droneOsc2?.stop();
+          this.ctx?.close();
+        } catch {
+          // Ignore
+        }
         this.ctx = null;
       }, 550);
     } catch {
