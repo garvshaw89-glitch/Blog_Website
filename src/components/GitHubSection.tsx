@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Github, Star, GitFork, BookOpen, ExternalLink, Activity } from 'lucide-react';
+import { GlitchHeading } from './ui/GlitchHeading';
 
 interface GitHubRepo {
   id: number;
@@ -124,9 +125,9 @@ export const GitHubSection: React.FC<GitHubSectionProps> = ({ id = 'github-telem
         {/* Section Title & Profile Meta */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
           <div>
-            <h2 className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-white mb-3">
+            <GlitchHeading className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-white mb-3">
               ENGINEERING.
-            </h2>
+            </GlitchHeading>
             <p className="font-sans text-neutral-400 text-sm sm:text-base leading-relaxed font-light max-w-xl">
               Verified public repositories and continuous development activity across artificial intelligence, microservices, and web utilities.
             </p>

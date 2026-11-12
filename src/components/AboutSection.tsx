@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowUpRight, ShieldCheck, Terminal, Award, Compass, Cpu, Layers } from 'lucide-react';
 import { ArchitectAvatar } from './ui/ArchitectAvatar';
+import { GlitchHeading } from './ui/GlitchHeading';
 
 interface AboutSectionProps {
   onContactClick?: () => void;
@@ -50,7 +51,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
         {/* Large Editorial Headline & Verified Profile Showcase */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-20">
           <div className="lg:col-span-7">
-            <h2 className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-[#F2F3F5] leading-[0.95]">
+            <GlitchHeading className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-[#F2F3F5] leading-[0.95]">
               THE PERSON
               <br />
               <span className="text-[#A7ADB5]">
@@ -58,7 +59,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
               </span>
               <br />
               SYSTEM.
-            </h2>
+            </GlitchHeading>
             <p className="font-sans text-[#A7ADB5] text-base sm:text-lg leading-relaxed font-light mt-6 max-w-xl">
               I am <strong className="text-[#F2F3F5] font-normal">Garv Shaw</strong>, a digital architect and software engineer designing intelligent platforms at the intersection of Artificial Intelligence, distributed cloud infrastructure, and financial systems.
             </p>

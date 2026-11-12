@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { ArrowUpRight, Github, ExternalLink, Sparkles } from 'lucide-react';
 import { PROJECTS } from '../data/portfolioData';
 import { ProjectItem } from '../types';
+import { GlitchHeading } from './ui/GlitchHeading';
 
 interface ProjectsSectionProps {
   onSelectProject: (project: ProjectItem) => void;
@@ -47,11 +48,11 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
         {/* Section Title & Filter Controls */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-20">
           <div>
-            <h2 className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-white leading-none">
+            <GlitchHeading className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-white leading-none">
               FEATURED
               <br />
               PROJECTS.
-            </h2>
+            </GlitchHeading>
             <p className="mt-4 text-neutral-400 font-sans text-base max-w-xl font-light">
               High-impact digital systems built from the ground up with meticulous attention to real-world performance, usability, and scale.
             </p>

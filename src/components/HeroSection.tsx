@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { IdentityCore } from './ui/IdentityCore';
+import { GlitchHeading } from './ui/GlitchHeading';
 import { ArrowDown, ArrowUpRight, Sparkles, Terminal, Activity } from 'lucide-react';
 
 interface HeroSectionProps {
@@ -130,7 +131,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 </div>
 
                 {/* Oversized Sharp Editorial Headline */}
-                <h1
+                <GlitchHeading
+                  as="h1"
                   className={`font-editorial ${currentRotation.fluidSize} ${currentRotation.lineHeight} font-bold tracking-tight text-[#F2F3F5] max-w-5xl mx-auto break-words [text-wrap:balance]`}
                 >
                   {currentRotation.id === 'garv-shaw' && (
@@ -160,7 +162,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                       .
                     </>
                   )}
-                </h1>
+                </GlitchHeading>
 
                 {/* Subtitle datum */}
                 <p className="font-mono text-[10px] sm:text-xs uppercase tracking-widest text-[#626A73] mt-3 sm:mt-4 max-w-xl mx-auto">

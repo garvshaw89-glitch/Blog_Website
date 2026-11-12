@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowUpRight, BookOpen, Clock, Search, X, Tag } from 'lucide-react';
 import { ArticleModal, ArticleData } from './ArticleModal';
+import { GlitchHeading } from './ui/GlitchHeading';
 
 // Helper to calculate reading time based on word count (approx 200 WPM)
 export const calculateReadingTimeMinutes = (text: string): number => {
@@ -240,9 +241,9 @@ export const WritingSection: React.FC<WritingSectionProps> = ({ id = 'writing' }
 
         {/* Section Headline */}
         <div className="max-w-2xl mb-12">
-          <h2 className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-white mb-4">
+          <GlitchHeading className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-white mb-4">
             WRITING.
-          </h2>
+          </GlitchHeading>
           <p className="font-sans text-neutral-400 text-sm sm:text-base leading-relaxed font-light">
             Reflections on system architecture, generative AI patterns, cloud infrastructure trade-offs, and digital product design.
           </p>

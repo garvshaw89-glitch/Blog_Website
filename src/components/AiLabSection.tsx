@@ -13,6 +13,7 @@ import {
   Cpu,
   Layers,
 } from 'lucide-react';
+import { GlitchHeading } from './ui/GlitchHeading';
 import { AI_EXPERIMENTS } from '../data/portfolioData';
 
 interface AiLabSectionProps {
@@ -137,9 +138,9 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({ id = 'ai-lab' }) => 
             <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
             <span>05 // INTERACTIVE LABORATORY</span>
           </div>
-          <h2 className="hero-heading font-display font-black uppercase text-3xl sm:text-5xl md:text-6xl tracking-tight mb-3">
+          <GlitchHeading className="hero-heading font-display font-black uppercase text-3xl sm:text-5xl md:text-6xl tracking-tight mb-3">
             AI ENGINEERING LAB
-          </h2>
+          </GlitchHeading>
           <p className="text-slate-300 font-sans text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
             Test live AI models, inspect vector RAG similarity search, and simulate autonomous agent execution loops.
           </p>

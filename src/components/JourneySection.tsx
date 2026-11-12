@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Calendar, Terminal, Briefcase, Sparkles, ArrowUpRight } from 'lucide-react';
+import { GlitchHeading } from './ui/GlitchHeading';
 
 interface JourneyMilestone {
   year: string;
@@ -74,9 +75,9 @@ export const JourneySection: React.FC<JourneySectionProps> = ({ id = 'journey' }
 
         {/* Section Title */}
         <div className="max-w-2xl mb-16">
-          <h2 className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-white mb-4">
+          <GlitchHeading className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-white mb-4">
             JOURNEY.
-          </h2>
+          </GlitchHeading>
           <p className="font-sans text-neutral-400 text-sm sm:text-base leading-relaxed font-light">
             A transparent progression documenting systems engineered, architectural milestones conquered, and ongoing production ventures.
           </p>

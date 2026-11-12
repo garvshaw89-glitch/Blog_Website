@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Cpu, Cloud, Terminal, Layers, TrendingUp, DollarSign, Sparkles } from 'lucide-react';
+import { GlitchHeading } from './ui/GlitchHeading';
 
 interface DnaNode {
   id: string;
@@ -125,9 +126,9 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
 
         {/* Section Headline */}
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="font-editorial text-3xl sm:text-5xl md:text-6xl font-bold uppercase tracking-tight text-white mb-4">
+          <GlitchHeading className="font-editorial text-3xl sm:text-5xl md:text-6xl font-bold uppercase tracking-tight text-white mb-4">
             DIGITAL DNA
-          </h2>
+          </GlitchHeading>
           <p className="font-sans text-neutral-400 text-sm sm:text-base leading-relaxed font-light">
             A visual network illustrating how my engineering disciplines interconnect around a single central core: building defensible, high-performance digital products.
           </p>

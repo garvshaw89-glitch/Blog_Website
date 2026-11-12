@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { CONSTELLATION_NODES, CONSTELLATION_LINKS } from '../data/portfolioData';
 import { ConstellationNode } from '../types';
 import { Compass, ArrowUpRight, Cpu, Database, Cloud, Terminal, Sparkles } from 'lucide-react';
+import { GlitchHeading } from './ui/GlitchHeading';
 
 interface TechnologyConstellationProps {
   id?: string;
@@ -58,9 +59,9 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
         </div>
 
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-white mb-4">
+          <GlitchHeading className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-white mb-4">
             TECHNOLOGY CONSTELLATION
-          </h2>
+          </GlitchHeading>
           <p className="font-sans text-neutral-400 text-sm sm:text-base leading-relaxed font-light">
             Interactive topology showing how my AI orchestration, backend services, real-time protocols, and multi-cloud infrastructure interlink around production systems.
           </p>

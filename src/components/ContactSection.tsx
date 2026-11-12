@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, CheckCircle2, Copy, Check, Mail, MessageSquare, Terminal, ArrowUpRight } from 'lucide-react';
+import { GlitchHeading } from './ui/GlitchHeading';
 
 interface ContactSectionProps {
   id?: string;
@@ -64,11 +65,11 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ id = 'contact' }
           {/* Left Column: Cinematic Headline & Details */}
           <div className="lg:col-span-6 flex flex-col justify-between">
             <div>
-              <h2 className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-white leading-[0.95] mb-4">
+              <GlitchHeading className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-white leading-[0.95] mb-4">
                 BUILD SOMETHING
                 <br />
                 <span className="text-neutral-500">SIGNIFICANT.</span>
-              </h2>
+              </GlitchHeading>
 
               <p className="font-mono text-xs sm:text-sm tracking-[0.32em] text-[#5B8CFF] uppercase mb-8 font-medium">
                 Let&apos;s Connect
