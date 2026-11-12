@@ -186,8 +186,10 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
         camera.rotation.y = THREE.MathUtils.damp(camera.rotation.y, -mouseRef.current.x * 0.03, 4.5, delta);
         camera.rotation.x = THREE.MathUtils.damp(camera.rotation.x, mouseRef.current.y * 0.022, 4.5, delta);
       } else {
-        // Slowly dim the ambient particle light before and during the screen flip
-        particleField.setTargetOpacity(0.04);
+        // Gently push camera forward while fading ambient particles smoothly into the T zoom
+        currentCamZ = THREE.MathUtils.damp(currentCamZ, baseZ - 3.6, 2.2, delta);
+        camera.position.z = currentCamZ;
+        particleField.setTargetOpacity(0);
       }
 
       particleField.update(

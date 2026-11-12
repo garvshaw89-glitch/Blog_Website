@@ -4,6 +4,7 @@ import { Volume2, VolumeX } from 'lucide-react';
 
 interface IntroOverlayProps {
   scrollProgressRef: React.RefObject<number>;
+  zoomProgressRef: React.RefObject<number>;
   isAudioOn: boolean;
   onToggleAudio: () => void;
   isTransitioning: boolean;
@@ -11,8 +12,15 @@ interface IntroOverlayProps {
 
 const LUXURY_EASE: [number, number, number, number] = [0.22, 1, 0.3, 1];
 
+// C2-continuous quintic smootherstep (zero velocity & acceleration at endpoints)
+const smootherstep = (t: number): number => {
+  const x = Math.min(Math.max(t, 0), 1);
+  return x * x * x * (x * (x * 6 - 15) + 10);
+};
+
 export const IntroOverlay: React.FC<IntroOverlayProps> = ({
   scrollProgressRef,
+  zoomProgressRef,
   isAudioOn,
   onToggleAudio,
   isTransitioning,
@@ -20,22 +28,146 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
   const maskGroupRef = useRef<SVGGElement | null>(null);
   const strokeGroupRef = useRef<SVGGElement | null>(null);
   const strokeTextRef = useRef<SVGTextElement | null>(null);
+  const backdropRectRef = useRef<SVGRectElement | null>(null);
+  const tailMaskRef = useRef<SVGTSpanElement | null>(null);
+  const tailStrokeRef = useRef<SVGTSpanElement | null>(null);
 
-  // Sync SVG cutout mask & thick-bordered "PORTFOLIO  BY  GARV SHAW" to scrollProgressRef
+  // Sync SVG cutout mask & thick-bordered typography with cached glyph measurements
+  // so 60-120fps scroll and T-zoom animations incur zero per-frame layout thrashing.
   useEffect(() => {
     let rafId = 0;
+    let isDisposed = false;
 
-    const updateFromScroll = () => {
-      const p = scrollProgressRef.current;
+    const metrics = {
+      vw: window.innerWidth,
+      vh: window.innerHeight,
+      totalWidth: window.innerWidth * 2.5,
+      pLeft: 0,
+      portfolioCenterX: window.innerWidth * 0.6,
+      tCenterX: window.innerWidth * 0.24,
+    };
+
+    const measureTypography = () => {
       const vw = window.innerWidth;
-      const measuredWidth = strokeTextRef.current?.getComputedTextLength() || vw * 2.5;
+      const vh = window.innerHeight;
+      metrics.vw = vw;
+      metrics.vh = vh;
 
-      // Sweep slowly across p = [0 .. 0.82] from right edge to completely past left edge
-      const sweep = Math.min(Math.max(p / 0.82, 0), 1);
-      const startX = vw * 0.82;
-      const endX = -(measuredWidth + vw * 0.1);
-      const txPx = startX + (endX - startX) * sweep;
-      const transformAttr = `translate(${txPx.toFixed(2)}, 0)`;
+      const textEl = strokeTextRef.current;
+      if (!textEl) return;
+
+      const totalWidth = textEl.getComputedTextLength();
+      if (totalWidth > 0) {
+        metrics.totalWidth = totalWidth;
+      }
+
+      try {
+        const pRect = textEl.getExtentOfChar(0);
+        const tRect = textEl.getExtentOfChar(3); // 'T' in PORTFOLIO
+        const oRect = textEl.getExtentOfChar(8); // final 'O' in PORTFOLIO
+        metrics.pLeft = pRect.x;
+        metrics.portfolioCenterX = pRect.x + (oRect.x + oRect.width - pRect.x) * 0.5;
+        metrics.tCenterX = tRect.x + tRect.width * 0.5;
+      } catch {
+        // Fallback proportions if glyphs are not yet measurable
+        metrics.portfolioCenterX = metrics.totalWidth * 0.24;
+        metrics.tCenterX = metrics.totalWidth * 0.095;
+      }
+    };
+
+    measureTypography();
+
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => {
+        if (!isDisposed) measureTypography();
+      });
+    }
+
+    const handleResize = () => measureTypography();
+    window.addEventListener('resize', handleResize, { passive: true });
+
+    let prevShowTail: boolean | null = null;
+    let wasZooming = false;
+
+    const updateFrame = () => {
+      if (isDisposed) return;
+
+      const p = scrollProgressRef.current;
+      const z = zoomProgressRef.current;
+      const { vw, vh, totalWidth, pLeft, portfolioCenterX, tCenterX } = metrics;
+      const tCenterY = vh * 0.5;
+
+      const showTail = p <= 0.56 && z === 0;
+      if (showTail !== prevShowTail) {
+        prevShowTail = showTail;
+        const tailOpacity = showTail ? '1' : '0';
+        const tailVisibility = showTail ? 'visible' : 'hidden';
+
+        if (tailMaskRef.current) {
+          tailMaskRef.current.style.opacity = tailOpacity;
+          tailMaskRef.current.style.visibility = tailVisibility;
+        }
+        if (tailStrokeRef.current) {
+          tailStrokeRef.current.style.opacity = tailOpacity;
+          tailStrokeRef.current.style.visibility = tailVisibility;
+        }
+      }
+
+      let transformAttr: string;
+
+      if (z > 0) {
+        // Disable SVG drop-shadow filter during zoom so scaling up to 68x stays GPU-smooth
+        if (!wasZooming && strokeTextRef.current) {
+          wasZooming = true;
+          strokeTextRef.current.style.filter = 'none';
+        }
+
+        // Smooth C2 quintic focus onto the 'T' stem + silky exponential fly-through zoom
+        const focusEase = smootherstep(z / 0.45);
+        const pivotX = portfolioCenterX + (tCenterX - portfolioCenterX) * focusEase;
+        const zoomEase = smootherstep(z);
+        const zoomScale = Math.pow(68, zoomEase);
+
+        transformAttr = `translate(${(vw * 0.5).toFixed(2)}, ${tCenterY.toFixed(2)}) scale(${zoomScale.toFixed(4)}) translate(${(-pivotX).toFixed(2)}, ${(-tCenterY).toFixed(2)})`;
+
+        if (strokeTextRef.current) {
+          const strokeFade = 1 - smootherstep((z - 0.42) / 0.44);
+          strokeTextRef.current.style.opacity = strokeFade.toFixed(3);
+        }
+
+        if (backdropRectRef.current) {
+          const backdropFade = 1 - smootherstep((z - 0.78) / 0.22);
+          backdropRectRef.current.style.opacity = backdropFade.toFixed(3);
+        }
+      } else {
+        if (wasZooming && strokeTextRef.current) {
+          wasZooming = false;
+          strokeTextRef.current.style.filter = 'drop-shadow(0 0 18px rgba(56, 189, 248, 0.18))';
+        }
+
+        if (backdropRectRef.current) {
+          backdropRectRef.current.style.opacity = '1';
+        }
+        if (strokeTextRef.current) {
+          strokeTextRef.current.style.opacity = '1';
+        }
+
+        if (p <= 0.56) {
+          // Phase 1: Slow right-to-left slide of "PORTFOLIO  BY  GARV SHAW"
+          const t1 = Math.min(Math.max(p / 0.56, 0), 1);
+          const startX1 = vw * 0.82;
+          const endX1 = -(totalWidth + vw * 0.08);
+          const tx = startX1 + (endX1 - startX1) * t1;
+          transformAttr = `translate(${tx.toFixed(2)}, 0)`;
+        } else {
+          // Phase 2: "PORTFOLIO" glides smoothly into the middle of the screen
+          const easeCenter = smootherstep((p - 0.56) / 0.2);
+          const startX2 = vw * 1.05 - pLeft;
+          const centerTx = vw * 0.5 - portfolioCenterX;
+          const tx = startX2 + (centerTx - startX2) * easeCenter;
+          transformAttr = `translate(${tx.toFixed(2)}, 0)`;
+        }
+      }
 
       if (maskGroupRef.current) {
         maskGroupRef.current.setAttribute('transform', transformAttr);
@@ -44,14 +176,21 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         strokeGroupRef.current.setAttribute('transform', transformAttr);
       }
 
-      rafId = requestAnimationFrame(updateFromScroll);
+      rafId = requestAnimationFrame(updateFrame);
     };
 
-    rafId = requestAnimationFrame(updateFromScroll);
-    return () => cancelAnimationFrame(rafId);
-  }, [scrollProgressRef]);
+    rafId = requestAnimationFrame(updateFrame);
+    return () => {
+      isDisposed = true;
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [scrollProgressRef, zoomProgressRef]);
 
-  const renderSequenceTspans = (isStrokeLayer: boolean) => (
+  const renderSequenceTspans = (
+    isStrokeLayer: boolean,
+    tailRef: React.RefObject<SVGTSpanElement | null>
+  ) => (
     <>
       <tspan
         fill={isStrokeLayer ? 'transparent' : 'black'}
@@ -59,34 +198,36 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
       >
         PORTFOLIO
       </tspan>
-      <tspan
-        fill={isStrokeLayer ? 'transparent' : 'white'}
-        stroke={isStrokeLayer ? 'none' : undefined}
-        style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
-      >
-        {'\u00A0\u00A0'}
-      </tspan>
-      <tspan
-        className={isStrokeLayer ? 'intro-by-multicolor' : undefined}
-        fill={isStrokeLayer ? undefined : 'white'}
-        stroke={isStrokeLayer ? 'none' : undefined}
-        strokeWidth={isStrokeLayer ? 0 : undefined}
-        style={{ fontSize: 'clamp(15px, 5.7vw, 5.25rem)' }}
-      >
-        BY
-      </tspan>
-      <tspan
-        fill={isStrokeLayer ? 'transparent' : 'white'}
-        stroke={isStrokeLayer ? 'none' : undefined}
-        style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
-      >
-        {'\u00A0\u00A0'}
-      </tspan>
-      <tspan
-        fill={isStrokeLayer ? 'transparent' : 'black'}
-        style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
-      >
-        GARV SHAW
+      <tspan ref={tailRef}>
+        <tspan
+          fill={isStrokeLayer ? 'transparent' : 'white'}
+          stroke={isStrokeLayer ? 'none' : undefined}
+          style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+        >
+          {'\u00A0\u00A0'}
+        </tspan>
+        <tspan
+          className={isStrokeLayer ? 'intro-by-multicolor' : undefined}
+          fill={isStrokeLayer ? undefined : 'white'}
+          stroke={isStrokeLayer ? 'none' : undefined}
+          strokeWidth={isStrokeLayer ? 0 : undefined}
+          style={{ fontSize: 'clamp(15px, 5.7vw, 5.25rem)' }}
+        >
+          BY
+        </tspan>
+        <tspan
+          fill={isStrokeLayer ? 'transparent' : 'white'}
+          stroke={isStrokeLayer ? 'none' : undefined}
+          style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+        >
+          {'\u00A0\u00A0'}
+        </tspan>
+        <tspan
+          fill={isStrokeLayer ? 'transparent' : 'black'}
+          style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+        >
+          GARV SHAW
+        </tspan>
       </tspan>
     </>
   );
@@ -103,6 +244,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         aria-hidden="true"
         className="fixed inset-0 w-full h-full pointer-events-none z-[1]"
         preserveAspectRatio="none"
+        style={{ willChange: 'transform, opacity' }}
       >
         <defs>
           <radialGradient id="portfolio-void-bg" cx="50%" cy="50%" r="72%">
@@ -125,13 +267,14 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
                 letterSpacing="-0.03em"
                 style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
               >
-                {renderSequenceTspans(false)}
+                {renderSequenceTspans(false, tailMaskRef)}
               </text>
             </g>
           </mask>
         </defs>
 
         <rect
+          ref={backdropRectRef}
           x="0"
           y="0"
           width="100%"
@@ -146,6 +289,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         aria-hidden="true"
         className="fixed inset-0 w-full h-full pointer-events-none z-[5]"
         preserveAspectRatio="none"
+        style={{ willChange: 'transform, opacity' }}
       >
         <g ref={strokeGroupRef} transform="translate(1200, 0)">
           <text
@@ -168,7 +312,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
               filter: 'drop-shadow(0 0 18px rgba(56, 189, 248, 0.18))',
             }}
           >
-            {renderSequenceTspans(true)}
+            {renderSequenceTspans(true, tailStrokeRef)}
           </text>
         </g>
       </svg>
@@ -178,7 +322,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: isTransitioning ? 0 : 1, y: 0 }}
-          transition={{ duration: 0.6, ease: LUXURY_EASE }}
+          transition={{ duration: 0.45, ease: LUXURY_EASE }}
           className="w-full flex items-center justify-end z-20 pointer-events-auto"
         >
           <button
@@ -196,17 +340,6 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
           </button>
         </motion.div>
       </div>
-
-      {/* Phase 1 of Entry Effect: Slowly dim the light */}
-      {isTransitioning && (
-        <motion.div
-          aria-hidden="true"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.85 }}
-          transition={{ duration: 0.75, ease: [0.32, 0, 0.45, 1] }}
-          className="fixed inset-0 z-30 pointer-events-none bg-[#030407]"
-        />
-      )}
     </>
   );
 };

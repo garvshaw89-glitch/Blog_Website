@@ -18,8 +18,9 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
   const elapsedTimeRef = useRef(0);
   const scrollTargetRef = useRef(0);
   const scrollProgressRef = useRef(0);
+  const zoomProgressRef = useRef(0);
   const isTransitioningRef = useRef(false);
-  const transitionTimerRef = useRef<number | null>(null);
+  const hasCompletedRef = useRef(false);
   const heldDirectionRef = useRef<-1 | 0 | 1>(0);
   const touchStartYRef = useRef<number | null>(null);
 
@@ -39,19 +40,14 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     setIsTransitioning(true);
     introAudio.triggerWarp();
     entrySequenceManager.completeImmediately();
+  }, []);
 
-    // 0.0–0.75s: Slowly dim the light | 0.65–1.60s: 3D screen flip -> move to main page
-    transitionTimerRef.current = window.setTimeout(() => {
-      introAudio.stop();
-      onComplete();
-    }, 1600);
-  }, [onComplete]);
-
-  // Slow, deliberate scroll progression through "PORTFOLIO   BY   GARV SHAW"
+  // Slow scroll progression -> center PORTFOLIO -> zoom through transparent "T" into main page
   useEffect(() => {
     let animId = 0;
     const startTime = performance.now();
     let prevTime = startTime;
+    const ZOOM_DURATION_SEC = 2.1;
 
     const loop = (now: number) => {
       const dt = Math.min((now - prevTime) / 1000, 0.05);
@@ -74,9 +70,22 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       scrollProgressRef.current +=
         (scrollTargetRef.current - scrollProgressRef.current) * factor;
 
-      // Once "GARV SHAW" finishes gliding past center -> slowly dim light, flip screen, enter main page
-      if (!isTransitioningRef.current && scrollProgressRef.current >= 0.82) {
+      // Once "PORTFOLIO" settles in the middle, trigger zoom through the transparent 'T'
+      if (!isTransitioningRef.current && scrollProgressRef.current >= 0.78) {
         triggerEntryTransition();
+      }
+
+      // Advance zoom-through-T smoothly using clamped dt so frame spikes never skip frames
+      if (isTransitioningRef.current && !hasCompletedRef.current) {
+        const nextZ = Math.min(zoomProgressRef.current + dt / ZOOM_DURATION_SEC, 1);
+        zoomProgressRef.current = nextZ;
+
+        if (nextZ >= 1) {
+          hasCompletedRef.current = true;
+          introAudio.stop();
+          onComplete();
+          return;
+        }
       }
 
       animId = requestAnimationFrame(loop);
@@ -85,11 +94,8 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     animId = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(animId);
-      if (transitionTimerRef.current !== null) {
-        clearTimeout(transitionTimerRef.current);
-      }
     };
-  }, [triggerEntryTransition]);
+  }, [onComplete, triggerEntryTransition]);
 
   const handleToggleAudio = useCallback(() => {
     const newState = introAudio.toggle();
@@ -187,46 +193,16 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     };
   }, []);
 
-  const scanlineOverlay = isTransitioning ? (
-    <div aria-hidden="true" className="intro-scanline-overlay">
-      <div className="intro-scanline-grid" />
-      <div className="intro-scanline-beam" />
-      <div className="intro-scanline-beam-echo" />
-    </div>
-  ) : null;
-
   if (webGlFailed) {
     return (
-      <div
-        className="fixed inset-0 z-50 overflow-hidden"
-        style={{ perspective: '1600px' }}
-      >
-        <motion.div
-          animate={
-            isTransitioning
-              ? { rotateY: -92, scale: 0.88, opacity: 0 }
-              : { rotateY: 0, scale: 1, opacity: 1 }
-          }
-          transition={{
-            duration: 0.95,
-            delay: isTransitioning ? 0.62 : 0,
-            ease: [0.42, 0, 0.2, 1],
-          }}
-          style={{
-            transformOrigin: 'center center',
-            backfaceVisibility: 'hidden',
-            willChange: 'transform, opacity',
-          }}
-          className="w-full h-full"
-        >
-          <WebGlFallback
-            scrollProgressRef={scrollProgressRef}
-            isAudioOn={isAudioOn}
-            onToggleAudio={handleToggleAudio}
-            isTransitioning={isTransitioning}
-          />
-        </motion.div>
-        {scanlineOverlay}
+      <div className="fixed inset-0 z-50 overflow-hidden select-none">
+        <WebGlFallback
+          scrollProgressRef={scrollProgressRef}
+          zoomProgressRef={zoomProgressRef}
+          isAudioOn={isAudioOn}
+          onToggleAudio={handleToggleAudio}
+          isTransitioning={isTransitioning}
+        />
       </div>
     );
   }
@@ -236,49 +212,25 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       key="luxury-portal-entrance"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.25, ease: 'easeOut' }}
-      style={{ perspective: '1600px' }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
       className="fixed inset-0 z-50 bg-transparent overflow-hidden select-none"
     >
-      {/* Phase 2 of Entry Effect: 3D Screen Flip after light dims */}
-      <motion.div
-        animate={
-          isTransitioning
-            ? { rotateY: -92, scale: 0.88, opacity: 0 }
-            : { rotateY: 0, scale: 1, opacity: 1 }
-        }
-        transition={{
-          duration: 0.95,
-          delay: isTransitioning ? 0.62 : 0,
-          ease: [0.42, 0, 0.2, 1],
-        }}
-        style={{
-          transformOrigin: 'center center',
-          transformStyle: 'preserve-3d',
-          backfaceVisibility: 'hidden',
-          willChange: 'transform, opacity',
-        }}
-        className="relative w-full h-full"
-      >
-        {/* 3D WebGL Particle Field */}
-        <IntroScene
-          elapsedTimeRef={elapsedTimeRef}
-          scrollProgressRef={scrollProgressRef}
-          isTransitioningRef={isTransitioningRef}
-          onWebGLError={handleWebGLError}
-        />
+      {/* 3D WebGL Particle Field */}
+      <IntroScene
+        elapsedTimeRef={elapsedTimeRef}
+        scrollProgressRef={scrollProgressRef}
+        isTransitioningRef={isTransitioningRef}
+        onWebGLError={handleWebGLError}
+      />
 
-        {/* SVG Knockout PORTFOLIO  BY  GARV SHAW Backdrop & Dimmer */}
-        <IntroOverlay
-          scrollProgressRef={scrollProgressRef}
-          isAudioOn={isAudioOn}
-          onToggleAudio={handleToggleAudio}
-          isTransitioning={isTransitioning}
-        />
-      </motion.div>
-
-      {/* Dynamic CSS Scanline Overlay sweeping across the viewport during transition */}
-      {scanlineOverlay}
+      {/* SVG Knockout Slide -> Center PORTFOLIO -> Zoom through transparent 'T' */}
+      <IntroOverlay
+        scrollProgressRef={scrollProgressRef}
+        zoomProgressRef={zoomProgressRef}
+        isAudioOn={isAudioOn}
+        onToggleAudio={handleToggleAudio}
+        isTransitioning={isTransitioning}
+      />
     </motion.div>
   );
 };
