@@ -23,7 +23,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
   const heldDirectionRef = useRef<-1 | 0 | 1>(0);
   const touchStartYRef = useRef<number | null>(null);
 
-  // Lock background page scroll while entry portal is active
+  // Lock background page scroll while compulsory entry portal is active
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -31,19 +31,6 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       document.body.style.overflow = prevOverflow;
     };
   }, []);
-
-  // Respect prefers-reduced-motion
-  useEffect(() => {
-    try {
-      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (prefersReduced) {
-        entrySequenceManager.completeImmediately();
-        onComplete();
-      }
-    } catch {
-      // Ignore
-    }
-  }, [onComplete]);
 
   const triggerEntryTransition = useCallback(() => {
     if (isTransitioningRef.current) return;
@@ -56,10 +43,10 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     transitionTimerRef.current = window.setTimeout(() => {
       introAudio.stop();
       onComplete();
-    }, 1000);
+    }, 1150);
   }, [onComplete]);
 
-  // Master timeline + smooth damped virtual scroll loop (zero per-frame React re-renders)
+  // Deliberate, slow, luxurious damped scroll progression (compulsory to enter main website)
   useEffect(() => {
     let animId = 0;
     const startTime = performance.now();
@@ -73,21 +60,21 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       elapsedTimeRef.current = t;
       entrySequenceManager.tick(t);
 
-      // Continuous smooth scroll while keyboard Arrow / Page / Space key is held
+      // Slow, continuous glide while holding Arrow / Page / Space keys
       if (!isTransitioningRef.current && heldDirectionRef.current !== 0) {
         scrollTargetRef.current = Math.min(
           1,
-          Math.max(0, scrollTargetRef.current + heldDirectionRef.current * 0.58 * dt)
+          Math.max(0, scrollTargetRef.current + heldDirectionRef.current * 0.165 * dt)
         );
       }
 
-      // Exponential damping for silky scroll inertia
-      const factor = 1 - Math.exp(-8.5 * dt);
+      // Weighty, cinematic scroll inertia
+      const factor = 1 - Math.exp(-4.4 * dt);
       scrollProgressRef.current +=
         (scrollTargetRef.current - scrollProgressRef.current) * factor;
 
-      // Once PORTFOLIO finishes sweeping right-to-left and user scrolls past threshold -> futuristic entry
-      if (!isTransitioningRef.current && scrollProgressRef.current >= 0.78) {
+      // After PORTFOLIO finishes gliding past center -> trigger futuristic entry into main page
+      if (!isTransitioningRef.current && scrollProgressRef.current >= 0.8) {
         triggerEntryTransition();
       }
 
@@ -103,16 +90,6 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     };
   }, [triggerEntryTransition]);
 
-  const handleSkip = useCallback(() => {
-    if (isTransitioningRef.current) return;
-    if (transitionTimerRef.current !== null) {
-      clearTimeout(transitionTimerRef.current);
-    }
-    introAudio.stop();
-    entrySequenceManager.completeImmediately();
-    onComplete();
-  }, [onComplete]);
-
   const handleToggleAudio = useCallback(() => {
     const newState = introAudio.toggle();
     setIsAudioOn(newState);
@@ -122,36 +99,22 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     setWebGlFailed(true);
   }, []);
 
-  // Keyboard scroll (ArrowDown/Up, PageDown/Up, Space), Enter & Escape, plus Wheel & Touch swipe
+  // Compulsory scroll handlers: keyboard (ArrowDown/Up, PageDown/Up, Space), wheel & touch swipe (no Esc/Enter skip)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        handleSkip();
-        return;
-      }
-
       if (isTransitioningRef.current) return;
-
-      if (e.key === 'Enter') {
-        const targetTag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-        if (targetTag === 'button') return;
-        e.preventDefault();
-        triggerEntryTransition();
-        return;
-      }
 
       if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
         e.preventDefault();
         if (!e.repeat) {
-          const step = e.key === 'ArrowDown' ? 0.14 : 0.24;
+          const step = e.key === 'ArrowDown' ? 0.045 : 0.085;
           scrollTargetRef.current = Math.min(1, scrollTargetRef.current + step);
         }
         heldDirectionRef.current = 1;
       } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
         e.preventDefault();
         if (!e.repeat) {
-          const step = e.key === 'ArrowUp' ? 0.14 : 0.24;
+          const step = e.key === 'ArrowUp' ? 0.045 : 0.085;
           scrollTargetRef.current = Math.max(0, scrollTargetRef.current - step);
         }
         heldDirectionRef.current = -1;
@@ -176,10 +139,10 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       if (isTransitioningRef.current) return;
-      const clampedDelta = Math.max(-180, Math.min(180, e.deltaY));
+      const clampedDelta = Math.max(-110, Math.min(110, e.deltaY));
       scrollTargetRef.current = Math.min(
         1,
-        Math.max(0, scrollTargetRef.current + clampedDelta * 0.00085)
+        Math.max(0, scrollTargetRef.current + clampedDelta * 0.00028)
       );
     };
 
@@ -198,7 +161,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       touchStartYRef.current = currentY;
       scrollTargetRef.current = Math.min(
         1,
-        Math.max(0, scrollTargetRef.current + deltaY * 0.0022)
+        Math.max(0, scrollTargetRef.current + deltaY * 0.0009)
       );
     };
 
@@ -221,10 +184,17 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [handleSkip, triggerEntryTransition]);
+  }, []);
 
   if (webGlFailed) {
-    return <WebGlFallback onEnter={triggerEntryTransition} onSkip={handleSkip} />;
+    return (
+      <WebGlFallback
+        scrollProgressRef={scrollProgressRef}
+        isAudioOn={isAudioOn}
+        onToggleAudio={handleToggleAudio}
+        isTransitioning={isTransitioning}
+      />
+    );
   }
 
   return (
@@ -232,20 +202,10 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       key="luxury-portal-entrance"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.75, ease: [0.22, 1, 0.3, 1] }}
-      className="fixed inset-0 z-50 bg-[#050505] overflow-hidden select-none"
+      transition={{ duration: 0.85, ease: [0.22, 1, 0.3, 1] }}
+      className="fixed inset-0 z-50 bg-transparent overflow-hidden select-none"
     >
-      {/* Foundation Deep Dark Vignette */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none opacity-85"
-        style={{
-          background:
-            'radial-gradient(circle at 50% 50%, #080d16 0%, #050505 85%)',
-        }}
-      />
-
-      {/* 3D WebGL Liquid Chrome & Ambient Particle Field */}
+      {/* 3D WebGL Particle Field */}
       <IntroScene
         elapsedTimeRef={elapsedTimeRef}
         scrollProgressRef={scrollProgressRef}
@@ -253,25 +213,12 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
         onWebGLError={handleWebGLError}
       />
 
-      {/* Scroll-Driven PORTFOLIO & Futuristic Portal Overlay */}
+      {/* SVG Knockout PORTFOLIO Backdrop & Futuristic Portal Overlay */}
       <IntroOverlay
         scrollProgressRef={scrollProgressRef}
-        onEnter={triggerEntryTransition}
-        onSkip={handleSkip}
         isAudioOn={isAudioOn}
         onToggleAudio={handleToggleAudio}
         isTransitioning={isTransitioning}
-      />
-
-      {/* Subtle film-grain atmosphere */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none opacity-[0.025] mix-blend-screen"
-        style={{
-          backgroundImage:
-            'radial-gradient(rgba(255, 255, 255, 0.6) 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-        }}
       />
     </motion.div>
   );

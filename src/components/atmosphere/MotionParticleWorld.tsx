@@ -919,6 +919,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
 
     // 7. Animation Loop (Delta-Time Based)
     let prevTime = performance.now();
+    let lastPausedRender = 0;
 
     const animate = (time: number) => {
       rafId = requestAnimationFrame(animate);
@@ -927,7 +928,10 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
       prevTime = time;
 
       if (pausedRef.current) {
-        return;
+        if (lastPausedRender !== 0 && time - lastPausedRender < 85) {
+          return;
+        }
+        lastPausedRender = time;
       }
 
       const seconds = time * 0.001;

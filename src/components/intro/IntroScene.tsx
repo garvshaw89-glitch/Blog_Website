@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { LiquidChromeCore } from './LiquidChromeCore';
 import { ParticleField } from './ParticleField';
 
 interface IntroSceneProps {
@@ -50,7 +49,7 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     scene.fog = new THREE.FogExp2(0x050505, 0.036);
 
     const baseZ = isMobile ? 8.0 : 6.7;
-    const startZ = isMobile ? 10.6 : 9.2;
+    const startZ = isMobile ? 10.2 : 8.8;
 
     const camera = new THREE.PerspectiveCamera(
       45,
@@ -77,8 +76,6 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setPixelRatio(dpr);
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.18;
 
     const canvas = renderer.domElement;
     canvas.style.position = 'absolute';
@@ -86,27 +83,9 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     canvas.style.pointerEvents = 'none';
     container.appendChild(canvas);
 
-    const ambientLight = new THREE.AmbientLight(0x080d16, 0.2);
-    scene.add(ambientLight);
-
-    const keyLight = new THREE.DirectionalLight(0xf8fafc, 0.35);
-    keyLight.position.set(5.0, 6.0, 5.0);
-    scene.add(keyLight);
-
-    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
-    rimLight.position.set(-5.5, -3.0, -4.0);
-    scene.add(rimLight);
-
-    const accentLight = new THREE.DirectionalLight(0xe0f2fe, 0.2);
-    accentLight.position.set(0, 5.0, -2.5);
-    scene.add(accentLight);
-
-    const liquidChrome = new LiquidChromeCore();
-    scene.add(liquidChrome.group);
-
     const particleField = new ParticleField(isMobile);
     scene.add(particleField.points);
-    particleField.setTargetOpacity(0.45);
+    particleField.setTargetOpacity(0.5);
 
     if (!isSoftwareGl) {
       renderer.compile(scene, camera);
@@ -189,21 +168,12 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
         const p = THREE.MathUtils.clamp(t / 2.2, 0, 1);
         const ease = 1 - Math.pow(1 - p, 3);
 
-        const targetAmbient = 0.2 + ease * 0.34 + scrollP * 0.16;
-        const targetKey = 0.4 + ease * 2.0 + scrollP * 0.9;
-        const targetRim = 0.4 + ease * 1.55 + scrollP * 1.4;
-        const targetAccent = 0.2 + ease * 0.75 + scrollP * 0.5;
-        const targetCamZ = (startZ - ease * (startZ - baseZ)) - scrollP * 1.35;
-        const targetParticleOpacity = 0.45 + ease * 0.3 + scrollP * 0.2;
+        const targetCamZ = (startZ - ease * (startZ - baseZ)) - scrollP * 1.25;
+        const targetParticleOpacity = 0.45 + ease * 0.25 + scrollP * 0.22;
 
-        ambientLight.intensity = THREE.MathUtils.damp(ambientLight.intensity, targetAmbient, 4.2, delta);
-        keyLight.intensity = THREE.MathUtils.damp(keyLight.intensity, targetKey, 4.2, delta);
-        rimLight.intensity = THREE.MathUtils.damp(rimLight.intensity, targetRim, 4.2, delta);
-        accentLight.intensity = THREE.MathUtils.damp(accentLight.intensity, targetAccent, 4.2, delta);
         currentCamZ = THREE.MathUtils.damp(currentCamZ, targetCamZ, 4.2, delta);
         particleField.setTargetOpacity(targetParticleOpacity);
 
-        // Smooth scroll-driven FOV widening & subtle parallax
         const targetFov = 45 + scrollP * 7;
         camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, 4.0, delta);
         camera.updateProjectionMatrix();
@@ -217,7 +187,6 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
         camera.rotation.y = THREE.MathUtils.damp(camera.rotation.y, -mouseRef.current.x * 0.03, 4.5, delta);
         camera.rotation.x = THREE.MathUtils.damp(camera.rotation.x, mouseRef.current.y * 0.022, 4.5, delta);
       } else {
-        // Futuristic hyperspace portal warp dive
         warpCamVel = THREE.MathUtils.damp(warpCamVel, 20.0, 3.6, delta);
         currentCamZ = Math.max(0.35, currentCamZ - warpCamVel * delta);
         camera.position.z = currentCamZ;
@@ -227,20 +196,9 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
         camera.rotation.y = THREE.MathUtils.damp(camera.rotation.y, 0, 5.0, delta);
         camera.fov = THREE.MathUtils.damp(camera.fov, 68, 3.8, delta);
         camera.updateProjectionMatrix();
-
-        keyLight.intensity = THREE.MathUtils.damp(keyLight.intensity, 6.8, 3.2, delta);
-        rimLight.intensity = THREE.MathUtils.damp(rimLight.intensity, 6.2, 3.2, delta);
+        particleField.setTargetOpacity(0.95);
       }
 
-      liquidChrome.update(
-        time,
-        delta,
-        t,
-        scrollP,
-        mouseRef.current.x,
-        mouseRef.current.y,
-        isTrans
-      );
       particleField.update(
         time,
         delta,
@@ -269,7 +227,6 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
       canvas.removeEventListener('webglcontextlost', handleContextLost);
       canvas.removeEventListener('webglcontextrestored', handleContextRestored);
 
-      liquidChrome.dispose();
       particleField.dispose();
       renderer.dispose();
 
@@ -283,7 +240,7 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     <div
       ref={containerRef}
       aria-hidden="true"
-      className="absolute inset-0 pointer-events-none z-0 overflow-hidden"
+      className="absolute inset-0 pointer-events-none z-[2] overflow-hidden"
     />
   );
 };
