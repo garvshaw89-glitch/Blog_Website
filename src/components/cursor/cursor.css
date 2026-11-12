@@ -1,5 +1,5 @@
 /* ==========================================================================
-   REFINED ROCKET CURSOR SYSTEM - HARDWARE-ACCELERATED
+   PARTICLE ROCKET CURSOR SYSTEM - HARDWARE-ACCELERATED
    ========================================================================== */
 
 .custom-cursor {
@@ -18,127 +18,24 @@
   transform: none !important;
 }
 
-/* Rocket Entity (sharp nose-tip anchored at exact pointer coordinate 17, 2) */
-.cursor-rocket {
+.cursor-rocket-canvas {
   position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 34px;
-  height: 46px;
-  margin-top: -2px !important;
-  margin-left: -17px !important;
-  transform-origin: 17px 2px !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
   pointer-events: none !important;
   z-index: 2147483647 !important;
-  transform: translate3d(0, 0, 0) rotate(-32deg);
-  will-change: transform, opacity;
-  opacity: 1 !important;
-  visibility: visible !important;
   display: block !important;
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.92))
-    drop-shadow(0 0 8px rgba(56, 189, 248, 0.42));
-  transition: filter 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.2s ease;
+  transition: opacity 0.18s ease;
 }
 
-.cursor-rocket-svg {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  display: block;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.2s ease;
-}
-
-/* Interactive states handled directly by the rocket */
-.cursor-rocket.is-button {
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.95))
-    drop-shadow(0 0 12px rgba(34, 211, 238, 0.85));
-}
-
-.cursor-rocket.is-button .cursor-rocket-svg {
-  transform: scale(1.12);
-}
-
-.cursor-rocket.is-link {
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.95))
-    drop-shadow(0 0 12px rgba(125, 211, 252, 0.85));
-}
-
-.cursor-rocket.is-link .cursor-rocket-svg {
-  transform: scale(1.1);
-}
-
-.cursor-rocket.is-project {
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.95))
-    drop-shadow(0 0 15px rgba(56, 189, 248, 0.95));
-}
-
-.cursor-rocket.is-project .cursor-rocket-svg {
-  transform: scale(1.16);
-}
-
-.cursor-rocket.is-text .cursor-rocket-svg {
-  transform: scale(0.84);
-  opacity: 0.78;
-}
-
-.cursor-rocket.is-boosting {
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.95))
-    drop-shadow(0 0 18px rgba(56, 189, 248, 1));
-}
-
-.cursor-rocket.is-boosting .cursor-rocket-svg {
-  transform: scale(1.18);
-}
-
-@keyframes rocketThrusterFlicker {
-  0%,
-  100% {
-    transform: scaleY(0.9) scaleX(0.95);
-    opacity: 0.9;
-  }
-  50% {
-    transform: scaleY(1.18) scaleX(1.06);
-    opacity: 1;
-  }
-}
-
-.cursor-rocket-flame-wrap {
-  transform-origin: 17px 29px;
-  transition: transform 0.1s ease-out;
-}
-
-.cursor-rocket-flame {
-  transform-origin: 17px 29px;
-  animation: rocketThrusterFlicker 0.15s ease-in-out infinite;
-}
-
-.cursor-rocket.is-button .cursor-rocket-flame-wrap,
-.cursor-rocket.is-link .cursor-rocket-flame-wrap {
-  filter: brightness(1.15);
-}
-
-.cursor-rocket.is-project .cursor-rocket-flame-wrap {
-  filter: brightness(1.25);
-}
-
-.cursor-rocket.is-text .cursor-rocket-flame-wrap {
-  opacity: 0.55;
-}
-
-.cursor-rocket.is-boosting .cursor-rocket-flame-wrap {
-  transform: scaleY(1.95) scaleX(1.22) !important;
-  filter: brightness(1.4);
-}
-
-/* Upright Trailing Contextual HUD Badge (replaces the old ring's label role) */
+/* Upright Trailing Contextual HUD Badge */
 .cursor-rocket-badge-wrap {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   pointer-events: none !important;
-  z-index: 2147483646 !important;
+  z-index: 2147483647 !important;
   transform: translate3d(0, 0, 0);
   will-change: transform, opacity;
   transition: opacity 0.18s ease;
@@ -164,33 +61,6 @@
   pointer-events: none !important;
   user-select: none !important;
   display: block;
-}
-
-/* Click Plasma Burst (directional thrust puff, no circle) */
-@keyframes rocketIgnitionFlash {
-  0% {
-    transform: translate(-50%, -50%) scale(0.5);
-    opacity: 0.95;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1.9);
-    opacity: 0;
-  }
-}
-
-.cursor-rocket-ignition {
-  position: fixed !important;
-  width: 22px;
-  height: 22px;
-  pointer-events: none !important;
-  z-index: 2147483645 !important;
-  background: radial-gradient(
-    circle,
-    rgba(224, 242, 254, 0.9) 0%,
-    rgba(56, 189, 248, 0.55) 45%,
-    transparent 75%
-  );
-  animation: rocketIgnitionFlash 0.36s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
 /* Magnetic active glow */

@@ -3,19 +3,248 @@ import { interactionEngine } from '../../context/SingularityInteractionEngine';
 import { applyMagneticAttraction, resetMagneticElement } from '../../hooks/cursor/useCursor';
 import '../cursor/cursor.css';
 
-interface IgnitionBurstItem {
-  id: number;
-  x: number;
-  y: number;
-}
-
 export interface CustomCursorProps {
   magneticStrength?: number;
 }
 
+type ParticleTone = 'silver' | 'cyan' | 'amber' | 'white';
+
+interface RocketStructureParticle {
+  lx: number;
+  ly: number;
+  size: number;
+  baseAlpha: number;
+  tone: ParticleTone;
+  phase: number;
+  jitterAmp: number;
+  isFlame?: boolean;
+  flameReach?: number;
+}
+
+interface ExhaustParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  life: number;
+  maxLife: number;
+  tone: ParticleTone;
+}
+
+function createGlowSprite(coreHex: string, midRgba: string, outerRgba: string): HTMLCanvasElement {
+  const size = 24;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const g = c.getContext('2d');
+  if (g) {
+    const half = size / 2;
+    const grad = g.createRadialGradient(half, half, 0, half, half, half);
+    grad.addColorStop(0, coreHex);
+    grad.addColorStop(0.28, midRgba);
+    grad.addColorStop(0.62, outerRgba);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+  }
+  return c;
+}
+
+/**
+ * Generates the exact 34x46 aerospace rocket blueprint (nose-tip at (0, 0))
+ * rendered strictly from luminous micro-particles matching MotionParticleWorld.
+ */
+function buildRocketParticleBlueprint(): RocketStructureParticle[] {
+  const pts: RocketStructureParticle[] = [];
+  let seed = 1337;
+  const rand = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+
+  const push = (
+    lx: number,
+    ly: number,
+    size: number,
+    baseAlpha: number,
+    tone: ParticleTone,
+    jitterAmp = 0.28,
+    isFlame = false,
+    flameReach = 0
+  ) => {
+    pts.push({
+      lx,
+      ly,
+      size,
+      baseAlpha,
+      tone,
+      phase: rand() * Math.PI * 2,
+      jitterAmp,
+      isFlame,
+      flameReach,
+    });
+  };
+
+  // Exact fuselage half-width matching the 34x46 SVG Bezier silhouette (nose tip at 0,0)
+  const hullHalfWidth = (y: number): number => {
+    if (y <= 0) return 0;
+    if (y <= 19.2) {
+      const t = y / 19.2;
+      return 5.4 * Math.pow(t, 0.72);
+    }
+    const t = Math.min((y - 19.2) / 6.4, 1);
+    return 5.4 - 1.3 * t;
+  };
+
+  // 1. Precision nose tip beacon at exact (0, 0) pointer hotspot
+  push(0, 0, 2.5, 1.0, 'white', 0);
+  push(0, 0.8, 2.0, 0.95, 'cyan', 0.08);
+
+  // 2. Outer aerodynamic fuselage contour (y = 0 .. 25.6) + cyan nose cone accents
+  const hullSteps = 22;
+  for (let i = 1; i <= hullSteps; i++) {
+    const y = (i / hullSteps) * 25.6;
+    const hw = hullHalfWidth(y);
+    const inNoseCone = y <= 7.8;
+
+    push(-hw, y, inNoseCone ? 1.55 : 1.4, 0.92, inNoseCone ? 'cyan' : 'silver', 0.2);
+    push(hw, y, inNoseCone ? 1.55 : 1.4, 0.88, inNoseCone ? 'cyan' : 'silver', 0.2);
+
+    // Nose cone horizontal ring & dense glowing interior particles
+    if (inNoseCone) {
+      const cols = Math.max(1, Math.round(hw / 1.35));
+      for (let c = -cols + 1; c < cols; c++) {
+        const x = (c / cols) * hw;
+        push(x, y, 1.25, 0.82, c === 0 ? 'white' : 'cyan', 0.18);
+      }
+    }
+  }
+
+  // 3. Recessed teardrop canopy cutout (y = 9.6 .. 17.2)
+  const canopyHalfW = (y: number): number => {
+    if (y < 9.6 || y > 17.2) return 0;
+    const t = (y - 9.6) / 7.6;
+    return 2.05 * Math.sin(Math.pow(t, 0.75) * Math.PI);
+  };
+
+  for (let i = 0; i <= 12; i++) {
+    const y = 9.6 + (i / 12) * 7.6;
+    const cw = canopyHalfW(y);
+    if (cw > 0.25) {
+      push(-cw, y, 1.35, 0.95, 'cyan', 0.14);
+      push(cw, y, 1.35, 0.95, 'cyan', 0.14);
+    } else {
+      push(0, y, 1.4, 0.95, 'cyan', 0.12);
+    }
+  }
+  // Canopy specular highlight glint
+  push(-0.75, 11.7, 1.25, 0.95, 'white', 0.1);
+  push(-1.05, 13.0, 1.15, 0.85, 'white', 0.1);
+
+  // 4. Split-lit interior hull shimmer particles (avoiding dark canopy interior for clear contrast)
+  for (let y = 8.4; y <= 24.8; y += 1.65) {
+    const hw = hullHalfWidth(y) * 0.76;
+    const cw = canopyHalfW(y);
+    for (let x = -hw; x <= hw; x += 1.55) {
+      if (cw > 0 && Math.abs(x) < cw + 0.55) continue;
+      const isLeftLit = x < 0;
+      const tone: ParticleTone = rand() < 0.08 ? 'amber' : isLeftLit ? 'white' : 'silver';
+      push(
+        x + (rand() - 0.5) * 0.35,
+        y + (rand() - 0.5) * 0.35,
+        1.15 + rand() * 0.45,
+        isLeftLit ? 0.78 : 0.58,
+        tone,
+        0.26
+      );
+    }
+  }
+
+  // 5. Central dorsal fin spine (y = 18.4 .. 25.2)
+  for (let y = 18.4; y <= 25.2; y += 1.15) {
+    push(0, y, 1.45, 0.94, 'cyan', 0.15);
+  }
+
+  // 6. Swept delta stabilizer wings (left & right mirror)
+  const wingTriangles: [number, number, number, number, number, number][] = [
+    [-5.2, 16.8, -11.8, 24.8, -5.4, 23.6],
+    [5.2, 16.8, 11.8, 24.8, 5.4, 23.6],
+  ];
+
+  for (const [x1, y1, x2, y2, x3, y3] of wingTriangles) {
+    // Crisp wing leading/trailing edges
+    const edges: [number, number, number, number, number][] = [
+      [x1, y1, x2, y2, 9],
+      [x2, y2, x3, y3, 7],
+      [x3, y3, x1, y1, 6],
+    ];
+    for (const [ax, ay, bx, by, steps] of edges) {
+      for (let s = 0; s <= steps; s++) {
+        const f = s / steps;
+        const tone: ParticleTone = s === steps && ax === x1 ? 'amber' : 'cyan';
+        push(
+          ax + (bx - ax) * f,
+          ay + (by - ay) * f,
+          1.35,
+          0.9,
+          tone,
+          0.2
+        );
+      }
+    }
+    // Interior wing fill particles
+    for (let u = 0.2; u <= 0.78; u += 0.28) {
+      for (let v = 0.2; v <= 0.78 - u * 0.5; v += 0.28) {
+        const w = 1 - u - v;
+        if (w <= 0.08) continue;
+        push(
+          x1 * u + x2 * v + x3 * w,
+          y1 * u + y2 * v + y3 * w,
+          1.15,
+          0.66,
+          rand() < 0.14 ? 'silver' : 'cyan',
+          0.25
+        );
+      }
+    }
+  }
+
+  // 7. Thruster bell nozzle rim (y = 25.6 .. 27.4)
+  for (let x = -3.8; x <= 3.8; x += 1.08) {
+    push(x, 25.8, 1.3, 0.85, 'silver', 0.12);
+    push(x * 1.05, 27.2, 1.35, 0.9, 'cyan', 0.12);
+  }
+
+  // 8. Dynamic particle exhaust plume (y = 27.8 .. 42.5)
+  for (let i = 0; i < 34; i++) {
+    const reach = (i / 33) * 1.0; // 0 = nozzle throat, 1 = plume tip
+    const baseY = 27.8 + reach * 14.5;
+    const spread = (1 - reach * 0.75) * 3.1;
+    const lx = (rand() - 0.5) * 2 * spread;
+    const isCore = Math.abs(lx) < 1.1 && reach < 0.55;
+    const tone: ParticleTone = isCore
+      ? 'white'
+      : reach > 0.45 && rand() < 0.52
+      ? 'amber'
+      : 'cyan';
+    push(
+      lx,
+      baseY,
+      (1.75 - reach * 0.65) + rand() * 0.4,
+      0.95 - reach * 0.48,
+      tone,
+      0.75,
+      true,
+      reach
+    );
+  }
+
+  return pts;
+}
+
 export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0.22 }) => {
-  const rocketRef = useRef<HTMLDivElement | null>(null);
-  const flameWrapRef = useRef<SVGGElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const badgeWrapRef = useRef<HTMLDivElement | null>(null);
   const labelRef = useRef<HTMLSpanElement | null>(null);
 
@@ -26,11 +255,14 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
   const targetAngleRef = useRef<number>(-32);
   const prevTargetPos = useRef({ x: -100, y: -100 });
   const isVisibleRef = useRef<boolean>(false);
-  const boostTimeoutRef = useRef<number | null>(null);
-  const hoverThrustMultiplierRef = useRef<number>(1);
 
-  const [bursts, setBursts] = useState<IgnitionBurstItem[]>([]);
-  const burstIdRef = useRef(0);
+  const targetScaleRef = useRef<number>(1);
+  const currentScaleRef = useRef<number>(1);
+  const targetThrustRef = useRef<number>(1);
+  const currentThrustRef = useRef<number>(1);
+  const targetAlphaMultRef = useRef<number>(1);
+  const currentAlphaMultRef = useRef<number>(1);
+  const boostUntilRef = useRef<number>(0);
 
   const activeMagneticRef = useRef<HTMLElement | null>(null);
   const currentCursorKeyRef = useRef<string>('default:');
@@ -47,6 +279,36 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
 
     document.documentElement.classList.add('custom-cursor-enabled');
 
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const resizeCanvas = () => {
+      canvas.width = Math.floor(window.innerWidth * dpr);
+      canvas.height = Math.floor(window.innerHeight * dpr);
+    };
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas, { passive: true });
+
+    const sprites: Record<ParticleTone, HTMLCanvasElement> = {
+      white: createGlowSprite('rgba(255,255,255,1)', 'rgba(224,242,254,0.65)', 'rgba(56,189,248,0.18)'),
+      silver: createGlowSprite('rgba(241,245,249,0.98)', 'rgba(203,213,225,0.55)', 'rgba(148,163,184,0.15)'),
+      cyan: createGlowSprite('rgba(224,242,254,1)', 'rgba(56,189,248,0.72)', 'rgba(14,165,233,0.2)'),
+      amber: createGlowSprite('rgba(254,243,199,1)', 'rgba(255,157,56,0.72)', 'rgba(245,158,11,0.2)'),
+    };
+    const contrastBackingSprite = createGlowSprite(
+      'rgba(3,5,10,0.45)',
+      'rgba(3,5,10,0.22)',
+      'rgba(3,5,10,0)'
+    );
+
+    const structure = buildRocketParticleBlueprint();
+    const exhaustPool: ExhaustParticle[] = [];
+
     const initX = window.innerWidth / 2;
     const initY = window.innerHeight / 2;
     targetPos.current = { x: initX, y: initY };
@@ -56,13 +318,13 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
 
     const handlePointerEnter = () => {
       isVisibleRef.current = true;
-      if (rocketRef.current) rocketRef.current.style.opacity = '1';
+      canvas.style.opacity = '1';
       if (badgeWrapRef.current) badgeWrapRef.current.style.opacity = '1';
     };
 
     const handlePointerLeave = () => {
       isVisibleRef.current = false;
-      if (rocketRef.current) rocketRef.current.style.opacity = '0';
+      canvas.style.opacity = '0';
       if (badgeWrapRef.current) badgeWrapRef.current.style.opacity = '0';
     };
 
@@ -75,7 +337,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
 
       if (!isVisibleRef.current) {
         isVisibleRef.current = true;
-        if (rocketRef.current) rocketRef.current.style.opacity = '1';
+        canvas.style.opacity = '1';
         if (badgeWrapRef.current) badgeWrapRef.current.style.opacity = '1';
       }
 
@@ -94,11 +356,8 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         activeMagneticRef.current = null;
       }
 
-      // Contextual morphing handled directly by the rocket + upright HUD badge
-      const rocketEl = rocketRef.current;
       const labelEl = labelRef.current;
-
-      if (rocketEl && labelEl) {
+      if (labelEl) {
         const customCursor = state.customCursor;
         const customLabel = state.customCursorLabel;
 
@@ -129,60 +388,110 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         if (stateKey !== currentCursorKeyRef.current) {
           currentCursorKeyRef.current = stateKey;
 
-          rocketEl.classList.remove('is-button', 'is-link', 'is-project', 'is-text');
-
           if (newCursorType === 'project') {
-            rocketEl.classList.add('is-project');
-            hoverThrustMultiplierRef.current = 1.3;
+            targetScaleRef.current = 1.16;
+            targetThrustRef.current = 1.35;
+            targetAlphaMultRef.current = 1;
             labelEl.textContent = newLabelText;
             labelEl.style.display = 'block';
           } else if (newCursorType === 'drag' || newCursorType === 'button') {
-            rocketEl.classList.add('is-button');
-            hoverThrustMultiplierRef.current = 1.2;
+            targetScaleRef.current = 1.12;
+            targetThrustRef.current = 1.24;
+            targetAlphaMultRef.current = 1;
             labelEl.textContent = newLabelText;
             labelEl.style.display = 'block';
           } else if (newCursorType === 'link') {
-            rocketEl.classList.add('is-link');
-            hoverThrustMultiplierRef.current = 1.18;
+            targetScaleRef.current = 1.1;
+            targetThrustRef.current = 1.22;
+            targetAlphaMultRef.current = 1;
             labelEl.textContent = newLabelText;
             labelEl.style.display = 'block';
           } else if (newCursorType === 'text') {
-            rocketEl.classList.add('is-text');
-            hoverThrustMultiplierRef.current = 0.72;
+            targetScaleRef.current = 0.84;
+            targetThrustRef.current = 0.68;
+            targetAlphaMultRef.current = 0.78;
             labelEl.style.display = 'none';
           } else {
-            hoverThrustMultiplierRef.current = 1;
+            targetScaleRef.current = 1;
+            targetThrustRef.current = 1;
+            targetAlphaMultRef.current = 1;
             labelEl.style.display = 'none';
           }
         }
       }
     });
 
-    const handlePointerDown = (e: PointerEvent) => {
-      burstIdRef.current += 1;
-      const newBurst: IgnitionBurstItem = {
-        id: burstIdRef.current,
-        x: e.clientX,
-        y: e.clientY,
-      };
-      setBursts((prev) => [...prev.slice(-2), newBurst]);
+    const spawnExhaustParticle = (
+      originX: number,
+      originY: number,
+      angleRad: number,
+      scale: number,
+      speedBoost: number,
+      toneOverride?: ParticleTone
+    ) => {
+      if (exhaustPool.length >= 64) exhaustPool.shift();
+      const sinA = Math.sin(angleRad);
+      const cosA = Math.cos(angleRad);
 
-      if (rocketRef.current) {
-        rocketRef.current.classList.add('is-boosting');
-        if (boostTimeoutRef.current !== null) {
-          window.clearTimeout(boostTimeoutRef.current);
+      // Nozzle sits at local (0, 27.6) relative to nose tip (0, 0)
+      const jitterX = (Math.random() - 0.5) * 3.2 * scale;
+      const nozzleY = 27.8 * scale;
+      const wx = originX + jitterX * cosA - nozzleY * sinA;
+      const wy = originY + jitterX * sinA + nozzleY * cosA;
+
+      // Tail eject direction = rocket +Y local axis rotated to screen space
+      const ejectMag = (26 + Math.random() * 44) * speedBoost;
+      const spread = (Math.random() - 0.5) * 0.45;
+      const ejectAngle = angleRad + spread;
+      const vx = -Math.sin(ejectAngle) * ejectMag;
+      const vy = Math.cos(ejectAngle) * ejectMag;
+
+      const r = Math.random();
+      const tone: ParticleTone =
+        toneOverride || (r < 0.34 ? 'amber' : r < 0.78 ? 'cyan' : 'white');
+
+      exhaustPool.push({
+        x: wx,
+        y: wy,
+        vx,
+        vy,
+        size: 1.5 + Math.random() * 1.4,
+        life: 0,
+        maxLife: 0.28 + Math.random() * 0.26,
+        tone,
+      });
+    };
+
+    const handlePointerDown = () => {
+      const now = performance.now();
+      boostUntilRef.current = now + 260;
+
+      if (!prefersReducedMotion) {
+        const angleRad = (rocketAngleRef.current * Math.PI) / 180;
+        for (let i = 0; i < 18; i++) {
+          spawnExhaustParticle(
+            rocketPos.current.x,
+            rocketPos.current.y,
+            angleRad,
+            currentScaleRef.current,
+            2.3,
+            i % 3 === 0 ? 'amber' : i % 2 === 0 ? 'white' : 'cyan'
+          );
         }
-        boostTimeoutRef.current = window.setTimeout(() => {
-          rocketRef.current?.classList.remove('is-boosting');
-        }, 240);
       }
     };
 
     window.addEventListener('pointerdown', handlePointerDown, { passive: true });
 
-    let rafId: number;
+    let rafId = 0;
+    let prevTime = performance.now();
+    let emitAccumulator = 0;
 
-    const tick = () => {
+    const tick = (now: number) => {
+      const dt = Math.min((now - prevTime) / 1000, 0.05);
+      prevTime = now;
+      const timeSec = now * 0.001;
+
       interactionEngine.step();
 
       const tx = targetPos.current.x;
@@ -203,28 +512,141 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         ((((targetAngleRef.current - rocketAngleRef.current + 180) % 360) + 360) % 360) - 180;
       rocketAngleRef.current += angleDiff * 0.22;
 
-      // Crisp 0.90 micro-lerp so the rocket tip stays locked to pointer input
+      // Crisp 0.90 micro-lerp so nose-tip stays locked to pointer input
       rocketPos.current.x += (tx - rocketPos.current.x) * 0.9;
       rocketPos.current.y += (ty - rocketPos.current.y) * 0.9;
 
-      if (rocketRef.current) {
-        rocketRef.current.style.transform = `translate3d(${rocketPos.current.x}px, ${rocketPos.current.y}px, 0) rotate(${rocketAngleRef.current.toFixed(1)}deg)`;
-      }
-
-      if (flameWrapRef.current) {
-        const thrustScale = Math.min(
-          2.0,
-          (0.85 + speed * 0.038) * hoverThrustMultiplierRef.current
-        );
-        flameWrapRef.current.style.transform = `scaleY(${thrustScale.toFixed(2)})`;
-      }
-
-      // Upright trailing HUD badge follows cleanly without rotating
+      // Upright trailing HUD badge
       badgePos.current.x += (tx - badgePos.current.x) * 0.26;
       badgePos.current.y += (ty - badgePos.current.y) * 0.26;
-
       if (badgeWrapRef.current) {
         badgeWrapRef.current.style.transform = `translate3d(${badgePos.current.x}px, ${badgePos.current.y}px, 0)`;
+      }
+
+      const isBoosting = now < boostUntilRef.current;
+      const desiredScale = isBoosting ? targetScaleRef.current * 1.12 : targetScaleRef.current;
+      const desiredThrust = isBoosting
+        ? 1.95
+        : Math.min(2.0, (0.88 + speed * 0.04) * targetThrustRef.current);
+
+      const damp = 1 - Math.exp(-14 * dt);
+      currentScaleRef.current += (desiredScale - currentScaleRef.current) * damp;
+      currentThrustRef.current += (desiredThrust - currentThrustRef.current) * damp;
+      currentAlphaMultRef.current += (targetAlphaMultRef.current - currentAlphaMultRef.current) * damp;
+
+      const angleRad = (rocketAngleRef.current * Math.PI) / 180;
+      const cosA = Math.cos(angleRad);
+      const sinA = Math.sin(angleRad);
+      const sc = currentScaleRef.current;
+      const thrust = currentThrustRef.current;
+
+      // Emit velocity-driven trailing stardust exhaust particles in screen space
+      if (!prefersReducedMotion && isVisibleRef.current) {
+        const emitRate = speed > 1.2 ? Math.min(90, 24 + speed * 2.2) : 14;
+        emitAccumulator += dt * emitRate;
+        while (emitAccumulator >= 1) {
+          emitAccumulator -= 1;
+          spawnExhaustParticle(
+            rocketPos.current.x,
+            rocketPos.current.y,
+            angleRad,
+            sc,
+            isBoosting ? 1.8 : 0.8 + Math.min(speed * 0.04, 1.2)
+          );
+        }
+      }
+
+      // Render particle rocket + exhaust stream
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      if (isVisibleRef.current) {
+        const rx = rocketPos.current.x;
+        const ry = rocketPos.current.y;
+
+        // Subtle dark backing pass keeps particles legible even over bright UI buttons
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 0.72 * currentAlphaMultRef.current;
+        const backingSpine = [5, 11, 17, 23];
+        for (let b = 0; b < backingSpine.length; b++) {
+          const ly = backingSpine[b] * sc;
+          const bx = rx - ly * sinA;
+          const by = ry + ly * cosA;
+          const br = (9.5 + b * 1.1) * sc;
+          ctx.drawImage(contrastBackingSprite, bx - br, by - br, br * 2, br * 2);
+        }
+
+        ctx.globalCompositeOperation = 'lighter';
+
+        // 1. Update & draw drifting exhaust particles behind the rocket
+        for (let i = exhaustPool.length - 1; i >= 0; i--) {
+          const ep = exhaustPool[i];
+          ep.life += dt;
+          if (ep.life >= ep.maxLife) {
+            exhaustPool.splice(i, 1);
+            continue;
+          }
+          ep.x += ep.vx * dt;
+          ep.y += ep.vy * dt;
+          ep.vx *= 0.96;
+          ep.vy *= 0.96;
+
+          const progress = ep.life / ep.maxLife;
+          const alpha = (1 - progress) * (1 - progress) * 0.72 * currentAlphaMultRef.current;
+          const drawRadius = ep.size * (1.35 - progress * 0.55) * 3.1;
+          ctx.globalAlpha = alpha;
+          ctx.drawImage(
+            sprites[ep.tone],
+            ep.x - drawRadius,
+            ep.y - drawRadius,
+            drawRadius * 2,
+            drawRadius * 2
+          );
+        }
+
+        // 2. Draw structured particle rocket rotated around exact nose tip (rx, ry)
+
+        for (let i = 0; i < structure.length; i++) {
+          const pt = structure[i];
+          let lx = pt.lx * sc;
+          let ly = pt.ly * sc;
+
+          if (pt.isFlame) {
+            // Stretch active plume along thruster axis & animate supersonic shimmer
+            const flicker = prefersReducedMotion
+              ? 1
+              : 0.88 + 0.16 * Math.sin(timeSec * 28 + pt.phase);
+            ly = (27.6 + (pt.ly - 27.6) * thrust * flicker) * sc;
+            lx *= 0.92 + thrust * 0.12;
+          }
+
+          if (!prefersReducedMotion && pt.jitterAmp > 0) {
+            const jSpeed = pt.isFlame ? 22 : 4.2;
+            lx += Math.sin(timeSec * jSpeed + pt.phase) * pt.jitterAmp * sc;
+            ly += Math.cos(timeSec * (jSpeed * 0.85) + pt.phase * 1.3) * pt.jitterAmp * sc;
+          }
+
+          const wx = rx + lx * cosA - ly * sinA;
+          const wy = ry + lx * sinA + ly * cosA;
+
+          const twinkle = prefersReducedMotion
+            ? 1
+            : 0.8 + 0.2 * Math.sin(timeSec * 5.2 + pt.phase);
+          const alpha = Math.min(1, pt.baseAlpha * twinkle * currentAlphaMultRef.current);
+          const drawRadius = pt.size * sc * (isBoosting && pt.isFlame ? 3.2 : 2.75);
+
+          ctx.globalAlpha = alpha;
+          ctx.drawImage(
+            sprites[pt.tone],
+            wx - drawRadius,
+            wy - drawRadius,
+            drawRadius * 2,
+            drawRadius * 2
+          );
+        }
+
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
       }
 
       rafId = requestAnimationFrame(tick);
@@ -234,14 +656,12 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
 
     return () => {
       unsubscribe();
+      window.removeEventListener('resize', resizeCanvas);
       window.removeEventListener('mouseenter', handlePointerEnter);
       window.removeEventListener('mouseleave', handlePointerLeave);
       window.removeEventListener('pointerdown', handlePointerDown);
       document.documentElement.classList.remove('custom-cursor-enabled');
       cancelAnimationFrame(rafId);
-      if (boostTimeoutRef.current !== null) {
-        window.clearTimeout(boostTimeoutRef.current);
-      }
 
       if (activeMagneticRef.current) {
         resetMagneticElement(activeMagneticRef.current);
@@ -270,6 +690,9 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         display: 'block',
       }}
     >
+      {/* Full-viewport Particle Rocket Canvas */}
+      <canvas ref={canvasRef} className="cursor-rocket-canvas" />
+
       {/* Upright Trailing Context HUD Badge */}
       <div ref={badgeWrapRef} className="cursor-rocket-badge-wrap">
         <span
@@ -280,148 +703,6 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
           VIEW ↗
         </span>
       </div>
-
-      {/* Refined Aerospace Rocket Cursor (nose tip anchored at exact 17, 2) */}
-      <div ref={rocketRef} className="cursor-rocket">
-        <svg
-          viewBox="0 0 34 46"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="cursor-rocket-svg"
-        >
-          <defs>
-            <linearGradient id="rocket-hull-left" x1="17" y1="2" x2="11" y2="28" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="55%" stopColor="#E2E8F0" />
-              <stop offset="100%" stopColor="#94A3B8" />
-            </linearGradient>
-            <linearGradient id="rocket-hull-right" x1="17" y1="2" x2="23" y2="28" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#F1F5F9" />
-              <stop offset="60%" stopColor="#CBD5E1" />
-              <stop offset="100%" stopColor="#64748B" />
-            </linearGradient>
-            <linearGradient id="rocket-wing-grad" x1="17" y1="18" x2="17" y2="29" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#38BDF8" />
-              <stop offset="100%" stopColor="#0284C7" />
-            </linearGradient>
-            <linearGradient id="rocket-flame-outer" x1="17" y1="29" x2="17" y2="45" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#BAE6FD" />
-              <stop offset="32%" stopColor="#38BDF8" />
-              <stop offset="68%" stopColor="#F59E0B" />
-              <stop offset="100%" stopColor="rgba(249, 115, 22, 0)" />
-            </linearGradient>
-            <linearGradient id="rocket-flame-core" x1="17" y1="29" x2="17" y2="39" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="60%" stopColor="#E0F2FE" />
-              <stop offset="100%" stopColor="rgba(56, 189, 248, 0)" />
-            </linearGradient>
-          </defs>
-
-          {/* Dual-Layer Supersonic Thruster Plume */}
-          <g ref={flameWrapRef} className="cursor-rocket-flame-wrap">
-            <path
-              className="cursor-rocket-flame"
-              d="M13.2 29C13.2 29 14.4 40.5 17 44.5C19.6 40.5 20.8 29 20.8 29H13.2Z"
-              fill="url(#rocket-flame-outer)"
-            />
-            <path
-              className="cursor-rocket-flame"
-              d="M15 29C15 29 15.8 36 17 38.8C18.2 36 19 29 19 29H15Z"
-              fill="url(#rocket-flame-core)"
-            />
-          </g>
-
-          {/* Swept Delta Stabilizer Wings */}
-          <path
-            d="M11.8 18.8L5.2 26.8L11.6 25.6L12.4 20.2Z"
-            fill="url(#rocket-wing-grad)"
-            stroke="#7DD3FC"
-            strokeWidth="0.65"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M22.2 18.8L28.8 26.8L22.4 25.6L21.6 20.2Z"
-            fill="url(#rocket-wing-grad)"
-            stroke="#7DD3FC"
-            strokeWidth="0.65"
-            strokeLinejoin="round"
-          />
-
-          {/* Fuselage Halves (3D lit bevel along central spine) */}
-          <path
-            d="M17 2C13.6 7.5 11.6 13.8 11.6 21.2L12.9 27.6H17V2Z"
-            fill="url(#rocket-hull-left)"
-          />
-          <path
-            d="M17 2C20.4 7.5 22.4 13.8 22.4 21.2L21.1 27.6H17V2Z"
-            fill="url(#rocket-hull-right)"
-          />
-
-          {/* Fuselage Outer Contour */}
-          <path
-            d="M17 2C13.6 7.5 11.6 13.8 11.6 21.2L12.9 27.6H21.1L22.4 21.2C22.4 13.8 20.4 7.5 17 2Z"
-            stroke="#38BDF8"
-            strokeWidth="0.85"
-            strokeLinejoin="round"
-          />
-
-          {/* Precision Cyan Nose Cone Tip */}
-          <path
-            d="M17 2C15.4 4.7 14.3 7.3 13.5 9.8H20.5C19.7 7.3 18.6 4.7 17 2Z"
-            fill="#38BDF8"
-          />
-          <circle cx="17" cy="2.3" r="0.9" fill="#E0F2FE" />
-
-          {/* Recessed Aerospace Teardrop Canopy */}
-          <path
-            d="M17 11.6C15.5 13.2 14.9 15.2 15.1 17.6C15.2 18.5 16 19.2 17 19.2C18 19.2 18.8 18.5 18.9 17.6C19.1 15.2 18.5 13.2 17 11.6Z"
-            fill="#0B1120"
-            stroke="#38BDF8"
-            strokeWidth="0.85"
-          />
-          <path
-            d="M16.2 13.3C15.8 14.1 15.7 15.1 15.8 16.2"
-            stroke="#E0F2FE"
-            strokeWidth="0.8"
-            strokeLinecap="round"
-          />
-
-          {/* Central Dorsal Fin Spine */}
-          <line
-            x1="17"
-            y1="20.4"
-            x2="17"
-            y2="27.2"
-            stroke="#0EA5E9"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-          />
-
-          {/* Thruster Bell Nozzle */}
-          <path
-            d="M13.6 27.5H20.4L21 29.4H13L13.6 27.5Z"
-            fill="#1E293B"
-            stroke="#475569"
-            strokeWidth="0.6"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
-
-      {/* Click Ignition Plasma Flash (no circle) */}
-      {bursts.map((b) => (
-        <div
-          key={b.id}
-          className="cursor-rocket-ignition"
-          style={{
-            left: `${b.x}px`,
-            top: `${b.y}px`,
-          }}
-          onAnimationEnd={() =>
-            setBursts((prev) => prev.filter((item) => item.id !== b.id))
-          }
-        />
-      ))}
     </div>
   );
 };
