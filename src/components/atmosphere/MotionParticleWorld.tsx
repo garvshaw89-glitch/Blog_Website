@@ -42,6 +42,7 @@ export interface MotionParticleWorldProps {
   sizeVariation?: number;
   glowIntensity?: number;
   className?: string;
+  paused?: boolean;
 }
 
 const PARTICLE_COUNT = 14500;
@@ -628,6 +629,7 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
   sizeVariation = 1.0,
   glowIntensity = 1.0,
   className = '',
+  paused = false,
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
 
@@ -637,6 +639,8 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
   sizeVariationRef.current = sizeVariation;
   const glowIntensityRef = useRef(glowIntensity);
   glowIntensityRef.current = glowIntensity;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
 
   useEffect(() => {
     const container = mountRef.current;
@@ -921,6 +925,10 @@ export const MotionParticleWorld: React.FC<MotionParticleWorldProps> = ({
 
       const dt = Math.min(Math.max((time - prevTime) / 1000, 0.001), 0.08);
       prevTime = time;
+
+      if (pausedRef.current) {
+        return;
+      }
 
       const seconds = time * 0.001;
       uniforms.uTime.value = seconds;

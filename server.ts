@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import http from 'http';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -156,13 +157,38 @@ app.get('/api/telemetry', (_req: Request, res: Response) => {
 // Setup Vite middleware in dev or static files in production
 async function startServer() {
   const isProduction = process.env.NODE_ENV === 'production';
+  const httpServer = http.createServer(app);
 
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+      },
       appType: 'spa',
     });
+
+    // Intercept /@vite/client to neutralize WebSocket HMR connection in Cloud Run preview
+    app.get('/@vite/client', async (req: Request, res: Response, next) => {
+      try {
+        const transformed = await vite.transformRequest(req.originalUrl || req.url);
+        if (transformed && transformed.code) {
+          const dummySocket = 'class __ViteMockWS extends EventTarget { constructor() { super(); this.readyState = 1; setTimeout(() => this.dispatchEvent(new Event("open")), 0); } send() {} close() {} };';
+          const safeCode = dummySocket + '\n' + transformed.code
+            .replace(/new WebSocket\(/g, 'new __ViteMockWS(')
+            .replace('throw e;', '/* hmr disabled in preview */')
+            .replace('reject(new Error("WebSocket closed without opened."));', 'resolve();');
+          res.setHeader('Content-Type', 'application/javascript');
+          res.setHeader('Cache-Control', 'no-cache');
+          return res.send(safeCode);
+        }
+      } catch {
+        // Fall back to next()
+      }
+      next();
+    });
+
     app.use(vite.middlewares);
   } else {
     const distPath = path.resolve(__dirname, 'dist');
@@ -172,7 +198,7 @@ async function startServer() {
     });
   }
 
-  app.listen(port, '0.0.0.0', () => {
+  httpServer.listen(port, '0.0.0.0', () => {
     console.log(`Server listening on port ${port} (mode: ${isProduction ? 'prod' : 'dev'})`);
   });
 }

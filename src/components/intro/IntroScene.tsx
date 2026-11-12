@@ -4,59 +4,53 @@ import { LiquidChromeCore } from './LiquidChromeCore';
 import { ParticleField } from './ParticleField';
 
 interface IntroSceneProps {
-  elapsedTime: number;
-  isTransitioning: boolean;
+  elapsedTimeRef: React.RefObject<number>;
+  scrollProgressRef: React.RefObject<number>;
+  isTransitioningRef: React.RefObject<boolean>;
   onWebGLError: () => void;
 }
 
 export const IntroScene: React.FC<IntroSceneProps> = ({
-  elapsedTime,
-  isTransitioning,
+  elapsedTimeRef,
+  scrollProgressRef,
+  isTransitioningRef,
   onWebGLError,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
-  const liquidChromeRef = useRef<LiquidChromeCore | null>(null);
-  const particleFieldRef = useRef<ParticleField | null>(null);
-  const isTransitioningRef = useRef(isTransitioning);
-  const elapsedTimeRef = useRef(elapsedTime);
-
-  isTransitioningRef.current = isTransitioning;
-  elapsedTimeRef.current = elapsedTime;
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Check WebGL availability
-    const checkWebGL = () => {
-      try {
-        const testCanvas = document.createElement('canvas');
-        return !!(
-          window.WebGLRenderingContext &&
-          (testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl'))
-        );
-      } catch {
-        return false;
+    let isSoftwareGl = false;
+    try {
+      const probeCanvas = document.createElement('canvas');
+      const gl = probeCanvas.getContext('webgl2') || probeCanvas.getContext('webgl');
+      if (!gl) {
+        onWebGLError();
+        return;
       }
-    };
-
-    if (!checkWebGL()) {
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      const param = ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER;
+      const gpu = String(gl.getParameter(param) || '');
+      isSoftwareGl = /SwiftShader|llvmpipe|softpipe|Software|Basic Render/i.test(gpu);
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
+    } catch {
       onWebGLError();
       return;
     }
 
     const isMobile = window.innerWidth < 768;
-    const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
-    const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.0 : isTablet ? 1.3 : 1.5);
+    const dpr = isSoftwareGl
+      ? 1
+      : Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.75);
 
-    // 1. Scene & Atmosphere Fog
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x050505, 0.038);
+    scene.fog = new THREE.FogExp2(0x050505, 0.036);
 
-    // 2. Camera Setup
-    const baseZ = isMobile ? 8.2 : 6.8;
-    const startZ = isMobile ? 12.0 : 10.2;
+    const baseZ = isMobile ? 8.0 : 6.7;
+    const startZ = isMobile ? 10.6 : 9.2;
 
     const camera = new THREE.PerspectiveCamera(
       45,
@@ -66,12 +60,11 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     );
     camera.position.set(0, 0, startZ);
 
-    // 3. WebGL Renderer
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({
         powerPreference: 'high-performance',
-        antialias: !isMobile,
+        antialias: !isSoftwareGl && !isMobile,
         alpha: true,
         stencil: false,
         depth: true,
@@ -81,54 +74,50 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
       return;
     }
 
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setPixelRatio(dpr);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.18;
 
-    container.appendChild(renderer.domElement);
-    renderer.domElement.style.position = 'absolute';
-    renderer.domElement.style.inset = '0';
-    renderer.domElement.style.pointerEvents = 'none';
+    const canvas = renderer.domElement;
+    canvas.style.position = 'absolute';
+    canvas.style.inset = '0';
+    canvas.style.pointerEvents = 'none';
+    container.appendChild(canvas);
 
-    // 4. Lighting Rig tailored for Liquid Mercury
-    // Ambient fill
-    const ambientLight = new THREE.AmbientLight(0x080c14, 0.2);
+    const ambientLight = new THREE.AmbientLight(0x080d16, 0.2);
     scene.add(ambientLight);
 
-    // Cool Key Light
-    const keyLight = new THREE.DirectionalLight(0xf8fafc, 0.2);
+    const keyLight = new THREE.DirectionalLight(0xf8fafc, 0.35);
     keyLight.position.set(5.0, 6.0, 5.0);
     scene.add(keyLight);
 
-    // Electric Cyan Rim Light
-    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.2);
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
     rimLight.position.set(-5.5, -3.0, -4.0);
     scene.add(rimLight);
 
-    // Top Specular Accent
-    const accentLight = new THREE.DirectionalLight(0xe0f2fe, 0.1);
+    const accentLight = new THREE.DirectionalLight(0xe0f2fe, 0.2);
     accentLight.position.set(0, 5.0, -2.5);
     scene.add(accentLight);
 
-    // 5. 3D Systems
     const liquidChrome = new LiquidChromeCore();
-    liquidChromeRef.current = liquidChrome;
     scene.add(liquidChrome.group);
 
     const particleField = new ParticleField(isMobile);
-    particleFieldRef.current = particleField;
     scene.add(particleField.points);
-    particleField.setOpacity(0.35);
+    particleField.setTargetOpacity(0.45);
 
-    // 6. Mouse Tracking
+    if (!isSoftwareGl) {
+      renderer.compile(scene, camera);
+    }
+
     const handleMouseMove = (e: MouseEvent) => {
       mouseRef.current.targetX = (e.clientX / window.innerWidth) * 2 - 1;
       mouseRef.current.targetY = -(e.clientY / window.innerHeight) * 2 + 1;
     };
     window.addEventListener('mousemove', handleMouseMove, { passive: true });
 
-    // 7. Resize Handling
     const handleResize = () => {
       const w = window.innerWidth;
       const h = window.innerHeight;
@@ -138,86 +127,116 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     };
     window.addEventListener('resize', handleResize, { passive: true });
 
-    // 8. Animation Loop
-    let animId: number;
+    let animId = 0;
+    let isDisposed = false;
+    let currentCamZ = startZ;
+    let warpCamVel = 0;
     const clock = new THREE.Clock();
 
+    const handleContextLost = (e: Event) => {
+      e.preventDefault();
+      cancelAnimationFrame(animId);
+      clearTimeout(animId);
+    };
+
+    const handleContextRestored = () => {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      if (!isDisposed) {
+        animId = requestAnimationFrame(animate);
+      }
+    };
+
+    canvas.addEventListener('webglcontextlost', handleContextLost, false);
+    canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
+
+    const afterDraw = (cb: () => void) => {
+      const gl = renderer.getContext() as WebGL2RenderingContext;
+      if (!gl || !gl.fenceSync) {
+        animId = window.setTimeout(cb, 80);
+        return;
+      }
+      const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      gl.flush();
+      const poll = () => {
+        if (isDisposed) {
+          if (sync) gl.deleteSync(sync);
+          return;
+        }
+        const state = sync ? gl.getSyncParameter(sync, gl.SYNC_STATUS) : gl.SIGNALED;
+        if (state === gl.UNSIGNALED) {
+          animId = window.setTimeout(poll, 5);
+        } else {
+          if (sync) gl.deleteSync(sync);
+          animId = window.setTimeout(cb, 80);
+        }
+      };
+      animId = window.setTimeout(poll, 5);
+    };
+
     const animate = () => {
-      animId = requestAnimationFrame(animate);
+      if (isDisposed) return;
 
       const delta = Math.min(clock.getDelta(), 0.05);
       const time = clock.getElapsedTime();
       const t = elapsedTimeRef.current;
+      const scrollP = scrollProgressRef.current;
       const isTrans = isTransitioningRef.current;
 
-      mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.045;
-      mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.045;
+      mouseRef.current.x = THREE.MathUtils.damp(mouseRef.current.x, mouseRef.current.targetX, 4.5, delta);
+      mouseRef.current.y = THREE.MathUtils.damp(mouseRef.current.y, mouseRef.current.targetY, 4.5, delta);
 
-      // Camera & Lighting timeline progression
       if (!isTrans) {
-        if (t < 2.8) {
-          // Scene 01: Typography takeover
-          ambientLight.intensity = 0.15;
-          keyLight.intensity = 0.2;
-          rimLight.intensity = 0.2;
-          accentLight.intensity = 0.1;
-          camera.position.z = startZ;
-          particleField.setOpacity(0.4);
-        } else if (t < 5.8) {
-          // Scene 02: Transformation into Liquid Chrome
-          const p = (t - 2.8) / 3.0;
-          const ease = 0.5 - 0.5 * Math.cos(p * Math.PI);
-          ambientLight.intensity = 0.2 + ease * 0.35;
-          keyLight.intensity = 0.3 + ease * 2.2;
-          rimLight.intensity = 0.25 + ease * 1.8;
-          accentLight.intensity = 0.15 + ease * 0.8;
-          camera.position.z = startZ - ease * (startZ - baseZ);
-          particleField.setOpacity(0.5 + ease * 0.3);
-        } else if (t < 8.8) {
-          // Scene 03: Identity composition
-          ambientLight.intensity = 0.55;
-          keyLight.intensity = 2.4;
-          rimLight.intensity = 1.9;
-          accentLight.intensity = 0.95;
-          camera.position.z = baseZ;
-          particleField.setOpacity(0.75);
+        const p = THREE.MathUtils.clamp(t / 2.2, 0, 1);
+        const ease = 1 - Math.pow(1 - p, 3);
 
-          // Subtle right-hand offset for asymmetric balance matching editorial text on left
-          if (!isMobile) {
-            liquidChrome.group.position.x = 0.8;
-          }
-        } else {
-          // Scene 04: Enter stage
-          ambientLight.intensity = 0.6;
-          keyLight.intensity = 2.5;
-          rimLight.intensity = 2.0;
-          accentLight.intensity = 1.0;
-          camera.position.z = baseZ;
-          particleField.setOpacity(0.8);
-          if (!isMobile) {
-            liquidChrome.group.position.x = 0.6;
-          }
-        }
+        const targetAmbient = 0.2 + ease * 0.34 + scrollP * 0.16;
+        const targetKey = 0.4 + ease * 2.0 + scrollP * 0.9;
+        const targetRim = 0.4 + ease * 1.55 + scrollP * 1.4;
+        const targetAccent = 0.2 + ease * 0.75 + scrollP * 0.5;
+        const targetCamZ = (startZ - ease * (startZ - baseZ)) - scrollP * 1.35;
+        const targetParticleOpacity = 0.45 + ease * 0.3 + scrollP * 0.2;
 
-        // Camera Parallax
+        ambientLight.intensity = THREE.MathUtils.damp(ambientLight.intensity, targetAmbient, 4.2, delta);
+        keyLight.intensity = THREE.MathUtils.damp(keyLight.intensity, targetKey, 4.2, delta);
+        rimLight.intensity = THREE.MathUtils.damp(rimLight.intensity, targetRim, 4.2, delta);
+        accentLight.intensity = THREE.MathUtils.damp(accentLight.intensity, targetAccent, 4.2, delta);
+        currentCamZ = THREE.MathUtils.damp(currentCamZ, targetCamZ, 4.2, delta);
+        particleField.setTargetOpacity(targetParticleOpacity);
+
+        // Smooth scroll-driven FOV widening & subtle parallax
+        const targetFov = 45 + scrollP * 7;
+        camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, 4.0, delta);
+        camera.updateProjectionMatrix();
+
         const targetCamX = mouseRef.current.x * 0.3;
-        const targetCamY = mouseRef.current.y * 0.2;
-        camera.position.x += (targetCamX - camera.position.x) * 0.04;
-        camera.position.y += (targetCamY - camera.position.y) * 0.04;
-        camera.rotation.y = -mouseRef.current.x * 0.03;
-        camera.rotation.x = mouseRef.current.y * 0.02;
+        const targetCamY = mouseRef.current.y * 0.22;
+        camera.position.x = THREE.MathUtils.damp(camera.position.x, targetCamX, 4.2, delta);
+        camera.position.y = THREE.MathUtils.damp(camera.position.y, targetCamY, 4.2, delta);
+        camera.position.z = currentCamZ;
+
+        camera.rotation.y = THREE.MathUtils.damp(camera.rotation.y, -mouseRef.current.x * 0.03, 4.5, delta);
+        camera.rotation.x = THREE.MathUtils.damp(camera.rotation.x, mouseRef.current.y * 0.022, 4.5, delta);
       } else {
-        // Scene 05: Transition
-        camera.position.z = Math.max(0.4, camera.position.z - delta * 16.0);
-        keyLight.intensity += delta * 8.0;
-        rimLight.intensity += delta * 6.0;
+        // Futuristic hyperspace portal warp dive
+        warpCamVel = THREE.MathUtils.damp(warpCamVel, 20.0, 3.6, delta);
+        currentCamZ = Math.max(0.35, currentCamZ - warpCamVel * delta);
+        camera.position.z = currentCamZ;
+        camera.position.x = THREE.MathUtils.damp(camera.position.x, 0, 5.0, delta);
+        camera.position.y = THREE.MathUtils.damp(camera.position.y, 0, 5.0, delta);
+        camera.rotation.x = THREE.MathUtils.damp(camera.rotation.x, 0, 5.0, delta);
+        camera.rotation.y = THREE.MathUtils.damp(camera.rotation.y, 0, 5.0, delta);
+        camera.fov = THREE.MathUtils.damp(camera.fov, 68, 3.8, delta);
+        camera.updateProjectionMatrix();
+
+        keyLight.intensity = THREE.MathUtils.damp(keyLight.intensity, 6.8, 3.2, delta);
+        rimLight.intensity = THREE.MathUtils.damp(rimLight.intensity, 6.2, 3.2, delta);
       }
 
-      // Update liquid chrome sculpture & particles
       liquidChrome.update(
         time,
         delta,
         t,
+        scrollP,
         mouseRef.current.x,
         mouseRef.current.y,
         isTrans
@@ -231,24 +250,34 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
       );
 
       renderer.render(scene, camera);
+
+      if (isSoftwareGl) {
+        afterDraw(animate);
+      } else {
+        animId = requestAnimationFrame(animate);
+      }
     };
 
     animId = requestAnimationFrame(animate);
 
     return () => {
+      isDisposed = true;
       cancelAnimationFrame(animId);
+      clearTimeout(animId);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
+      canvas.removeEventListener('webglcontextlost', handleContextLost);
+      canvas.removeEventListener('webglcontextrestored', handleContextRestored);
 
       liquidChrome.dispose();
       particleField.dispose();
       renderer.dispose();
 
-      if (renderer.domElement && container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
+      if (container.contains(canvas)) {
+        container.removeChild(canvas);
       }
     };
-  }, [onWebGLError]);
+  }, [elapsedTimeRef, scrollProgressRef, isTransitioningRef, onWebGLError]);
 
   return (
     <div

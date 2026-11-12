@@ -95,17 +95,17 @@ class IntroAudioEngine {
 
       osc.type = 'sine';
       osc.frequency.setValueAtTime(55, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(420, this.ctx.currentTime + 0.85);
+      osc.frequency.exponentialRampToValueAtTime(360, this.ctx.currentTime + 1.2);
 
       gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.22, this.ctx.currentTime + 0.55);
-      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 1.05);
+      gain.gain.exponentialRampToValueAtTime(0.2, this.ctx.currentTime + 0.8);
+      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 1.65);
 
       osc.connect(gain);
       gain.connect(this.ctx.destination);
 
       osc.start();
-      osc.stop(this.ctx.currentTime + 1.1);
+      osc.stop(this.ctx.currentTime + 1.7);
     } catch {
       // Ignore
     }

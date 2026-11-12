@@ -172,7 +172,7 @@ export default function App() {
         </div>
 
         {/* Luxury Interactive Particle Universe (Award-Winning Creative Studio Experience) */}
-        <MotionParticleWorld />
+        <MotionParticleWorld paused={showIntro} />
 
         <div className="relative z-10 flex flex-col">
           {/* 1. HERO / LANDING PAGE with Identity Core */}

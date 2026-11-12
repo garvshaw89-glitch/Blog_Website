@@ -4,6 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Garv Shaw - AI & Cloud Developer</title>
+    <script>
+      // Suppress Vite HMR / WebSocket errors in iframe preview per environment constraints
+      window.addEventListener('error', function (event) {
+        if (
+          (event.filename && event.filename.includes('@vite/client')) ||
+          (event.message && (event.message.includes('WebSocket') || event.message.includes('vite-hmr')))
+        ) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function (event) {
+        var reason = event.reason;
+        if (
+          (reason && reason.message && (reason.message.includes('WebSocket') || reason.message.includes('vite-hmr'))) ||
+          (reason && reason.stack && reason.stack.includes('@vite/client'))
+        ) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }
+      }, true);
+    </script>
     <meta name="description" content="Portfolio of Garv Shaw, a B.Tech Computer Science & Engineering student exploring Artificial Intelligence, Cloud Computing, Software Development, Business, and Finance." />
     <meta name="keywords" content="AI developer, cloud computing, software development, business, finance, machine learning, Garv Shaw" />
     <meta name="author" content="Garv Shaw" />
