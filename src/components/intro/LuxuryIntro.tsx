@@ -40,13 +40,14 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     introAudio.triggerWarp();
     entrySequenceManager.completeImmediately();
 
+    // 0.0–0.75s: Slowly dim the light | 0.65–1.60s: 3D screen flip -> move to main page
     transitionTimerRef.current = window.setTimeout(() => {
       introAudio.stop();
       onComplete();
-    }, 1150);
+    }, 1600);
   }, [onComplete]);
 
-  // Deliberate, slow, luxurious damped scroll progression (compulsory to enter main website)
+  // Slow, deliberate scroll progression through "PORTFOLIO   BY   GARV SHAW"
   useEffect(() => {
     let animId = 0;
     const startTime = performance.now();
@@ -60,21 +61,21 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       elapsedTimeRef.current = t;
       entrySequenceManager.tick(t);
 
-      // Slow, continuous glide while holding Arrow / Page / Space keys
+      // Slow, steady glide while holding Arrow / Page / Space keys
       if (!isTransitioningRef.current && heldDirectionRef.current !== 0) {
         scrollTargetRef.current = Math.min(
           1,
-          Math.max(0, scrollTargetRef.current + heldDirectionRef.current * 0.165 * dt)
+          Math.max(0, scrollTargetRef.current + heldDirectionRef.current * 0.115 * dt)
         );
       }
 
       // Weighty, cinematic scroll inertia
-      const factor = 1 - Math.exp(-4.4 * dt);
+      const factor = 1 - Math.exp(-4.2 * dt);
       scrollProgressRef.current +=
         (scrollTargetRef.current - scrollProgressRef.current) * factor;
 
-      // After PORTFOLIO finishes gliding past center -> trigger futuristic entry into main page
-      if (!isTransitioningRef.current && scrollProgressRef.current >= 0.8) {
+      // Once "GARV SHAW" finishes gliding past center -> slowly dim light, flip screen, enter main page
+      if (!isTransitioningRef.current && scrollProgressRef.current >= 0.82) {
         triggerEntryTransition();
       }
 
@@ -99,7 +100,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     setWebGlFailed(true);
   }, []);
 
-  // Compulsory scroll handlers: keyboard (ArrowDown/Up, PageDown/Up, Space), wheel & touch swipe (no Esc/Enter skip)
+  // Compulsory scroll handlers: keyboard (ArrowDown/Up, PageDown/Up, Space), wheel & touch swipe
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isTransitioningRef.current) return;
@@ -107,14 +108,14 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
         e.preventDefault();
         if (!e.repeat) {
-          const step = e.key === 'ArrowDown' ? 0.045 : 0.085;
+          const step = e.key === 'ArrowDown' ? 0.035 : 0.065;
           scrollTargetRef.current = Math.min(1, scrollTargetRef.current + step);
         }
         heldDirectionRef.current = 1;
       } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
         e.preventDefault();
         if (!e.repeat) {
-          const step = e.key === 'ArrowUp' ? 0.045 : 0.085;
+          const step = e.key === 'ArrowUp' ? 0.035 : 0.065;
           scrollTargetRef.current = Math.max(0, scrollTargetRef.current - step);
         }
         heldDirectionRef.current = -1;
@@ -139,10 +140,10 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       if (isTransitioningRef.current) return;
-      const clampedDelta = Math.max(-110, Math.min(110, e.deltaY));
+      const clampedDelta = Math.max(-100, Math.min(100, e.deltaY));
       scrollTargetRef.current = Math.min(
         1,
-        Math.max(0, scrollTargetRef.current + clampedDelta * 0.00028)
+        Math.max(0, scrollTargetRef.current + clampedDelta * 0.00022)
       );
     };
 
@@ -161,7 +162,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       touchStartYRef.current = currentY;
       scrollTargetRef.current = Math.min(
         1,
-        Math.max(0, scrollTargetRef.current + deltaY * 0.0009)
+        Math.max(0, scrollTargetRef.current + deltaY * 0.0007)
       );
     };
 
@@ -188,12 +189,36 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
 
   if (webGlFailed) {
     return (
-      <WebGlFallback
-        scrollProgressRef={scrollProgressRef}
-        isAudioOn={isAudioOn}
-        onToggleAudio={handleToggleAudio}
-        isTransitioning={isTransitioning}
-      />
+      <div
+        className="fixed inset-0 z-50 overflow-hidden"
+        style={{ perspective: '1600px' }}
+      >
+        <motion.div
+          animate={
+            isTransitioning
+              ? { rotateY: -92, scale: 0.88, opacity: 0 }
+              : { rotateY: 0, scale: 1, opacity: 1 }
+          }
+          transition={{
+            duration: 0.95,
+            delay: isTransitioning ? 0.62 : 0,
+            ease: [0.42, 0, 0.2, 1],
+          }}
+          style={{
+            transformOrigin: 'center center',
+            backfaceVisibility: 'hidden',
+            willChange: 'transform, opacity',
+          }}
+          className="w-full h-full"
+        >
+          <WebGlFallback
+            scrollProgressRef={scrollProgressRef}
+            isAudioOn={isAudioOn}
+            onToggleAudio={handleToggleAudio}
+            isTransitioning={isTransitioning}
+          />
+        </motion.div>
+      </div>
     );
   }
 
@@ -202,24 +227,46 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       key="luxury-portal-entrance"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.85, ease: [0.22, 1, 0.3, 1] }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
+      style={{ perspective: '1600px' }}
       className="fixed inset-0 z-50 bg-transparent overflow-hidden select-none"
     >
-      {/* 3D WebGL Particle Field */}
-      <IntroScene
-        elapsedTimeRef={elapsedTimeRef}
-        scrollProgressRef={scrollProgressRef}
-        isTransitioningRef={isTransitioningRef}
-        onWebGLError={handleWebGLError}
-      />
+      {/* Phase 2 of Entry Effect: 3D Screen Flip after light dims */}
+      <motion.div
+        animate={
+          isTransitioning
+            ? { rotateY: -92, scale: 0.88, opacity: 0 }
+            : { rotateY: 0, scale: 1, opacity: 1 }
+        }
+        transition={{
+          duration: 0.95,
+          delay: isTransitioning ? 0.62 : 0,
+          ease: [0.42, 0, 0.2, 1],
+        }}
+        style={{
+          transformOrigin: 'center center',
+          transformStyle: 'preserve-3d',
+          backfaceVisibility: 'hidden',
+          willChange: 'transform, opacity',
+        }}
+        className="relative w-full h-full"
+      >
+        {/* 3D WebGL Particle Field */}
+        <IntroScene
+          elapsedTimeRef={elapsedTimeRef}
+          scrollProgressRef={scrollProgressRef}
+          isTransitioningRef={isTransitioningRef}
+          onWebGLError={handleWebGLError}
+        />
 
-      {/* SVG Knockout PORTFOLIO Backdrop & Futuristic Portal Overlay */}
-      <IntroOverlay
-        scrollProgressRef={scrollProgressRef}
-        isAudioOn={isAudioOn}
-        onToggleAudio={handleToggleAudio}
-        isTransitioning={isTransitioning}
-      />
+        {/* SVG Knockout PORTFOLIO   BY   GARV SHAW Backdrop & Dimmer */}
+        <IntroOverlay
+          scrollProgressRef={scrollProgressRef}
+          isAudioOn={isAudioOn}
+          onToggleAudio={handleToggleAudio}
+          isTransitioning={isTransitioning}
+        />
+      </motion.div>
     </motion.div>
   );
 };

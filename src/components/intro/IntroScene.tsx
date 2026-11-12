@@ -109,7 +109,6 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
     let animId = 0;
     let isDisposed = false;
     let currentCamZ = startZ;
-    let warpCamVel = 0;
     const clock = new THREE.Clock();
 
     const handleContextLost = (e: Event) => {
@@ -187,16 +186,8 @@ export const IntroScene: React.FC<IntroSceneProps> = ({
         camera.rotation.y = THREE.MathUtils.damp(camera.rotation.y, -mouseRef.current.x * 0.03, 4.5, delta);
         camera.rotation.x = THREE.MathUtils.damp(camera.rotation.x, mouseRef.current.y * 0.022, 4.5, delta);
       } else {
-        warpCamVel = THREE.MathUtils.damp(warpCamVel, 20.0, 3.6, delta);
-        currentCamZ = Math.max(0.35, currentCamZ - warpCamVel * delta);
-        camera.position.z = currentCamZ;
-        camera.position.x = THREE.MathUtils.damp(camera.position.x, 0, 5.0, delta);
-        camera.position.y = THREE.MathUtils.damp(camera.position.y, 0, 5.0, delta);
-        camera.rotation.x = THREE.MathUtils.damp(camera.rotation.x, 0, 5.0, delta);
-        camera.rotation.y = THREE.MathUtils.damp(camera.rotation.y, 0, 5.0, delta);
-        camera.fov = THREE.MathUtils.damp(camera.fov, 68, 3.8, delta);
-        camera.updateProjectionMatrix();
-        particleField.setTargetOpacity(0.95);
+        // Slowly dim the ambient particle light before and during the screen flip
+        particleField.setTargetOpacity(0.04);
       }
 
       particleField.update(

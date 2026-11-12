@@ -17,18 +17,15 @@ export class ParticleField {
   private count: number;
   private positions: Float32Array;
   private basePositions: Float32Array;
-  private velocities: Float32Array;
 
   private currentOpacity = 0;
   private targetOpacity = 0.35;
-  private warpFactor = 0;
 
   constructor(isMobile: boolean = false) {
     this.count = isMobile ? 220 : 480;
 
     this.positions = new Float32Array(this.count * 3);
     this.basePositions = new Float32Array(this.count * 3);
-    this.velocities = new Float32Array(this.count * 3);
 
     for (let i = 0; i < this.count; i++) {
       const idx = i * 3;
@@ -47,10 +44,6 @@ export class ParticleField {
       this.basePositions[idx] = x;
       this.basePositions[idx + 1] = y;
       this.basePositions[idx + 2] = z;
-
-      this.velocities[idx] = (Math.random() - 0.5) * 0.02;
-      this.velocities[idx + 1] = (Math.random() - 0.5) * 0.02;
-      this.velocities[idx + 2] = 0.6 + Math.random() * 1.9;
     }
 
     this.geometry = new THREE.BufferGeometry();
@@ -99,46 +92,30 @@ export class ParticleField {
     this.currentOpacity = THREE.MathUtils.damp(
       this.currentOpacity,
       this.targetOpacity,
-      3.8,
+      isTransitioning ? 2.8 : 3.8,
       delta
     );
     this.material.opacity = this.currentOpacity;
 
     const dampFactor = 1 - Math.exp(-3.4 * delta);
 
-    if (isTransitioning) {
-      this.warpFactor = THREE.MathUtils.damp(this.warpFactor, 1.0, 4.2, delta);
-    }
-
     for (let i = 0; i < this.count; i++) {
       const idx = i * 3;
+      const bx = this.basePositions[idx];
+      const by = this.basePositions[idx + 1];
+      const bz = this.basePositions[idx + 2];
 
-      if (isTransitioning) {
-        const speedMult = this.warpFactor * delta;
-        pos[idx + 2] += this.velocities[idx + 2] * speedMult * 26.0;
-        pos[idx] += pos[idx] * speedMult * 2.2;
-        pos[idx + 1] += pos[idx + 1] * speedMult * 2.2;
+      const driftX = Math.sin(time * 0.36 + i * 0.2) * 0.18;
+      const driftY = Math.cos(time * 0.32 + i * 0.3) * 0.2;
+      const driftZ = Math.sin(time * 0.24 + i * 0.5) * 0.15;
 
-        if (pos[idx + 2] > 14.0) {
-          pos[idx + 2] = -6.0;
-        }
-      } else {
-        const bx = this.basePositions[idx];
-        const by = this.basePositions[idx + 1];
-        const bz = this.basePositions[idx + 2];
+      const targetX = bx + driftX - mouseX * 0.32;
+      const targetY = by + driftY + mouseY * 0.32;
+      const targetZ = bz + driftZ;
 
-        const driftX = Math.sin(time * 0.36 + i * 0.2) * 0.18;
-        const driftY = Math.cos(time * 0.32 + i * 0.3) * 0.2;
-        const driftZ = Math.sin(time * 0.24 + i * 0.5) * 0.15;
-
-        const targetX = bx + driftX - mouseX * 0.32;
-        const targetY = by + driftY + mouseY * 0.32;
-        const targetZ = bz + driftZ;
-
-        pos[idx] += (targetX - pos[idx]) * dampFactor;
-        pos[idx + 1] += (targetY - pos[idx + 1]) * dampFactor;
-        pos[idx + 2] += (targetZ - pos[idx + 2]) * dampFactor;
-      }
+      pos[idx] += (targetX - pos[idx]) * dampFactor;
+      pos[idx + 1] += (targetY - pos[idx + 1]) * dampFactor;
+      pos[idx + 2] += (targetZ - pos[idx + 2]) * dampFactor;
     }
 
     this.geometry.attributes.position.needsUpdate = true;

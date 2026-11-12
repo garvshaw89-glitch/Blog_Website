@@ -19,19 +19,22 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
 }) => {
   const maskGroupRef = useRef<SVGGElement | null>(null);
   const strokeGroupRef = useRef<SVGGElement | null>(null);
+  const strokeTextRef = useRef<SVGTextElement | null>(null);
 
-  // Sync SVG cutout mask & thick-bordered PORTFOLIO outline to scrollProgressRef at native display FPS
+  // Sync SVG cutout mask & thick-bordered "PORTFOLIO   BY   GARV SHAW" to scrollProgressRef
   useEffect(() => {
     let rafId = 0;
 
     const updateFromScroll = () => {
       const p = scrollProgressRef.current;
       const vw = window.innerWidth;
+      const measuredWidth = strokeTextRef.current?.getComputedTextLength() || vw * 2.5;
 
-      // Sweep slowly across p = [0 .. 0.80] from right edge (+86vw) to off left edge (-104vw)
-      const sweep = Math.min(Math.max(p / 0.8, 0), 1);
-      const translateXVw = 86 - sweep * 190;
-      const txPx = (translateXVw / 100) * vw;
+      // Sweep slowly across p = [0 .. 0.82] from right edge to completely past left edge
+      const sweep = Math.min(Math.max(p / 0.82, 0), 1);
+      const startX = vw * 0.82;
+      const endX = -(measuredWidth + vw * 0.1);
+      const txPx = startX + (endX - startX) * sweep;
       const transformAttr = `translate(${txPx.toFixed(2)}, 0)`;
 
       if (maskGroupRef.current) {
@@ -48,13 +51,49 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
     return () => cancelAnimationFrame(rafId);
   }, [scrollProgressRef]);
 
+  const renderSequenceTspans = (isStrokeLayer: boolean) => (
+    <>
+      <tspan
+        dominantBaseline="central"
+        style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+      >
+        PORTFOLIO
+      </tspan>
+      <tspan
+        dominantBaseline="central"
+        style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+      >
+        {'\u00A0\u00A0\u00A0'}
+      </tspan>
+      <tspan
+        dominantBaseline="central"
+        strokeWidth={isStrokeLayer ? '2.2' : undefined}
+        style={{ fontSize: 'clamp(15px, 5.7vw, 5.25rem)' }}
+      >
+        BY
+      </tspan>
+      <tspan
+        dominantBaseline="central"
+        style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+      >
+        {'\u00A0\u00A0\u00A0'}
+      </tspan>
+      <tspan
+        dominantBaseline="central"
+        style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+      >
+        GARV SHAW
+      </tspan>
+    </>
+  );
+
   return (
     <>
       {/*
         SVG KNOCKOUT BACKDROP (z-[1]):
-        - Everywhere outside PORTFOLIO is dark obsidian (#050505 / #09101c radial)
-        - Inside the giant PORTFOLIO letters (fill="black" in mask), it cuts out a true
-          transparent portal revealing the live main website underneath!
+        - Everywhere outside the letters is dark obsidian (#050505 / #09101c radial)
+        - Inside PORTFOLIO, BY, and GARV SHAW (fill="black" in mask), it cuts out a true
+          transparent window revealing the live main website underneath!
       */}
       <svg
         aria-hidden="true"
@@ -71,17 +110,16 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
             <rect x="0" y="0" width="100%" height="100%" fill="white" />
             <g ref={maskGroupRef} transform="translate(1200, 0)">
               <text
-                x="50%"
+                x="0"
                 y="50%"
-                textAnchor="middle"
+                textAnchor="start"
                 dominantBaseline="central"
                 fill="black"
                 fontFamily="'Space Grotesk', sans-serif"
                 fontWeight="700"
                 letterSpacing="-0.03em"
-                style={{ fontSize: 'clamp(54px, 19vw, 17.5rem)' }}
               >
-                PORTFOLIO
+                {renderSequenceTspans(false)}
               </text>
             </g>
           </mask>
@@ -97,7 +135,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         />
       </svg>
 
-      {/* Thick-bordered transparent PORTFOLIO framing the live website cutout (z-[5]) */}
+      {/* Thick-bordered transparent PORTFOLIO   BY   GARV SHAW outline (z-[5]) */}
       <svg
         aria-hidden="true"
         className="fixed inset-0 w-full h-full pointer-events-none z-[5]"
@@ -105,9 +143,10 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
       >
         <g ref={strokeGroupRef} transform="translate(1200, 0)">
           <text
-            x="50%"
+            ref={strokeTextRef}
+            x="0"
             y="50%"
-            textAnchor="middle"
+            textAnchor="start"
             dominantBaseline="central"
             fill="transparent"
             stroke="rgba(226, 232, 240, 0.88)"
@@ -118,21 +157,20 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
             fontWeight="700"
             letterSpacing="-0.03em"
             style={{
-              fontSize: 'clamp(54px, 19vw, 17.5rem)',
               filter: 'drop-shadow(0 0 18px rgba(56, 189, 248, 0.18))',
             }}
           >
-            PORTFOLIO
+            {renderSequenceTspans(true)}
           </text>
         </g>
       </svg>
 
-      {/* UI Layer (z-10): Audio toggle only — no skip, no arrow, no loading bar */}
+      {/* UI Layer (z-10): Audio toggle only */}
       <div className="absolute inset-0 z-10 flex flex-col justify-between p-6 sm:p-10 pointer-events-none select-none overflow-hidden">
         <motion.div
           initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.15, ease: LUXURY_EASE }}
+          animate={{ opacity: isTransitioning ? 0 : 1, y: 0 }}
+          transition={{ duration: 0.6, ease: LUXURY_EASE }}
           className="w-full flex items-center justify-end z-20 pointer-events-auto"
         >
           <button
@@ -149,55 +187,18 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
             )}
           </button>
         </motion.div>
-
-        {/* Futuristic Portal Entry Effect */}
-        {isTransitioning && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.9, ease: LUXURY_EASE }}
-            className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden bg-[#03050a]/80"
-          >
-            {/* Radial cyan-obsidian energy bloom */}
-            <motion.div
-              initial={{ scale: 0.2, opacity: 0.25 }}
-              animate={{ scale: 2.3, opacity: [0.4, 0.95, 0.6] }}
-              transition={{ duration: 1.15, ease: LUXURY_EASE }}
-              style={{
-                willChange: 'transform, opacity',
-                background:
-                  'radial-gradient(circle at 50% 50%, rgba(125, 211, 252, 0.55) 0%, rgba(56, 189, 248, 0.22) 28%, rgba(5, 8, 16, 0.92) 68%, #050505 100%)',
-              }}
-              className="absolute inset-0"
-            />
-
-            {/* Futuristic expanding concentric portal rings */}
-            <motion.div
-              initial={{ scale: 0.12, opacity: 0.95, rotate: 0 }}
-              animate={{ scale: 3.8, opacity: 0, rotate: 54 }}
-              transition={{ duration: 1.1, ease: LUXURY_EASE }}
-              style={{ willChange: 'transform, opacity' }}
-              className="w-64 h-64 rounded-full border border-cyan-300/75 shadow-[0_0_45px_rgba(56,189,248,0.45)]"
-            />
-            <motion.div
-              initial={{ scale: 0.06, opacity: 0.9, rotate: 0 }}
-              animate={{ scale: 2.9, opacity: 0, rotate: -65 }}
-              transition={{ duration: 1.05, delay: 0.08, ease: LUXURY_EASE }}
-              style={{ willChange: 'transform, opacity' }}
-              className="absolute w-48 h-48 rounded-full border border-dashed border-sky-200/65"
-            />
-
-            {/* Horizontal plasma horizon sweep */}
-            <motion.div
-              initial={{ scaleX: 0.05, opacity: 0 }}
-              animate={{ scaleX: 1.4, opacity: [0, 1, 0.2] }}
-              transition={{ duration: 1.05, ease: LUXURY_EASE }}
-              style={{ willChange: 'transform, opacity' }}
-              className="absolute w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_24px_rgba(56,189,248,0.85)]"
-            />
-          </motion.div>
-        )}
       </div>
+
+      {/* Phase 1 of Entry Effect: Slowly dim the light */}
+      {isTransitioning && (
+        <motion.div
+          aria-hidden="true"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.85 }}
+          transition={{ duration: 0.75, ease: [0.32, 0, 0.45, 1] }}
+          className="fixed inset-0 z-30 pointer-events-none bg-[#030407]"
+        />
+      )}
     </>
   );
 };
