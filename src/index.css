@@ -200,6 +200,36 @@
   animation: radar-scan 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
+/* Solid multicolour cycling fill for intro "BY" label */
+@keyframes by-multicolor-solid {
+  0% {
+    fill: #38bdf8;
+  }
+  16% {
+    fill: #818cf8;
+  }
+  33% {
+    fill: #e879f9;
+  }
+  50% {
+    fill: #fb7185;
+  }
+  66% {
+    fill: #fbbf24;
+  }
+  83% {
+    fill: #34d399;
+  }
+  100% {
+    fill: #38bdf8;
+  }
+}
+
+.intro-by-multicolor {
+  fill: #38bdf8;
+  animation: by-multicolor-solid 6s linear infinite;
+}
+
 /* Accessibility: Strict Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {

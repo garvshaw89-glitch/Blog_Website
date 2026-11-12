@@ -21,7 +21,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
   const strokeGroupRef = useRef<SVGGElement | null>(null);
   const strokeTextRef = useRef<SVGTextElement | null>(null);
 
-  // Sync SVG cutout mask & thick-bordered "PORTFOLIO   BY   GARV SHAW" to scrollProgressRef
+  // Sync SVG cutout mask & thick-bordered "PORTFOLIO  BY  GARV SHAW" to scrollProgressRef
   useEffect(() => {
     let rafId = 0;
 
@@ -54,32 +54,36 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
   const renderSequenceTspans = (isStrokeLayer: boolean) => (
     <>
       <tspan
-        dominantBaseline="central"
+        fill={isStrokeLayer ? 'transparent' : 'black'}
         style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
       >
         PORTFOLIO
       </tspan>
       <tspan
-        dominantBaseline="central"
+        fill={isStrokeLayer ? 'transparent' : 'white'}
+        stroke={isStrokeLayer ? 'none' : undefined}
         style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
       >
-        {'\u00A0\u00A0\u00A0'}
+        {'\u00A0\u00A0'}
       </tspan>
       <tspan
-        dominantBaseline="central"
-        strokeWidth={isStrokeLayer ? '2.2' : undefined}
+        className={isStrokeLayer ? 'intro-by-multicolor' : undefined}
+        fill={isStrokeLayer ? undefined : 'white'}
+        stroke={isStrokeLayer ? 'none' : undefined}
+        strokeWidth={isStrokeLayer ? 0 : undefined}
         style={{ fontSize: 'clamp(15px, 5.7vw, 5.25rem)' }}
       >
         BY
       </tspan>
       <tspan
-        dominantBaseline="central"
+        fill={isStrokeLayer ? 'transparent' : 'white'}
+        stroke={isStrokeLayer ? 'none' : undefined}
         style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
       >
-        {'\u00A0\u00A0\u00A0'}
+        {'\u00A0\u00A0'}
       </tspan>
       <tspan
-        dominantBaseline="central"
+        fill={isStrokeLayer ? 'transparent' : 'black'}
         style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
       >
         GARV SHAW
@@ -91,8 +95,8 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
     <>
       {/*
         SVG KNOCKOUT BACKDROP (z-[1]):
-        - Everywhere outside the letters is dark obsidian (#050505 / #09101c radial)
-        - Inside PORTFOLIO, BY, and GARV SHAW (fill="black" in mask), it cuts out a true
+        - Everywhere outside PORTFOLIO and GARV SHAW is dark obsidian (#050505 / #09101c radial)
+        - Inside PORTFOLIO and GARV SHAW (fill="black" in mask), it cuts out a true
           transparent window revealing the live main website underneath!
       */}
       <svg
@@ -112,12 +116,14 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
               <text
                 x="0"
                 y="50%"
+                dy="0.35em"
                 textAnchor="start"
-                dominantBaseline="central"
+                dominantBaseline="alphabetic"
                 fill="black"
                 fontFamily="'Space Grotesk', sans-serif"
                 fontWeight="700"
                 letterSpacing="-0.03em"
+                style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
               >
                 {renderSequenceTspans(false)}
               </text>
@@ -135,7 +141,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         />
       </svg>
 
-      {/* Thick-bordered transparent PORTFOLIO   BY   GARV SHAW outline (z-[5]) */}
+      {/* Thick-bordered transparent PORTFOLIO & GARV SHAW + solid multicolour BY (z-[5]) */}
       <svg
         aria-hidden="true"
         className="fixed inset-0 w-full h-full pointer-events-none z-[5]"
@@ -146,8 +152,9 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
             ref={strokeTextRef}
             x="0"
             y="50%"
+            dy="0.35em"
             textAnchor="start"
-            dominantBaseline="central"
+            dominantBaseline="alphabetic"
             fill="transparent"
             stroke="rgba(226, 232, 240, 0.88)"
             strokeWidth="4.5"
@@ -157,6 +164,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
             fontWeight="700"
             letterSpacing="-0.03em"
             style={{
+              fontSize: 'clamp(50px, 19vw, 17.5rem)',
               filter: 'drop-shadow(0 0 18px rgba(56, 189, 248, 0.18))',
             }}
           >
