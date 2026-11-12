@@ -230,6 +230,126 @@
   animation: by-multicolor-solid 6s linear infinite;
 }
 
+/* Dynamic CSS scanline overlay during PORTFOLIO intro -> main page transition */
+@keyframes intro-scanline-fade {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes intro-scanline-raster {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 16px, 0);
+  }
+}
+
+@keyframes intro-scanline-sweep-y {
+  0% {
+    transform: translate3d(0, -24vh, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate3d(0, 118vh, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes intro-scanline-sweep-echo {
+  0%,
+  26% {
+    transform: translate3d(0, 112vh, 0);
+    opacity: 0;
+  }
+  38% {
+    opacity: 0.85;
+  }
+  88% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate3d(0, -22vh, 0);
+    opacity: 0;
+  }
+}
+
+.intro-scanline-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  overflow: hidden;
+  animation: intro-scanline-fade 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.intro-scanline-grid {
+  position: absolute;
+  inset: -16px 0 0 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(56, 189, 248, 0.08) 0px,
+    rgba(56, 189, 248, 0.08) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  animation: intro-scanline-raster 0.45s linear infinite;
+  will-change: transform;
+}
+
+.intro-scanline-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 18vh;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(56, 189, 248, 0.05) 45%,
+    rgba(56, 189, 248, 0.24) 86%,
+    rgba(186, 230, 253, 0.82) 98%,
+    rgba(224, 242, 254, 0.96) 100%
+  );
+  box-shadow: 0 2px 24px rgba(56, 189, 248, 0.55), 0 0 8px rgba(186, 230, 253, 0.85);
+  animation: intro-scanline-sweep-y 1.25s cubic-bezier(0.25, 0.9, 0.35, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.intro-scanline-beam-echo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 12vh;
+  background: linear-gradient(
+    to top,
+    transparent 0%,
+    rgba(129, 140, 248, 0.08) 55%,
+    rgba(56, 189, 248, 0.32) 92%,
+    rgba(224, 242, 254, 0.78) 100%
+  );
+  box-shadow: 0 -2px 18px rgba(56, 189, 248, 0.4);
+  animation: intro-scanline-sweep-echo 1.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
 /* Accessibility: Strict Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
@@ -242,7 +362,11 @@
     animation: none !important;
     transform: none !important;
   }
-  .animate-radar-scan {
+  .animate-radar-scan,
+  .intro-scanline-overlay,
+  .intro-scanline-grid,
+  .intro-scanline-beam,
+  .intro-scanline-beam-echo {
     animation: none !important;
   }
 }

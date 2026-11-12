@@ -187,6 +187,14 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     };
   }, []);
 
+  const scanlineOverlay = isTransitioning ? (
+    <div aria-hidden="true" className="intro-scanline-overlay">
+      <div className="intro-scanline-grid" />
+      <div className="intro-scanline-beam" />
+      <div className="intro-scanline-beam-echo" />
+    </div>
+  ) : null;
+
   if (webGlFailed) {
     return (
       <div
@@ -218,6 +226,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
             isTransitioning={isTransitioning}
           />
         </motion.div>
+        {scanlineOverlay}
       </div>
     );
   }
@@ -259,7 +268,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
           onWebGLError={handleWebGLError}
         />
 
-        {/* SVG Knockout PORTFOLIO   BY   GARV SHAW Backdrop & Dimmer */}
+        {/* SVG Knockout PORTFOLIO  BY  GARV SHAW Backdrop & Dimmer */}
         <IntroOverlay
           scrollProgressRef={scrollProgressRef}
           isAudioOn={isAudioOn}
@@ -267,6 +276,9 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
           isTransitioning={isTransitioning}
         />
       </motion.div>
+
+      {/* Dynamic CSS Scanline Overlay sweeping across the viewport during transition */}
+      {scanlineOverlay}
     </motion.div>
   );
 };
