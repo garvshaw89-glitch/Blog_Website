@@ -5,6 +5,7 @@ import { Volume2, VolumeX } from 'lucide-react';
 interface IntroOverlayProps {
   scrollProgressRef: React.RefObject<number>;
   zoomProgressRef: React.RefObject<number>;
+  portalRevealRef?: React.RefObject<number>;
   isAudioOn: boolean;
   onToggleAudio: () => void;
   isTransitioning: boolean;
@@ -21,6 +22,7 @@ const smootherstep = (t: number): number => {
 export const IntroOverlay: React.FC<IntroOverlayProps> = ({
   scrollProgressRef,
   zoomProgressRef,
+  portalRevealRef,
   isAudioOn,
   onToggleAudio,
   isTransitioning,
@@ -132,6 +134,9 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
       let transformAttr: string;
 
       if (z > 0) {
+        if (maskGroupRef.current) {
+          maskGroupRef.current.style.display = 'inline';
+        }
         // Disable SVG drop-shadow filter during zoom so scaling up stays GPU-smooth
         if (!wasZooming && strokeTextRef.current) {
           wasZooming = true;
@@ -156,6 +161,10 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
           backdropRectRef.current.style.opacity = backdropFade.toFixed(3);
         }
       } else {
+        const reveal = portalRevealRef
+          ? Math.min(Math.max(portalRevealRef.current, 0), 1)
+          : 1;
+
         if (wasZooming && strokeTextRef.current) {
           wasZooming = false;
           strokeTextRef.current.style.filter = 'drop-shadow(0 0 18px rgba(56, 189, 248, 0.18))';
@@ -164,8 +173,11 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         if (backdropRectRef.current) {
           backdropRectRef.current.style.opacity = '1';
         }
+        if (maskGroupRef.current) {
+          maskGroupRef.current.style.display = reveal > 0.01 ? 'inline' : 'none';
+        }
         if (strokeTextRef.current) {
-          strokeTextRef.current.style.opacity = '1';
+          strokeTextRef.current.style.opacity = reveal.toFixed(3);
         }
 
         if (p <= 0.56) {
@@ -202,7 +214,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
     };
-  }, [scrollProgressRef, zoomProgressRef]);
+  }, [scrollProgressRef, zoomProgressRef, portalRevealRef]);
 
   const largeTitleSize = 'clamp(50px, min(19vw, 44dvh), 17.5rem)';
   const byTitleSize = 'clamp(15px, min(5.7vw, 13.2dvh), 5.25rem)';

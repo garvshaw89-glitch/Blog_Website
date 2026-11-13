@@ -1,20 +1,50 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
+import { ParticleScene } from './ParticleScene';
 import { IntroScene } from './IntroScene';
 import { IntroOverlay } from './IntroOverlay';
 import { WebGlFallback } from './WebGlFallback';
+import { EntryRocketLanding } from './EntryRocketLanding';
 import { introAudio } from './introAudio';
 import { entrySequenceManager } from './entrySequenceManager';
 
 interface LuxuryIntroProps {
   onComplete: () => void;
+  onRocketCursorReady?: () => void;
 }
 
-export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
+const SAND_HOLD_END_SEC = 8.4;
+const SAND_DISSOLVE_SEC = 0.95;
+const ROCKET_LAUNCH_START_SEC = 8.15;
+const PORTAL_ZOOM_DURATION_SEC = 2.1;
+
+export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
+  onComplete,
+  onRocketCursorReady,
+}) => {
+  const [prefersReducedMotion] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false
+  );
+
+  const [sandFinished, setSandFinished] = useState(false);
+  const [rocketLaunchStarted, setRocketLaunchStarted] = useState(false);
+  const [rocketFinished, setRocketFinished] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [webGlFailed, setWebGlFailed] = useState(false);
   const [isAudioOn, setIsAudioOn] = useState(false);
 
+  // Unified timeline refs for white-sand THINK. -> CREATE. -> DISCOVER. + PORTFOLIO BY GARV SHAW portal
+  const timelineSecRef = useRef(prefersReducedMotion ? 8.2 : 0);
+  const isSandExitingRef = useRef(false);
+  const sandExitProgressRef = useRef(0);
+  const isHoveringEnterRef = useRef(false);
+  const rocketLaunchedRef = useRef(false);
+  const rocketCursorReadyRef = useRef(false);
+
+  const portalRevealRef = useRef(0);
+  const portalReadyForScrollRef = useRef(false);
   const elapsedTimeRef = useRef(0);
   const scrollTargetRef = useRef(0);
   const scrollProgressRef = useRef(0);
@@ -23,6 +53,16 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
   const hasCompletedRef = useRef(false);
   const heldDirectionRef = useRef<-1 | 0 | 1>(0);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  const onRocketCursorReadyRef = useRef(onRocketCursorReady);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
+    onRocketCursorReadyRef.current = onRocketCursorReady;
+  }, [onRocketCursorReady]);
 
   // Lock background page scroll while compulsory entry portal is active
   useEffect(() => {
@@ -42,48 +82,125 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     entrySequenceManager.completeImmediately();
   }, []);
 
-  // Slow scroll progression -> center PORTFOLIO -> zoom through transparent "T" into main page
+  // Unified master animation loop on the single PORTFOLIO BY GARV SHAW entry page:
+  // 1) White sand forms THINK. -> CREATE. -> DISCOVER.
+  // 2) DISCOVER. exhales gently into white sand breeze as PORTFOLIO BY GARV SHAW reveals
+  // 3) Visitor scrolls right-to-left -> centers PORTFOLIO -> zooms through transparent 'T' into site
   useEffect(() => {
     let animId = 0;
     const startTime = performance.now();
     let prevTime = startTime;
-    const ZOOM_DURATION_SEC = 2.1;
+    let chime2Played = false;
+    let chime3Played = false;
+    let chime4Played = false;
+    let sandMarkedDone = false;
 
     const loop = (now: number) => {
+      if (hasCompletedRef.current) return;
+
       const dt = Math.min((now - prevTime) / 1000, 0.05);
       prevTime = now;
 
       const t = (now - startTime) / 1000;
       elapsedTimeRef.current = t;
+
+      if (!prefersReducedMotion) {
+        timelineSecRef.current = t;
+      }
       entrySequenceManager.tick(t);
 
-      // Slow, steady glide while holding Arrow / Page / Space keys
-      if (!isTransitioningRef.current && heldDirectionRef.current !== 0) {
+      // Optional subtle chimes synced with white sand formations
+      if (!prefersReducedMotion) {
+        if (!chime2Played && t >= 2.05) {
+          chime2Played = true;
+          introAudio.triggerChime(392.0);
+        }
+        if (!chime3Played && t >= 4.45) {
+          chime3Played = true;
+          introAudio.triggerChime(440.0);
+        }
+        if (!chime4Played && t >= 6.8) {
+          chime4Played = true;
+          introAudio.triggerChime(523.25);
+        }
+      }
+
+      // Split center of universe & launch real rocket breakout toward PORTFOLIO BY GARV SHAW
+      const rocketStartSec = prefersReducedMotion ? 1.05 : ROCKET_LAUNCH_START_SEC;
+      if (!rocketLaunchedRef.current && t >= rocketStartSec) {
+        rocketLaunchedRef.current = true;
+        setRocketLaunchStarted(true);
+      }
+
+      // Safety fallback in case the tab was throttled so the portal never stalls waiting for the landing
+      const safetyUnlockSec = prefersReducedMotion ? 1.5 : 13.0;
+      if (!rocketCursorReadyRef.current && t >= safetyUnlockSec) {
+        rocketCursorReadyRef.current = true;
+        portalReadyForScrollRef.current = true;
+        onRocketCursorReadyRef.current?.();
+      }
+
+      // Trigger smooth white-sand dissolution after DISCOVER. settles (or immediately if user starts scrolling)
+      const holdEnd = prefersReducedMotion ? 1.2 : SAND_HOLD_END_SEC;
+      if (!isSandExitingRef.current && (t >= holdEnd || scrollTargetRef.current > 0.002)) {
+        isSandExitingRef.current = true;
+      }
+
+      if (isSandExitingRef.current && sandExitProgressRef.current < 1) {
+        const speedMult = scrollTargetRef.current > 0.01 ? 1.65 : 1.0;
+        const nextExit = Math.min(
+          sandExitProgressRef.current + (dt * speedMult) / SAND_DISSOLVE_SEC,
+          1
+        );
+        sandExitProgressRef.current = nextExit;
+
+        // Smoothly cross-reveal PORTFOLIO BY GARV SHAW on the same page as sand exhales
+        portalRevealRef.current = Math.max(
+          portalRevealRef.current,
+          Math.min(Math.max((nextExit - 0.15) / 0.7, 0), 1)
+        );
+
+        if (nextExit >= 1 && !sandMarkedDone) {
+          sandMarkedDone = true;
+          portalRevealRef.current = 1;
+          setSandFinished(true);
+        }
+      }
+
+      // Slow, steady glide while holding Arrow / Page / Space keys (once portal is unlocked)
+      if (
+        portalReadyForScrollRef.current &&
+        !isTransitioningRef.current &&
+        heldDirectionRef.current !== 0
+      ) {
         scrollTargetRef.current = Math.min(
           1,
           Math.max(0, scrollTargetRef.current + heldDirectionRef.current * 0.115 * dt)
         );
       }
 
-      // Weighty, cinematic scroll inertia
+      // Weighty, cinematic scroll inertia for PORTFOLIO BY GARV SHAW slide
       const factor = 1 - Math.exp(-4.2 * dt);
       scrollProgressRef.current +=
         (scrollTargetRef.current - scrollProgressRef.current) * factor;
 
-      // Once "PORTFOLIO" settles in the middle, trigger zoom through the transparent 'T'
+      // Once "PORTFOLIO" settles in the middle, trigger zoom through transparent 'T'
       if (!isTransitioningRef.current && scrollProgressRef.current >= 0.78) {
         triggerEntryTransition();
       }
 
-      // Advance zoom-through-T smoothly using clamped dt so frame spikes never skip frames
+      // Advance zoom-through-T smoothly into the main website
       if (isTransitioningRef.current && !hasCompletedRef.current) {
-        const nextZ = Math.min(zoomProgressRef.current + dt / ZOOM_DURATION_SEC, 1);
+        const nextZ = Math.min(
+          zoomProgressRef.current + dt / PORTAL_ZOOM_DURATION_SEC,
+          1
+        );
         zoomProgressRef.current = nextZ;
 
         if (nextZ >= 1) {
           hasCompletedRef.current = true;
           introAudio.stop();
-          onComplete();
+          onCompleteRef.current();
           return;
         }
       }
@@ -95,7 +212,19 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     return () => {
       cancelAnimationFrame(animId);
     };
-  }, [onComplete, triggerEntryTransition]);
+  }, [triggerEntryTransition, prefersReducedMotion]);
+
+  const handleRocketBecomeCursor = useCallback(() => {
+    if (!rocketCursorReadyRef.current) {
+      rocketCursorReadyRef.current = true;
+      portalReadyForScrollRef.current = true;
+      onRocketCursorReadyRef.current?.();
+    }
+  }, []);
+
+  const handleRocketFinished = useCallback(() => {
+    setRocketFinished(true);
+  }, []);
 
   const handleToggleAudio = useCallback(() => {
     const newState = introAudio.toggle();
@@ -106,10 +235,10 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
     setWebGlFailed(true);
   }, []);
 
-  // Compulsory scroll handlers: keyboard (ArrowDown/Up, PageDown/Up, Space), wheel & touch swipe
+  // Compulsory scroll / swipe / keyboard listeners for PORTFOLIO BY GARV SHAW entry
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isTransitioningRef.current) return;
+      if (isTransitioningRef.current || !portalReadyForScrollRef.current) return;
 
       if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
         e.preventDefault();
@@ -145,7 +274,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      if (isTransitioningRef.current) return;
+      if (isTransitioningRef.current || !portalReadyForScrollRef.current) return;
       const clampedDelta = Math.max(-100, Math.min(100, e.deltaY));
       scrollTargetRef.current = Math.min(
         1,
@@ -164,9 +293,12 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
 
     const handleTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 0) return;
-      // Prevent iOS/iPadOS Safari rubber-band bounce while gliding through entry
       e.preventDefault();
-      if (isTransitioningRef.current || touchStartRef.current === null) {
+      if (
+        isTransitioningRef.current ||
+        !portalReadyForScrollRef.current ||
+        touchStartRef.current === null
+      ) {
         return;
       }
       const curX = e.touches[0].clientX;
@@ -175,7 +307,6 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       const dy = touchStartRef.current.y - curY;
       touchStartRef.current = { x: curX, y: curY };
 
-      // Accept both swipe-up and swipe-left seamlessly across phones & iPads
       const dominantDelta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
       const sensitivity = window.innerWidth < 768 ? 0.0011 : 0.00085;
       scrollTargetRef.current = Math.min(
@@ -216,10 +347,19 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
         <WebGlFallback
           scrollProgressRef={scrollProgressRef}
           zoomProgressRef={zoomProgressRef}
+          portalRevealRef={portalRevealRef}
           isAudioOn={isAudioOn}
           onToggleAudio={handleToggleAudio}
           isTransitioning={isTransitioning}
+          prefersReducedMotion={prefersReducedMotion}
         />
+        {rocketLaunchStarted && !rocketFinished && (
+          <EntryRocketLanding
+            onBecomeCursor={handleRocketBecomeCursor}
+            onFinished={handleRocketFinished}
+            prefersReducedMotion={prefersReducedMotion}
+          />
+        )}
       </div>
     );
   }
@@ -232,8 +372,13 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       transition={{ duration: 0.2, ease: 'easeOut' }}
       style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       className="fixed inset-0 h-[100dvh] z-50 bg-transparent overflow-hidden select-none"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Entry portal: Think, Create, Discover — Portfolio by Garv Shaw"
     >
-      {/* 3D WebGL Particle Field */}
+      <h1 className="sr-only">Think. Create. Discover. Portfolio by Garv Shaw</h1>
+
+      {/* 1. Ambient 3D floating particle field */}
       <IntroScene
         elapsedTimeRef={elapsedTimeRef}
         scrollProgressRef={scrollProgressRef}
@@ -241,14 +386,36 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
         onWebGLError={handleWebGLError}
       />
 
-      {/* SVG Knockout Slide -> Center PORTFOLIO -> Zoom through transparent 'T' */}
+      {/* 2. White sand THINK. -> CREATE. -> DISCOVER. on the same entry page */}
+      {!sandFinished && (
+        <ParticleScene
+          timelineSecRef={timelineSecRef}
+          isExitingRef={isSandExitingRef}
+          exitProgressRef={sandExitProgressRef}
+          isHoveringEnterRef={isHoveringEnterRef}
+          prefersReducedMotion={prefersReducedMotion}
+          onWebGLError={handleWebGLError}
+        />
+      )}
+
+      {/* 3. SVG Knockout Slide ("PORTFOLIO  BY  GARV SHAW") -> Center PORTFOLIO -> Zoom through transparent 'T' */}
       <IntroOverlay
         scrollProgressRef={scrollProgressRef}
         zoomProgressRef={zoomProgressRef}
+        portalRevealRef={portalRevealRef}
         isAudioOn={isAudioOn}
         onToggleAudio={handleToggleAudio}
         isTransitioning={isTransitioning}
       />
+
+      {/* 4. Real Rocket breaks out from middle of universe splitting particles, lands in center, and converts into cursor */}
+      {rocketLaunchStarted && !rocketFinished && (
+        <EntryRocketLanding
+          onBecomeCursor={handleRocketBecomeCursor}
+          onFinished={handleRocketFinished}
+          prefersReducedMotion={prefersReducedMotion}
+        />
+      )}
     </motion.div>
   );
 };

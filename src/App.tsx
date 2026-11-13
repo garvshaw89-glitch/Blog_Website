@@ -32,6 +32,8 @@ export default function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   // Fresh initialization on every page load / refresh — kept in React memory only
   const [showIntro, setShowIntro] = useState<boolean>(true);
+  // Keep normal default cursor through THINK. CREATE. DISCOVER. until entry rocket lands & morphs into cursor
+  const [isRocketCursorActive, setIsRocketCursorActive] = useState<boolean>(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -53,6 +55,7 @@ export default function App() {
   }, []);
 
   const handleIntroComplete = () => {
+    setIsRocketCursorActive(true);
     setShowIntro(false);
 
     // Preserve original destination route / section hash if someone refreshed an internal section
@@ -68,6 +71,7 @@ export default function App() {
   };
 
   const handleReplayIntro = () => {
+    setIsRocketCursorActive(false);
     setShowIntro(true);
   };
 
@@ -106,14 +110,19 @@ export default function App() {
       >
         {/* 0. Futuristic Luxury Opening Experience Portal */}
         <AnimatePresence>
-          {showIntro && <LuxuryIntro onComplete={handleIntroComplete} />}
+          {showIntro && (
+            <LuxuryIntro
+              onComplete={handleIntroComplete}
+              onRocketCursorReady={() => setIsRocketCursorActive(true)}
+            />
+          )}
         </AnimatePresence>
 
         {/* 1. Thin Animated Scroll Tracker */}
         <ScrollProgressBar />
 
         {/* 2. Desktop High-End Custom Cursor with Multi-State Labels */}
-        <CustomCursor />
+        <CustomCursor enabled={isRocketCursorActive} />
 
         {/* 3. Global Command Palette (Cmd + K) */}
         <CommandPalette

@@ -1,8 +1,13 @@
 export { LuxuryIntro } from './LuxuryIntro';
+export { ParticleScene } from './ParticleScene';
+export { SandParticleSystem } from './SandParticleSystem';
+export { TextParticleFormation } from './TextParticleFormation';
+export { AtmosphericDust } from './AtmosphericDust';
+export { EntryComposition } from './EntryComposition';
+export { EntryRocketLanding } from './EntryRocketLanding';
 export { IntroScene } from './IntroScene';
-export { DigitalCore } from './DigitalCore';
-export { ParticleField } from './ParticleField';
 export { IntroOverlay } from './IntroOverlay';
+export { ParticleField } from './ParticleField';
 export { WebGlFallback } from './WebGlFallback';
 export { introAudio } from './introAudio';
 export * from './types';
