@@ -47,8 +47,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       id={id}
       className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 select-none ${
         hasScrolled
-          ? 'bg-[#050608]/75 backdrop-blur-md border-b border-white/[0.08] py-3.5'
-          : 'bg-transparent border-b border-transparent py-5'
+          ? 'bg-[#050608]/75 backdrop-blur-md border-b border-white/[0.08] pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5'
+          : 'bg-transparent border-b border-transparent pt-[max(1.25rem,env(safe-area-inset-top))] pb-5'
       }`}
     >
       <div className="w-full max-w-7xl mx-auto px-5 sm:px-8 flex items-center justify-between">
@@ -64,14 +64,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="font-editorial text-sm sm:text-base font-bold tracking-tight text-[#F2F3F5] group-hover:text-white transition-colors">
               GARV SHAW
             </span>
-            <span className="hidden sm:inline-block font-mono text-[10px] text-[#626A73] tracking-widest pl-1 border-l border-white/10">
+            <span className="hidden lg:inline-block font-mono text-[10px] text-[#626A73] tracking-widest pl-1 border-l border-white/10">
               SYS // 2026
             </span>
           </button>
 
           {/* Dynamic Sticky Section Indicator in Navbar */}
           {hasScrolled && (
-            <div className="hidden sm:flex items-center gap-1.5 pl-2.5 border-l border-white/10 animate-fadeIn">
+            <div className="hidden lg:flex items-center gap-1.5 pl-2.5 border-l border-white/10 animate-fadeIn">
               <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
               <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-300 font-semibold">
                 {activeSection === 'hero-section'

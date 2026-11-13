@@ -134,9 +134,9 @@ export const IdentityCore: React.FC = () => {
         )}
 
         {current.geometryType === 'code' && (
-          <div className="absolute inset-x-4 top-4 flex justify-between font-mono text-[9px] text-emerald-400/60 overflow-hidden">
-            <span>async function orchestrate() &#123;</span>
-            <span>return await synthesize(); &#125;</span>
+          <div className="absolute inset-x-4 top-4 flex justify-between gap-3 font-mono text-[9px] text-emerald-400/60 overflow-hidden">
+            <span className="truncate">async function orchestrate() &#123;</span>
+            <span className="truncate">return await synthesize(); &#125;</span>
           </div>
         )}
 
@@ -186,7 +186,7 @@ export const IdentityCore: React.FC = () => {
           </div>
 
           {/* Morphing Headline Text */}
-          <h2 className="font-editorial text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white uppercase leading-none drop-shadow-[0_10px_25px_rgba(0,0,0,0.8)]">
+          <h2 className="font-editorial text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white uppercase leading-none drop-shadow-[0_10px_25px_rgba(0,0,0,0.8)]">
             {current.word}
           </h2>
 

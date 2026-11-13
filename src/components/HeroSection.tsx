@@ -30,7 +30,7 @@ const HEADLINE_ROTATIONS: HeadlineItem[] = [
     primary: 'GARV SHAW.',
     highlight: 'SHAW',
     subline: 'DIGITAL ARCHITECT & FULL-STACK SYSTEMS ENGINEER',
-    fluidSize: 'text-[clamp(3.8rem,9.5vw,9.5rem)]',
+    fluidSize: 'text-[clamp(2.5rem,9vw,9.5rem)]',
     lineHeight: 'leading-[0.92]',
   },
   {
@@ -39,7 +39,7 @@ const HEADLINE_ROTATIONS: HeadlineItem[] = [
     primary: 'INTELLIGENT SYSTEMS.',
     highlight: 'INTELLIGENT',
     subline: 'AUTONOMOUS REASONING, CLOUD RUNTIMES & DISTRIBUTED PLATFORMS',
-    fluidSize: 'text-[clamp(3.2rem,8.2vw,7.8rem)]',
+    fluidSize: 'text-[clamp(2.15rem,7.8vw,7.8rem)]',
     lineHeight: 'leading-[0.96]',
   },
   {
@@ -48,7 +48,7 @@ const HEADLINE_ROTATIONS: HeadlineItem[] = [
     primary: 'AI TO INNOVATION.',
     highlight: 'INNOVATION',
     subline: 'REASONING PIPELINES, HIGH-FREQUENCY QUANT & SCALED PRODUCTS',
-    fluidSize: 'text-[clamp(3.4rem,8.6vw,8.4rem)]',
+    fluidSize: 'text-[clamp(2.35rem,8.4vw,8.4rem)]',
     lineHeight: 'leading-[0.94]',
   },
 ];
@@ -59,12 +59,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   id = 'hero-section',
 }) => {
   const [rotationIndex, setRotationIndex] = useState(2);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setRotationIndex((prev) => (prev + 1) % HEADLINE_ROTATIONS.length);
-    }, 5500);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -79,7 +73,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     <section
       id={id}
       data-cursor-theme="default"
-      className="relative w-full min-h-screen flex flex-col justify-between pt-24 sm:pt-28 pb-10 px-4 sm:px-6 md:px-12 select-none overflow-hidden"
+      className="relative w-full min-h-screen min-h-[100dvh] flex flex-col justify-between pt-20 sm:pt-28 pb-8 sm:pb-10 px-4 sm:px-6 md:px-12 select-none overflow-hidden"
     >
       {/* Main Center Editorial Composition with Fluid Typography Scaling */}
       <div className="w-full max-w-7xl mx-auto my-auto py-6 sm:py-10 flex flex-col items-center opacity-100">

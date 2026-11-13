@@ -45,6 +45,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
       pLeft: 0,
       portfolioCenterX: window.innerWidth * 0.6,
       tCenterX: window.innerWidth * 0.24,
+      maxZoomScale: 68,
     };
 
     const measureTypography = () => {
@@ -56,6 +57,10 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
       const textEl = strokeTextRef.current;
       if (!textEl) return;
 
+      // Adapt border thickness proportionally so small mobile screens stay crisp
+      const responsiveStroke = Math.max(2.4, Math.min(4.5, vw * 0.0034));
+      textEl.setAttribute('stroke-width', responsiveStroke.toFixed(2));
+
       const totalWidth = textEl.getComputedTextLength();
       if (totalWidth > 0) {
         metrics.totalWidth = totalWidth;
@@ -65,13 +70,23 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         const pRect = textEl.getExtentOfChar(0);
         const tRect = textEl.getExtentOfChar(3); // 'T' in PORTFOLIO
         const oRect = textEl.getExtentOfChar(8); // final 'O' in PORTFOLIO
-        metrics.pLeft = pRect.x;
-        metrics.portfolioCenterX = pRect.x + (oRect.x + oRect.width - pRect.x) * 0.5;
-        metrics.tCenterX = tRect.x + tRect.width * 0.5;
+        pLeftMetrics: {
+          metrics.pLeft = pRect.x;
+          metrics.portfolioCenterX = pRect.x + (oRect.x + oRect.width - pRect.x) * 0.5;
+          metrics.tCenterX = tRect.x + tRect.width * 0.5;
+          // Ensure zoomed transparent 'T' stem clears both width & height on portrait phones/iPads & 4K screens
+          const tStemApprox = Math.max(tRect.width * 0.26, 8);
+          metrics.maxZoomScale = Math.max(
+            68,
+            Math.ceil((Math.max(vw, vh) / tStemApprox) * 1.45)
+          );
+          break pLeftMetrics;
+        }
       } catch {
         // Fallback proportions if glyphs are not yet measurable
         metrics.portfolioCenterX = metrics.totalWidth * 0.24;
         metrics.tCenterX = metrics.totalWidth * 0.095;
+        metrics.maxZoomScale = 76;
       }
     };
 
@@ -85,6 +100,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
 
     const handleResize = () => measureTypography();
     window.addEventListener('resize', handleResize, { passive: true });
+    window.addEventListener('orientationchange', handleResize, { passive: true });
 
     let prevShowTail: boolean | null = null;
     let wasZooming = false;
@@ -94,7 +110,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
 
       const p = scrollProgressRef.current;
       const z = zoomProgressRef.current;
-      const { vw, vh, totalWidth, pLeft, portfolioCenterX, tCenterX } = metrics;
+      const { vw, vh, totalWidth, pLeft, portfolioCenterX, tCenterX, maxZoomScale } = metrics;
       const tCenterY = vh * 0.5;
 
       const showTail = p <= 0.56 && z === 0;
@@ -116,7 +132,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
       let transformAttr: string;
 
       if (z > 0) {
-        // Disable SVG drop-shadow filter during zoom so scaling up to 68x stays GPU-smooth
+        // Disable SVG drop-shadow filter during zoom so scaling up stays GPU-smooth
         if (!wasZooming && strokeTextRef.current) {
           wasZooming = true;
           strokeTextRef.current.style.filter = 'none';
@@ -126,7 +142,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         const focusEase = smootherstep(z / 0.45);
         const pivotX = portfolioCenterX + (tCenterX - portfolioCenterX) * focusEase;
         const zoomEase = smootherstep(z);
-        const zoomScale = Math.pow(68, zoomEase);
+        const zoomScale = Math.pow(maxZoomScale, zoomEase);
 
         transformAttr = `translate(${(vw * 0.5).toFixed(2)}, ${tCenterY.toFixed(2)}) scale(${zoomScale.toFixed(4)}) translate(${(-pivotX).toFixed(2)}, ${(-tCenterY).toFixed(2)})`;
 
@@ -184,8 +200,12 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
       isDisposed = true;
       cancelAnimationFrame(rafId);
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
     };
   }, [scrollProgressRef, zoomProgressRef]);
+
+  const largeTitleSize = 'clamp(50px, min(19vw, 44dvh), 17.5rem)';
+  const byTitleSize = 'clamp(15px, min(5.7vw, 13.2dvh), 5.25rem)';
 
   const renderSequenceTspans = (
     isStrokeLayer: boolean,
@@ -194,7 +214,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
     <>
       <tspan
         fill={isStrokeLayer ? 'transparent' : 'black'}
-        style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+        style={{ fontSize: largeTitleSize }}
       >
         PORTFOLIO
       </tspan>
@@ -202,7 +222,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         <tspan
           fill={isStrokeLayer ? 'transparent' : 'white'}
           stroke={isStrokeLayer ? 'none' : undefined}
-          style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+          style={{ fontSize: largeTitleSize }}
         >
           {'\u00A0\u00A0'}
         </tspan>
@@ -211,20 +231,20 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
           fill={isStrokeLayer ? undefined : 'white'}
           stroke={isStrokeLayer ? 'none' : undefined}
           strokeWidth={isStrokeLayer ? 0 : undefined}
-          style={{ fontSize: 'clamp(15px, 5.7vw, 5.25rem)' }}
+          style={{ fontSize: byTitleSize }}
         >
           BY
         </tspan>
         <tspan
           fill={isStrokeLayer ? 'transparent' : 'white'}
           stroke={isStrokeLayer ? 'none' : undefined}
-          style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+          style={{ fontSize: largeTitleSize }}
         >
           {'\u00A0\u00A0'}
         </tspan>
         <tspan
           fill={isStrokeLayer ? 'transparent' : 'black'}
-          style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+          style={{ fontSize: largeTitleSize }}
         >
           GARV SHAW
         </tspan>
@@ -265,7 +285,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
                 fontFamily="'Space Grotesk', sans-serif"
                 fontWeight="700"
                 letterSpacing="-0.03em"
-                style={{ fontSize: 'clamp(50px, 19vw, 17.5rem)' }}
+                style={{ fontSize: largeTitleSize }}
               >
                 {renderSequenceTspans(false, tailMaskRef)}
               </text>
@@ -308,7 +328,7 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
             fontWeight="700"
             letterSpacing="-0.03em"
             style={{
-              fontSize: 'clamp(50px, 19vw, 17.5rem)',
+              fontSize: largeTitleSize,
               filter: 'drop-shadow(0 0 18px rgba(56, 189, 248, 0.18))',
             }}
           >
@@ -317,8 +337,8 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         </g>
       </svg>
 
-      {/* UI Layer (z-10): Audio toggle only */}
-      <div className="absolute inset-0 z-10 flex flex-col justify-between p-6 sm:p-10 pointer-events-none select-none overflow-hidden">
+      {/* UI Layer (z-10): Audio toggle with safe-area padding for notched phones & iPads */}
+      <div className="absolute inset-0 z-10 flex flex-col justify-between pt-[max(1.25rem,env(safe-area-inset-top))] pr-[max(1.25rem,env(safe-area-inset-right))] pb-6 pl-6 sm:p-10 pointer-events-none select-none overflow-hidden">
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: isTransitioning ? 0 : 1, y: 0 }}

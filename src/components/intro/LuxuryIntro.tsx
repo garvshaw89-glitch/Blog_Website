@@ -22,7 +22,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
   const isTransitioningRef = useRef(false);
   const hasCompletedRef = useRef(false);
   const heldDirectionRef = useRef<-1 | 0 | 1>(0);
-  const touchStartYRef = useRef<number | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Lock background page scroll while compulsory entry portal is active
   useEffect(() => {
@@ -155,33 +155,46 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
 
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length > 0) {
-        touchStartYRef.current = e.touches[0].clientY;
+        touchStartRef.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        };
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (isTransitioningRef.current || touchStartYRef.current === null || e.touches.length === 0) {
+      if (e.touches.length === 0) return;
+      // Prevent iOS/iPadOS Safari rubber-band bounce while gliding through entry
+      e.preventDefault();
+      if (isTransitioningRef.current || touchStartRef.current === null) {
         return;
       }
-      const currentY = e.touches[0].clientY;
-      const deltaY = touchStartYRef.current - currentY;
-      touchStartYRef.current = currentY;
+      const curX = e.touches[0].clientX;
+      const curY = e.touches[0].clientY;
+      const dx = touchStartRef.current.x - curX;
+      const dy = touchStartRef.current.y - curY;
+      touchStartRef.current = { x: curX, y: curY };
+
+      // Accept both swipe-up and swipe-left seamlessly across phones & iPads
+      const dominantDelta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
+      const sensitivity = window.innerWidth < 768 ? 0.0011 : 0.00085;
       scrollTargetRef.current = Math.min(
         1,
-        Math.max(0, scrollTargetRef.current + deltaY * 0.0007)
+        Math.max(0, scrollTargetRef.current + dominantDelta * sensitivity)
       );
     };
 
     const handleTouchEnd = () => {
-      touchStartYRef.current = null;
+      touchStartRef.current = null;
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('wheel', handleWheel, { passive: false });
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -190,12 +203,16 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
     };
   }, []);
 
   if (webGlFailed) {
     return (
-      <div className="fixed inset-0 z-50 overflow-hidden select-none">
+      <div
+        className="fixed inset-0 h-[100dvh] z-50 overflow-hidden select-none"
+        style={{ touchAction: 'none', overscrollBehavior: 'none' }}
+      >
         <WebGlFallback
           scrollProgressRef={scrollProgressRef}
           zoomProgressRef={zoomProgressRef}
@@ -213,7 +230,8 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({ onComplete }) => {
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
-      className="fixed inset-0 z-50 bg-transparent overflow-hidden select-none"
+      style={{ touchAction: 'none', overscrollBehavior: 'none' }}
+      className="fixed inset-0 h-[100dvh] z-50 bg-transparent overflow-hidden select-none"
     >
       {/* 3D WebGL Particle Field */}
       <IntroScene

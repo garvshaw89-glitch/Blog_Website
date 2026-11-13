@@ -40,7 +40,9 @@
     color: #f2f3f5;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     overflow-x: clip;
+    overscroll-behavior-x: none;
     min-height: 100vh;
+    min-height: 100dvh;
   }
 
   /* Precision Custom Cursor for fine-pointer desktop environments */

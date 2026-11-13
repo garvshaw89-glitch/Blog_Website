@@ -135,9 +135,9 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
         </div>
 
         {/* Interactive Network Graph & Inspector */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
           {/* SVG Canvas Map */}
-          <div className="lg:col-span-8 relative h-[420px] sm:h-[500px] md:h-[560px] rounded-3xl bg-[#08090B]/90 border border-white/10 p-6 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
+          <div className="lg:col-span-8 relative h-[360px] sm:h-[460px] md:h-[540px] rounded-3xl bg-[#08090B]/90 border border-white/10 p-4 sm:p-6 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
             <svg className="absolute inset-0 w-full h-full pointer-events-none">
               {DNA_NODES.map((sourceNode) =>
                 sourceNode.connectedTo.map((targetId) => {

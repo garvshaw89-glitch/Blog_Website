@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { interactionEngine } from '../../context/SingularityInteractionEngine';
 import { applyMagneticAttraction, resetMagneticElement } from '../../hooks/cursor/useCursor';
 import '../cursor/cursor.css';
@@ -266,18 +266,16 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
 
   const activeMagneticRef = useRef<HTMLElement | null>(null);
   const currentCursorKeyRef = useRef<string>('default:');
-  const [isSupported, setIsSupported] = useState<boolean>(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const finePointerQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
-    if (!finePointerQuery.matches) {
-      setIsSupported(false);
-      return;
-    }
+    const isFinePointer = finePointerQuery.matches;
 
-    document.documentElement.classList.add('custom-cursor-enabled');
+    if (isFinePointer) {
+      document.documentElement.classList.add('custom-cursor-enabled');
+    }
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -285,14 +283,16 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
     if (!ctx) return;
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     const resizeCanvas = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.floor(window.innerWidth * dpr);
       canvas.height = Math.floor(window.innerHeight * dpr);
     };
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas, { passive: true });
+    window.addEventListener('orientationchange', resizeCanvas, { passive: true });
 
     const sprites: Record<ParticleTone, HTMLCanvasElement> = {
       white: createGlowSprite('rgba(255,255,255,1)', 'rgba(224,242,254,0.65)', 'rgba(56,189,248,0.18)'),
@@ -462,9 +462,20 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
       });
     };
 
-    const handlePointerDown = () => {
+    const handlePointerDown = (e: PointerEvent) => {
       const now = performance.now();
       boostUntilRef.current = now + 260;
+
+      if (e.pointerType === 'touch') {
+        targetPos.current.x = e.clientX;
+        targetPos.current.y = e.clientY;
+        rocketPos.current.x = e.clientX;
+        rocketPos.current.y = e.clientY;
+        prevTargetPos.current.x = e.clientX;
+        prevTargetPos.current.y = e.clientY;
+        isVisibleRef.current = true;
+        canvas.style.opacity = '1';
+      }
 
       if (!prefersReducedMotion) {
         const angleRad = (rocketAngleRef.current * Math.PI) / 180;
@@ -481,7 +492,45 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
       }
     };
 
+    let touchHoldUntil = 0;
+    let isTouching = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 0) return;
+      const t = e.touches[0];
+      isTouching = true;
+      touchHoldUntil = performance.now() + 900;
+      targetPos.current.x = t.clientX;
+      targetPos.current.y = t.clientY;
+      rocketPos.current.x = t.clientX;
+      rocketPos.current.y = t.clientY;
+      prevTargetPos.current.x = t.clientX;
+      prevTargetPos.current.y = t.clientY;
+      isVisibleRef.current = true;
+      canvas.style.opacity = '1';
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 0) return;
+      const t = e.touches[0];
+      isTouching = true;
+      touchHoldUntil = performance.now() + 650;
+      targetPos.current.x = t.clientX;
+      targetPos.current.y = t.clientY;
+      isVisibleRef.current = true;
+      canvas.style.opacity = '1';
+    };
+
+    const handleTouchEnd = () => {
+      isTouching = false;
+      touchHoldUntil = performance.now() + 550;
+    };
+
     window.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     let rafId = 0;
     let prevTime = performance.now();
@@ -493,6 +542,14 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
       const timeSec = now * 0.001;
 
       interactionEngine.step();
+
+      // Auto-fade rocket after touch release on coarse-pointer phones/tablets
+      if (!isFinePointer && !isTouching) {
+        const remaining = touchHoldUntil - now;
+        if (remaining <= 0) {
+          isVisibleRef.current = false;
+        }
+      }
 
       const tx = targetPos.current.x;
       const ty = targetPos.current.y;
@@ -532,7 +589,12 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
       const damp = 1 - Math.exp(-14 * dt);
       currentScaleRef.current += (desiredScale - currentScaleRef.current) * damp;
       currentThrustRef.current += (desiredThrust - currentThrustRef.current) * damp;
-      currentAlphaMultRef.current += (targetAlphaMultRef.current - currentAlphaMultRef.current) * damp;
+      const touchFade =
+        !isFinePointer && !isTouching
+          ? Math.max(0, Math.min(1, (touchHoldUntil - now) / 550))
+          : 1;
+      currentAlphaMultRef.current +=
+        (targetAlphaMultRef.current * touchFade - currentAlphaMultRef.current) * damp;
 
       const angleRad = (rocketAngleRef.current * Math.PI) / 180;
       const cosA = Math.cos(angleRad);
@@ -541,7 +603,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
       const thrust = currentThrustRef.current;
 
       // Emit velocity-driven trailing stardust exhaust particles in screen space
-      if (!prefersReducedMotion && isVisibleRef.current) {
+      if (!prefersReducedMotion && (isVisibleRef.current || (!isFinePointer && touchFade > 0.05))) {
         const emitRate = speed > 1.2 ? Math.min(90, 24 + speed * 2.2) : 14;
         emitAccumulator += dt * emitRate;
         while (emitAccumulator >= 1) {
@@ -560,20 +622,22 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
-      if (isVisibleRef.current) {
+      if (isVisibleRef.current || exhaustPool.length > 0) {
         const rx = rocketPos.current.x;
         const ry = rocketPos.current.y;
 
-        // Subtle dark backing pass keeps particles legible even over bright UI buttons
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = 0.72 * currentAlphaMultRef.current;
-        const backingSpine = [5, 11, 17, 23];
-        for (let b = 0; b < backingSpine.length; b++) {
-          const ly = backingSpine[b] * sc;
-          const bx = rx - ly * sinA;
-          const by = ry + ly * cosA;
-          const br = (9.5 + b * 1.1) * sc;
-          ctx.drawImage(contrastBackingSprite, bx - br, by - br, br * 2, br * 2);
+        if (isVisibleRef.current && currentAlphaMultRef.current > 0.02) {
+          // Subtle dark backing pass keeps particles legible even over bright UI buttons
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.globalAlpha = 0.72 * currentAlphaMultRef.current;
+          const backingSpine = [5, 11, 17, 23];
+          for (let b = 0; b < backingSpine.length; b++) {
+            const ly = backingSpine[b] * sc;
+            const bx = rx - ly * sinA;
+            const by = ry + ly * cosA;
+            const br = (9.5 + b * 1.1) * sc;
+            ctx.drawImage(contrastBackingSprite, bx - br, by - br, br * 2, br * 2);
+          }
         }
 
         ctx.globalCompositeOperation = 'lighter';
@@ -592,7 +656,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
           ep.vy *= 0.96;
 
           const progress = ep.life / ep.maxLife;
-          const alpha = (1 - progress) * (1 - progress) * 0.72 * currentAlphaMultRef.current;
+          const alpha = (1 - progress) * (1 - progress) * 0.72;
           const drawRadius = ep.size * (1.35 - progress * 0.55) * 3.1;
           ctx.globalAlpha = alpha;
           ctx.drawImage(
@@ -605,44 +669,44 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
         }
 
         // 2. Draw structured particle rocket rotated around exact nose tip (rx, ry)
+        if (isVisibleRef.current && currentAlphaMultRef.current > 0.02) {
+          for (let i = 0; i < structure.length; i++) {
+            const pt = structure[i];
+            let lx = pt.lx * sc;
+            let ly = pt.ly * sc;
 
-        for (let i = 0; i < structure.length; i++) {
-          const pt = structure[i];
-          let lx = pt.lx * sc;
-          let ly = pt.ly * sc;
+            if (pt.isFlame) {
+              const flicker = prefersReducedMotion
+                ? 1
+                : 0.88 + 0.16 * Math.sin(timeSec * 28 + pt.phase);
+              ly = (27.6 + (pt.ly - 27.6) * thrust * flicker) * sc;
+              lx *= 0.92 + thrust * 0.12;
+            }
 
-          if (pt.isFlame) {
-            // Stretch active plume along thruster axis & animate supersonic shimmer
-            const flicker = prefersReducedMotion
+            if (!prefersReducedMotion && pt.jitterAmp > 0) {
+              const jSpeed = pt.isFlame ? 22 : 4.2;
+              lx += Math.sin(timeSec * jSpeed + pt.phase) * pt.jitterAmp * sc;
+              ly += Math.cos(timeSec * (jSpeed * 0.85) + pt.phase * 1.3) * pt.jitterAmp * sc;
+            }
+
+            const wx = rx + lx * cosA - ly * sinA;
+            const wy = ry + lx * sinA + ly * cosA;
+
+            const twinkle = prefersReducedMotion
               ? 1
-              : 0.88 + 0.16 * Math.sin(timeSec * 28 + pt.phase);
-            ly = (27.6 + (pt.ly - 27.6) * thrust * flicker) * sc;
-            lx *= 0.92 + thrust * 0.12;
+              : 0.8 + 0.2 * Math.sin(timeSec * 5.2 + pt.phase);
+            const alpha = Math.min(1, pt.baseAlpha * twinkle * currentAlphaMultRef.current);
+            const drawRadius = pt.size * sc * (isBoosting && pt.isFlame ? 3.2 : 2.75);
+
+            ctx.globalAlpha = alpha;
+            ctx.drawImage(
+              sprites[pt.tone],
+              wx - drawRadius,
+              wy - drawRadius,
+              drawRadius * 2,
+              drawRadius * 2
+            );
           }
-
-          if (!prefersReducedMotion && pt.jitterAmp > 0) {
-            const jSpeed = pt.isFlame ? 22 : 4.2;
-            lx += Math.sin(timeSec * jSpeed + pt.phase) * pt.jitterAmp * sc;
-            ly += Math.cos(timeSec * (jSpeed * 0.85) + pt.phase * 1.3) * pt.jitterAmp * sc;
-          }
-
-          const wx = rx + lx * cosA - ly * sinA;
-          const wy = ry + lx * sinA + ly * cosA;
-
-          const twinkle = prefersReducedMotion
-            ? 1
-            : 0.8 + 0.2 * Math.sin(timeSec * 5.2 + pt.phase);
-          const alpha = Math.min(1, pt.baseAlpha * twinkle * currentAlphaMultRef.current);
-          const drawRadius = pt.size * sc * (isBoosting && pt.isFlame ? 3.2 : 2.75);
-
-          ctx.globalAlpha = alpha;
-          ctx.drawImage(
-            sprites[pt.tone],
-            wx - drawRadius,
-            wy - drawRadius,
-            drawRadius * 2,
-            drawRadius * 2
-          );
         }
 
         ctx.globalAlpha = 1;
@@ -657,9 +721,14 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
     return () => {
       unsubscribe();
       window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('orientationchange', resizeCanvas);
       window.removeEventListener('mouseenter', handlePointerEnter);
       window.removeEventListener('mouseleave', handlePointerLeave);
       window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
       document.documentElement.classList.remove('custom-cursor-enabled');
       cancelAnimationFrame(rafId);
 
@@ -668,10 +737,6 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({ magneticStrength = 0
       }
     };
   }, [magneticStrength]);
-
-  if (!isSupported) {
-    return null;
-  }
 
   return (
     <div

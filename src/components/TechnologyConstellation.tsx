@@ -68,9 +68,9 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
         </div>
 
         {/* Visual Graph & Interactive Inspector Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
           {/* Interactive Topology Canvas / SVG (7 cols on desktop) */}
-          <div className="lg:col-span-7 relative h-[420px] sm:h-[480px] rounded-3xl bg-[#070D18]/90 border border-white/10 p-4 sm:p-6 overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+          <div className="lg:col-span-7 relative h-[360px] sm:h-[460px] rounded-3xl bg-[#070D18]/90 border border-white/10 p-3 sm:p-6 overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] backdrop-blur-xl">
             {/* Background Grid */}
             <div className="absolute inset-0 bg-tech-dots opacity-30 pointer-events-none" />
 
@@ -127,9 +127,9 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
                       top: `${node.y}%`,
                       transform: 'translate(-50%, -50%)',
                     }}
-                    className={`absolute flex items-center gap-2 px-3 py-2 rounded-xl font-mono text-xs transition-all duration-200 cursor-pointer ${
+                    className={`absolute flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl font-mono text-[10px] sm:text-xs transition-all duration-200 cursor-pointer ${
                       isSelected
-                        ? 'bg-cyan-500 text-black font-bold shadow-[0_0_25px_rgba(6,182,212,0.8)] scale-110 z-20'
+                        ? 'bg-cyan-500 text-black font-bold shadow-[0_0_25px_rgba(6,182,212,0.8)] scale-105 sm:scale-110 z-20'
                         : 'bg-[#0E1524]/90 text-slate-200 border border-white/15 hover:border-cyan-400 hover:scale-105 z-10'
                     }`}
                   >
