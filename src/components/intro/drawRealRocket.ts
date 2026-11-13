@@ -1,7 +1,7 @@
 /**
- * Renders a high-detail 3D-shaded aerospace rocket in the exact 34x46 coordinate space
- * of rocketBlueprint.ts (nose-tip anchored at (0, 0)), so it aligns pixel-for-pixel
- * when dissolving/converting into the particle rocket cursor.
+ * Renders a large, high-detail 3D-shaded aerospace launch rocket in the canonical
+ * 34x46 coordinate frame (nose-tip anchored at (0, 0)), so scaling cleanly from
+ * hero launch size (~220-300px) down to 1.0x aligns seamlessly with rocketBlueprint.ts.
  */
 export function drawRealRocket(
   ctx: CanvasRenderingContext2D,
@@ -15,157 +15,150 @@ export function drawRealRocket(
   ctx.save();
   ctx.scale(scale, scale);
 
-  // 1. Multi-layer supersonic exhaust plume with Mach shock diamonds (behind nozzle)
-  const flameLen = (14.5 + thrust * 9.5) * (0.92 + 0.1 * Math.sin(elapsed * 34));
-  const nozzleBottomY = 27.4;
+  const nozzleBottomY = 27.6;
+  const flicker = 0.92 + 0.1 * Math.sin(elapsed * 38);
+  const flameLen = (11.5 + thrust * 9.0) * flicker;
 
-  // Outer warm plasma envelope
+  // 1. Crisp Supersonic Propulsion Plume (tight Mach inner cone + warm secondary flame)
   ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.globalAlpha = alpha * Math.min(1, 0.55 + thrust * 0.35);
-  const outerPlumeGrad = ctx.createLinearGradient(0, nozzleBottomY - 1, 0, nozzleBottomY + flameLen);
-  outerPlumeGrad.addColorStop(0, 'rgba(255, 243, 196, 0.98)');
-  outerPlumeGrad.addColorStop(0.22, 'rgba(251, 146, 60, 0.85)');
-  outerPlumeGrad.addColorStop(0.62, 'rgba(234, 88, 12, 0.35)');
-  outerPlumeGrad.addColorStop(1, 'rgba(234, 88, 12, 0)');
+  ctx.globalCompositeOperation = 'source-over';
 
+  // Warm orange-amber secondary flame cone (crisp, zero blurry halo blotch)
+  ctx.globalAlpha = alpha * Math.min(0.95, 0.65 + thrust * 0.28);
+  const outerPlumeGrad = ctx.createLinearGradient(0, nozzleBottomY - 0.5, 0, nozzleBottomY + flameLen);
+  outerPlumeGrad.addColorStop(0, 'rgba(255, 251, 235, 1)');
+  outerPlumeGrad.addColorStop(0.24, 'rgba(251, 146, 60, 0.96)');
+  outerPlumeGrad.addColorStop(0.6, 'rgba(234, 88, 12, 0.72)');
+  outerPlumeGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
+
+  const plumeW = 2.95 + thrust * 0.4;
   ctx.fillStyle = outerPlumeGrad;
   ctx.beginPath();
-  ctx.moveTo(-3.4, nozzleBottomY);
-  ctx.quadraticCurveTo(-4.0, nozzleBottomY + flameLen * 0.32, 0, nozzleBottomY + flameLen);
-  ctx.quadraticCurveTo(4.0, nozzleBottomY + flameLen * 0.32, 3.4, nozzleBottomY);
+  ctx.moveTo(-2.85, nozzleBottomY);
+  ctx.quadraticCurveTo(-plumeW * 0.95, nozzleBottomY + flameLen * 0.28, 0, nozzleBottomY + flameLen);
+  ctx.quadraticCurveTo(plumeW * 0.95, nozzleBottomY + flameLen * 0.28, 2.85, nozzleBottomY);
   ctx.closePath();
   ctx.fill();
 
-  // Inner cyan-white ionized core jet
-  const innerLen = flameLen * 0.66;
-  const innerPlumeGrad = ctx.createLinearGradient(0, nozzleBottomY - 1, 0, nozzleBottomY + innerLen);
+  // Crisp incandescent blue-white central Mach core
+  const innerLen = flameLen * 0.58;
+  const innerPlumeGrad = ctx.createLinearGradient(0, nozzleBottomY - 0.4, 0, nozzleBottomY + innerLen);
   innerPlumeGrad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-  innerPlumeGrad.addColorStop(0.35, 'rgba(186, 230, 253, 0.92)');
-  innerPlumeGrad.addColorStop(0.8, 'rgba(56, 189, 248, 0.4)');
+  innerPlumeGrad.addColorStop(0.4, 'rgba(186, 230, 253, 0.95)');
+  innerPlumeGrad.addColorStop(0.85, 'rgba(56, 189, 248, 0.35)');
   innerPlumeGrad.addColorStop(1, 'rgba(14, 165, 233, 0)');
 
   ctx.fillStyle = innerPlumeGrad;
   ctx.beginPath();
-  ctx.moveTo(-1.85, nozzleBottomY);
-  ctx.quadraticCurveTo(-2.1, nozzleBottomY + innerLen * 0.3, 0, nozzleBottomY + innerLen);
-  ctx.quadraticCurveTo(2.1, nozzleBottomY + innerLen * 0.3, 1.85, nozzleBottomY);
+  ctx.moveTo(-1.55, nozzleBottomY);
+  ctx.quadraticCurveTo(-1.7, nozzleBottomY + innerLen * 0.26, 0, nozzleBottomY + innerLen);
+  ctx.quadraticCurveTo(1.7, nozzleBottomY + innerLen * 0.26, 1.55, nozzleBottomY);
   ctx.closePath();
   ctx.fill();
-
-  // Supersonic Mach shock diamonds
-  const diamondCount = 3;
-  for (let d = 0; d < diamondCount; d++) {
-    const frac = (d + 0.55) / (diamondCount + 0.5);
-    const dy = nozzleBottomY + innerLen * frac;
-    const dw = (1.35 - d * 0.3) * (0.9 + 0.12 * Math.sin(elapsed * 42 + d * 1.7));
-    const dh = 2.0 - d * 0.35;
-    ctx.globalAlpha = alpha * (0.72 - d * 0.16);
-    ctx.fillStyle = 'rgba(240, 249, 255, 0.95)';
-    ctx.beginPath();
-    ctx.moveTo(0, dy - dh);
-    ctx.lineTo(dw, dy);
-    ctx.lineTo(0, dy + dh);
-    ctx.lineTo(-dw, dy);
-    ctx.closePath();
-    ctx.fill();
-  }
   ctx.restore();
 
   ctx.globalAlpha = alpha;
 
-  // 2. Swept delta stabilizer wings (left lit, right shadowed, matching blueprint vertices)
-  // Left Wing
-  const leftWingGrad = ctx.createLinearGradient(-11.8, 16.8, -5.0, 24.8);
-  leftWingGrad.addColorStop(0, '#7dd3fc');
-  leftWingGrad.addColorStop(0.28, '#cbd5e1');
-  leftWingGrad.addColorStop(1, '#475569');
+  // 2. Sculpted Swept Aerospace Delta Wings (left & right with beveled 3D lighting)
+  // Left wing (lit metallic top-face + crimson/amber aerospace trim)
+  const leftWingGrad = ctx.createLinearGradient(-12.0, 17.0, -4.8, 24.8);
+  leftWingGrad.addColorStop(0, '#f1f5f9');
+  leftWingGrad.addColorStop(0.32, '#94a3b8');
+  leftWingGrad.addColorStop(0.75, '#475569');
+  leftWingGrad.addColorStop(1, '#1e293b');
   ctx.fillStyle = leftWingGrad;
   ctx.beginPath();
-  ctx.moveTo(-5.0, 16.8);
-  ctx.lineTo(-11.8, 24.8);
-  ctx.lineTo(-5.2, 23.6);
+  ctx.moveTo(-4.9, 16.5);
+  ctx.lineTo(-12.1, 24.9);
+  ctx.lineTo(-5.0, 23.8);
   ctx.closePath();
   ctx.fill();
 
-  // Left wing leading-edge bevel highlight
-  ctx.strokeStyle = 'rgba(224, 242, 254, 0.85)';
-  ctx.lineWidth = 0.45;
+  // Left wing root fairing shadow & specular leading edge
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.88)';
+  ctx.lineWidth = 0.36;
   ctx.beginPath();
-  ctx.moveTo(-5.0, 16.8);
-  ctx.lineTo(-11.8, 24.8);
+  ctx.moveTo(-4.9, 16.5);
+  ctx.lineTo(-12.1, 24.9);
   ctx.stroke();
 
-  // Right Wing
-  const rightWingGrad = ctx.createLinearGradient(5.0, 16.8, 11.8, 24.8);
+  // Right wing (deep gunmetal shadow + subtle sky-blue ambient bounce)
+  const rightWingGrad = ctx.createLinearGradient(4.8, 17.0, 12.0, 24.8);
   rightWingGrad.addColorStop(0, '#334155');
-  rightWingGrad.addColorStop(0.65, '#1e293b');
-  rightWingGrad.addColorStop(1, '#0f172a');
+  rightWingGrad.addColorStop(0.55, '#1e293b');
+  rightWingGrad.addColorStop(1, '#090d16');
   ctx.fillStyle = rightWingGrad;
   ctx.beginPath();
-  ctx.moveTo(5.0, 16.8);
-  ctx.lineTo(11.8, 24.8);
-  ctx.lineTo(5.2, 23.6);
+  ctx.moveTo(4.9, 16.5);
+  ctx.lineTo(12.1, 24.9);
+  ctx.lineTo(5.0, 23.8);
   ctx.closePath();
   ctx.fill();
 
-  // Right wing trailing rim glint
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
-  ctx.lineWidth = 0.4;
+  ctx.strokeStyle = 'rgba(125, 211, 252, 0.5)';
+  ctx.lineWidth = 0.32;
   ctx.beginPath();
-  ctx.moveTo(5.0, 16.8);
-  ctx.lineTo(11.8, 24.8);
+  ctx.moveTo(4.9, 16.5);
+  ctx.lineTo(12.1, 24.9);
   ctx.stroke();
 
-  // Wingtip aerospace trim accents
+  // Wingtip thruster / navigation pods
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(-12.1, 23.9, 0.85, 1.35);
+  ctx.fillRect(11.25, 23.9, 0.85, 1.35);
   ctx.fillStyle = '#f59e0b';
   ctx.beginPath();
-  ctx.arc(-11.4, 24.35, 0.48, 0, Math.PI * 2);
-  ctx.arc(11.4, 24.35, 0.48, 0, Math.PI * 2);
+  ctx.arc(-11.65, 24.0, 0.38, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#38bdf8';
+  ctx.beginPath();
+  ctx.arc(11.65, 24.0, 0.38, 0, Math.PI * 2);
   ctx.fill();
 
-  // 3. De Laval Engine Bell Thruster Nozzle (y = 25.2 .. 27.6)
-  const nozzleGrad = ctx.createLinearGradient(-4.3, 26.4, 4.3, 26.4);
-  nozzleGrad.addColorStop(0, '#334155');
-  nozzleGrad.addColorStop(0.32, '#94a3b8');
-  nozzleGrad.addColorStop(0.65, '#334155');
-  nozzleGrad.addColorStop(1, '#0f172a');
+  // 3. De Laval Rocket Engine Bell Nozzle & Cooling Manifold (y = 25.2 .. 27.8)
+  const nozzleGrad = ctx.createLinearGradient(-4.5, 26.5, 4.5, 26.5);
+  nozzleGrad.addColorStop(0, '#1e293b');
+  nozzleGrad.addColorStop(0.28, '#94a3b8');
+  nozzleGrad.addColorStop(0.55, '#475569');
+  nozzleGrad.addColorStop(0.85, '#0f172a');
+  nozzleGrad.addColorStop(1, '#1e293b');
   ctx.fillStyle = nozzleGrad;
   ctx.beginPath();
-  ctx.moveTo(-3.6, 25.3);
-  ctx.lineTo(3.6, 25.3);
-  ctx.lineTo(4.35, 27.55);
-  ctx.lineTo(-4.35, 27.55);
+  ctx.moveTo(-3.6, 25.2);
+  ctx.lineTo(3.6, 25.2);
+  ctx.lineTo(4.5, 27.65);
+  ctx.lineTo(-4.5, 27.65);
   ctx.closePath();
   ctx.fill();
 
-  // Hot plasma rim inside nozzle throat
-  ctx.fillStyle = '#38bdf8';
-  ctx.fillRect(-3.6, 27.2, 7.2, 0.4);
-  ctx.strokeStyle = 'rgba(15, 23, 42, 0.7)';
-  ctx.lineWidth = 0.35;
+  // Engine nozzle cooling ribs
+  ctx.strokeStyle = 'rgba(15, 23, 42, 0.85)';
+  ctx.lineWidth = 0.3;
   ctx.beginPath();
-  ctx.moveTo(-3.8, 26.4);
-  ctx.lineTo(3.8, 26.4);
+  ctx.moveTo(-3.8, 25.9);
+  ctx.lineTo(3.8, 25.9);
+  ctx.moveTo(-4.15, 26.75);
+  ctx.lineTo(4.15, 26.75);
   ctx.stroke();
 
-  // 4. Main Cylindrical Aerospace Fuselage Hull (matching exact 0..25.6 ogive curve)
+  // Glowing hot chamber rim
+  ctx.fillStyle = 'rgba(254, 243, 199, 0.92)';
+  ctx.fillRect(-3.8, 27.35, 7.6, 0.32);
+
+  // 4. Main Cylindrical Spacecraft Hull (0 .. 25.6 ogive curve matching blueprint)
   const buildHullPath = () => {
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    // Right profile (y = 0 -> 25.6)
-    for (let i = 1; i <= 20; i++) {
-      const y = (i / 20) * 19.2;
-      const hw = 5.4 * Math.pow(y / 19.2, 0.72);
+    for (let i = 1; i <= 24; i++) {
+      const y = (i / 24) * 19.2;
+      const hw = 5.45 * Math.pow(y / 19.2, 0.72);
       ctx.lineTo(hw, y);
     }
-    ctx.lineTo(4.1, 25.6);
-    // Flat aft bulkhead
-    ctx.lineTo(-4.1, 25.6);
-    // Left profile (y = 19.2 -> 0)
-    for (let i = 20; i >= 1; i--) {
-      const y = (i / 20) * 19.2;
-      const hw = 5.4 * Math.pow(y / 19.2, 0.72);
+    ctx.lineTo(4.15, 25.6);
+    ctx.lineTo(-4.15, 25.6);
+    for (let i = 24; i >= 1; i--) {
+      const y = (i / 24) * 19.2;
+      const hw = 5.45 * Math.pow(y / 19.2, 0.72);
       ctx.lineTo(-hw, y);
     }
     ctx.closePath();
@@ -173,108 +166,126 @@ export function drawRealRocket(
 
   buildHullPath();
   const hullGrad = ctx.createLinearGradient(-5.5, 13, 5.5, 13);
-  hullGrad.addColorStop(0, '#94a3b8');
-  hullGrad.addColorStop(0.24, '#f8fafc');
-  hullGrad.addColorStop(0.45, '#e2e8f0');
-  hullGrad.addColorStop(0.72, '#475569');
-  hullGrad.addColorStop(0.92, '#1e293b');
+  hullGrad.addColorStop(0, '#64748b');
+  hullGrad.addColorStop(0.18, '#e2e8f0');
+  hullGrad.addColorStop(0.32, '#ffffff');
+  hullGrad.addColorStop(0.55, '#cbd5e1');
+  hullGrad.addColorStop(0.78, '#334155');
+  hullGrad.addColorStop(0.94, '#0f172a');
   hullGrad.addColorStop(1, '#334155');
   ctx.fillStyle = hullGrad;
   ctx.fill();
 
-  // Clip interior aerospace detailing cleanly to fuselage hull
+  // Clip realistic hull panel architecture inside fuselage
   ctx.save();
   buildHullPath();
   ctx.clip();
 
-  // Thermal / titanium nose cone fairing (y = 0 .. 7.8)
-  const noseGrad = ctx.createLinearGradient(-4.0, 4.0, 4.0, 4.0);
-  noseGrad.addColorStop(0, '#0284c7');
-  noseGrad.addColorStop(0.28, '#e0f2fe');
-  noseGrad.addColorStop(0.55, '#38bdf8');
-  noseGrad.addColorStop(0.85, '#0369a1');
-  noseGrad.addColorStop(1, '#0c4a6e');
+  // Thermal Nose Fairing (metallic graphite / ceramic tip + cobalt-titanium collar)
+  const noseGrad = ctx.createLinearGradient(-4.2, 3.8, 4.2, 3.8);
+  noseGrad.addColorStop(0, '#1e293b');
+  noseGrad.addColorStop(0.28, '#94a3b8');
+  noseGrad.addColorStop(0.45, '#e2e8f0');
+  noseGrad.addColorStop(0.75, '#0f172a');
+  noseGrad.addColorStop(1, '#1e293b');
   ctx.fillStyle = noseGrad;
-  ctx.fillRect(-6, 0, 12, 7.8);
+  ctx.fillRect(-6, 0, 12, 7.6);
 
-  // Machined stage separation rings & metallic seams
-  ctx.strokeStyle = 'rgba(15, 23, 42, 0.52)';
-  ctx.lineWidth = 0.45;
+  // Crimson-amber aerospace orbital mission stripe under fairing
+  ctx.fillStyle = '#0284c7';
+  ctx.fillRect(-6, 6.8, 12, 0.95);
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillRect(-6, 7.75, 12, 0.45);
+
+  // Titanium interstage carbon ring & service seam lines
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(-6, 18.85, 12, 0.95);
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(-6, 24.45, 12, 1.15);
+
+  // Subtle vertical cylindrical panel stringers
+  ctx.strokeStyle = 'rgba(15, 23, 42, 0.25)';
+  ctx.lineWidth = 0.22;
   ctx.beginPath();
-  ctx.moveTo(-6, 7.8);
-  ctx.lineTo(6, 7.8);
-  ctx.moveTo(-6, 19.2);
-  ctx.lineTo(6, 19.2);
+  ctx.moveTo(-2.4, 8.2);
+  ctx.lineTo(-2.4, 24.4);
+  ctx.moveTo(2.1, 8.2);
+  ctx.lineTo(2.1, 24.4);
   ctx.stroke();
 
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
-  ctx.lineWidth = 0.3;
+  // Highlight along illuminated panel edge
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.lineWidth = 0.22;
   ctx.beginPath();
-  ctx.moveTo(-6, 8.2);
-  ctx.lineTo(6, 8.2);
+  ctx.moveTo(-2.15, 8.2);
+  ctx.lineTo(-2.15, 24.4);
   ctx.stroke();
 
-  // Subtle vertical dorsal fin spine on lower fuselage
-  const finGrad = ctx.createLinearGradient(-0.7, 21.8, 0.7, 21.8);
-  finGrad.addColorStop(0, '#e0f2fe');
-  finGrad.addColorStop(0.5, '#38bdf8');
-  finGrad.addColorStop(1, '#0c4a6e');
-  ctx.fillStyle = finGrad;
+  // Raised 3D Dorsal Center Stabilizer Fin (gives strong cylindrical depth during banking)
+  const dorsalGrad = ctx.createLinearGradient(-0.65, 21.5, 0.65, 21.5);
+  dorsalGrad.addColorStop(0, '#f8fafc');
+  dorsalGrad.addColorStop(0.45, '#94a3b8');
+  dorsalGrad.addColorStop(1, '#0f172a');
+  ctx.fillStyle = dorsalGrad;
   ctx.beginPath();
-  ctx.moveTo(0, 18.2);
-  ctx.lineTo(0.7, 25.6);
-  ctx.lineTo(-0.7, 25.6);
+  ctx.moveTo(0, 18.0);
+  ctx.lineTo(0.75, 25.6);
+  ctx.lineTo(-0.75, 25.6);
   ctx.closePath();
   ctx.fill();
 
   ctx.restore();
 
-  // Crisp subtle hull rim highlight
+  // Sharp metallic hull silhouette outline
   buildHullPath();
-  ctx.strokeStyle = 'rgba(226, 232, 240, 0.45)';
-  ctx.lineWidth = 0.28;
+  ctx.strokeStyle = 'rgba(241, 245, 249, 0.45)';
+  ctx.lineWidth = 0.24;
   ctx.stroke();
 
-  // 5. Recessed Sapphire-Glass Cockpit Canopy (y = 9.6 .. 17.2)
+  // 5. Recessed Machined Sapphire Cockpit Viewport (y = 9.6 .. 17.2)
   const buildCanopyPath = (inset = 0) => {
     ctx.beginPath();
-    for (let i = 0; i <= 14; i++) {
-      const t = i / 14;
+    for (let i = 0; i <= 16; i++) {
+      const t = i / 16;
       const y = 9.6 + inset + t * (7.6 - inset * 2);
-      const w = Math.max(0, 2.05 * Math.sin(Math.pow(t, 0.75) * Math.PI) - inset * 0.7);
+      const w = Math.max(0, 2.1 * Math.sin(Math.pow(t, 0.75) * Math.PI) - inset * 0.72);
       if (i === 0) ctx.moveTo(0, y);
       else ctx.lineTo(w, y);
     }
-    for (let i = 14; i >= 0; i--) {
-      const t = i / 14;
+    for (let i = 16; i >= 0; i--) {
+      const t = i / 16;
       const y = 9.6 + inset + t * (7.6 - inset * 2);
-      const w = Math.max(0, 2.05 * Math.sin(Math.pow(t, 0.75) * Math.PI) - inset * 0.7);
+      const w = Math.max(0, 2.1 * Math.sin(Math.pow(t, 0.75) * Math.PI) - inset * 0.72);
       ctx.lineTo(-w, y);
     }
     ctx.closePath();
   };
 
-  // Machined bezel
+  // Titanium bezel ring
   buildCanopyPath(0);
-  ctx.fillStyle = '#334155';
+  const bezelGrad = ctx.createLinearGradient(-2.1, 10, 2.1, 17);
+  bezelGrad.addColorStop(0, '#cbd5e1');
+  bezelGrad.addColorStop(0.5, '#475569');
+  bezelGrad.addColorStop(1, '#0f172a');
+  ctx.fillStyle = bezelGrad;
   ctx.fill();
 
-  // Deep tinted space glass core
+  // Deep armored space glass
   buildCanopyPath(0.32);
-  const glassGrad = ctx.createLinearGradient(-1.6, 10, 1.6, 17);
-  glassGrad.addColorStop(0, '#0284c7');
-  glassGrad.addColorStop(0.38, '#082f49');
+  const glassGrad = ctx.createLinearGradient(-1.5, 10, 1.5, 16.8);
+  glassGrad.addColorStop(0, '#0ea5e9');
+  glassGrad.addColorStop(0.35, '#082f49');
   glassGrad.addColorStop(1, '#020617');
   ctx.fillStyle = glassGrad;
   ctx.fill();
 
-  // Crisp curved glass specular reflection
-  ctx.strokeStyle = 'rgba(224, 242, 254, 0.9)';
-  ctx.lineWidth = 0.42;
+  // Curved glass specular highlight streak
+  ctx.strokeStyle = 'rgba(240, 249, 255, 0.92)';
+  ctx.lineWidth = 0.4;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(-0.45, 10.9);
-  ctx.quadraticCurveTo(-1.2, 12.1, -0.9, 13.7);
+  ctx.moveTo(-0.4, 10.8);
+  ctx.quadraticCurveTo(-1.2, 12.1, -0.85, 13.8);
   ctx.stroke();
 
   ctx.restore();

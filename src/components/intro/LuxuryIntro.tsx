@@ -5,6 +5,7 @@ import { IntroScene } from './IntroScene';
 import { IntroOverlay } from './IntroOverlay';
 import { WebGlFallback } from './WebGlFallback';
 import { EntryRocketLanding } from './EntryRocketLanding';
+import { RocketFlightAnimation } from './rocket/RocketFlightAnimation';
 import { introAudio } from './introAudio';
 import { entrySequenceManager } from './entrySequenceManager';
 
@@ -33,6 +34,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
   const [rocketFinished, setRocketFinished] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [webGlFailed, setWebGlFailed] = useState(false);
+  const [rocketWebGlFailed, setRocketWebGlFailed] = useState(false);
   const [isAudioOn, setIsAudioOn] = useState(false);
 
   // Unified timeline refs for white-sand THINK. -> CREATE. -> DISCOVER. + PORTFOLIO BY GARV SHAW portal
@@ -53,6 +55,9 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
   const hasCompletedRef = useRef(false);
   const heldDirectionRef = useRef<-1 | 0 | 1>(0);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const impactShakeWrapRef = useRef<HTMLDivElement | null>(null);
+  const whiteoutFlashRef = useRef<HTMLDivElement | null>(null);
+  const impactStartPerfRef = useRef<number | null>(null);
   const onCompleteRef = useRef(onComplete);
   const onRocketCursorReadyRef = useRef(onRocketCursorReady);
 
@@ -85,7 +90,8 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
   // Unified master animation loop on the single PORTFOLIO BY GARV SHAW entry page:
   // 1) White sand forms THINK. -> CREATE. -> DISCOVER.
   // 2) DISCOVER. exhales gently into white sand breeze as PORTFOLIO BY GARV SHAW reveals
-  // 3) Visitor scrolls right-to-left -> centers PORTFOLIO -> zooms through transparent 'T' into site
+  // 3) 3D PBR Rocket emerges from deep universe, lands with impact shake, and morphs into cursor
+  // 4) Visitor scrolls right-to-left -> centers PORTFOLIO -> zooms through transparent 'T' into site
   useEffect(() => {
     let animId = 0;
     const startTime = performance.now();
@@ -125,15 +131,15 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
         }
       }
 
-      // Split center of universe & launch real rocket breakout toward PORTFOLIO BY GARV SHAW
+      // Launch 3D rocket from the universe during DISCOVER. -> PORTFOLIO BY GARV SHAW transition
       const rocketStartSec = prefersReducedMotion ? 1.05 : ROCKET_LAUNCH_START_SEC;
       if (!rocketLaunchedRef.current && t >= rocketStartSec) {
         rocketLaunchedRef.current = true;
         setRocketLaunchStarted(true);
       }
 
-      // Safety fallback in case the tab was throttled so the portal never stalls waiting for the landing
-      const safetyUnlockSec = prefersReducedMotion ? 1.5 : 13.0;
+      // Safety fallback in case the tab was throttled so the portal never stalls waiting for the 6.65s landing + morph
+      const safetyUnlockSec = prefersReducedMotion ? 1.6 : 16.2;
       if (!rocketCursorReadyRef.current && t >= safetyUnlockSec) {
         rocketCursorReadyRef.current = true;
         portalReadyForScrollRef.current = true;
@@ -205,6 +211,46 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
         }
       }
 
+      // Subtle radial screen shake & soft whiteout flash on center rocket impact
+      if (impactStartPerfRef.current !== null) {
+        const dtImpact = (now - impactStartPerfRef.current) / 1000;
+        const SHAKE_DUR = 0.52;
+        const FLASH_DUR = 0.68;
+
+        if (impactShakeWrapRef.current) {
+          if (!prefersReducedMotion && dtImpact >= 0 && dtImpact < SHAKE_DUR) {
+            const decay = Math.exp(-7.8 * dtImpact);
+            const isSmall = window.innerWidth < 640;
+            const maxAmp = isSmall ? 4.2 : 6.8;
+            const theta = dtImpact * 54;
+            const radialOffset = Math.sin(dtImpact * 36) * maxAmp * decay;
+            const sx = Math.cos(theta) * radialOffset + Math.sin(dtImpact * 79) * (maxAmp * 0.35 * decay);
+            const sy = Math.sin(theta) * radialOffset + Math.cos(dtImpact * 73) * (maxAmp * 0.35 * decay);
+            const pulseScale = 1 + 0.011 * decay * Math.sin(Math.min(1, dtImpact / 0.14) * Math.PI);
+            impactShakeWrapRef.current.style.transform = `translate3d(${sx.toFixed(2)}px, ${sy.toFixed(2)}px, 0) scale(${pulseScale.toFixed(4)})`;
+          } else if (impactShakeWrapRef.current.style.transform !== '') {
+            impactShakeWrapRef.current.style.transform = '';
+          }
+        }
+
+        if (whiteoutFlashRef.current) {
+          if (dtImpact >= 0 && dtImpact < FLASH_DUR) {
+            const rise = Math.min(dtImpact / 0.055, 1);
+            const fallP = Math.max(0, (dtImpact - 0.055) / (FLASH_DUR - 0.055));
+            const envelope = dtImpact < 0.055 ? rise : Math.pow(1 - fallP, 2.35);
+            const peakOpacity = prefersReducedMotion ? 0.25 : 0.48;
+            const flashOpacity = envelope * peakOpacity;
+            const bloomScale = 0.88 + (dtImpact / FLASH_DUR) * 0.3;
+            whiteoutFlashRef.current.style.opacity = flashOpacity.toFixed(3);
+            whiteoutFlashRef.current.style.transform = `scale(${bloomScale.toFixed(3)})`;
+          } else {
+            whiteoutFlashRef.current.style.opacity = '0';
+            whiteoutFlashRef.current.style.transform = '';
+            impactStartPerfRef.current = null;
+          }
+        }
+      }
+
       animId = requestAnimationFrame(loop);
     };
 
@@ -213,6 +259,10 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
       cancelAnimationFrame(animId);
     };
   }, [triggerEntryTransition, prefersReducedMotion]);
+
+  const handleRocketCenterImpact = useCallback(() => {
+    impactStartPerfRef.current = performance.now();
+  }, []);
 
   const handleRocketBecomeCursor = useCallback(() => {
     if (!rocketCursorReadyRef.current) {
@@ -344,22 +394,41 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
         className="fixed inset-0 h-[100dvh] z-50 overflow-hidden select-none"
         style={{ touchAction: 'none', overscrollBehavior: 'none' }}
       >
-        <WebGlFallback
-          scrollProgressRef={scrollProgressRef}
-          zoomProgressRef={zoomProgressRef}
-          portalRevealRef={portalRevealRef}
-          isAudioOn={isAudioOn}
-          onToggleAudio={handleToggleAudio}
-          isTransitioning={isTransitioning}
-          prefersReducedMotion={prefersReducedMotion}
-        />
-        {rocketLaunchStarted && !rocketFinished && (
-          <EntryRocketLanding
-            onBecomeCursor={handleRocketBecomeCursor}
-            onFinished={handleRocketFinished}
+        <div
+          ref={impactShakeWrapRef}
+          className="fixed inset-0 w-full h-full"
+          style={{ willChange: 'transform', transformOrigin: '50% 50%' }}
+        >
+          <WebGlFallback
+            scrollProgressRef={scrollProgressRef}
+            zoomProgressRef={zoomProgressRef}
+            portalRevealRef={portalRevealRef}
+            isAudioOn={isAudioOn}
+            onToggleAudio={handleToggleAudio}
+            isTransitioning={isTransitioning}
             prefersReducedMotion={prefersReducedMotion}
           />
-        )}
+          {rocketLaunchStarted && !rocketFinished && (
+            <EntryRocketLanding
+              onCenterImpact={handleRocketCenterImpact}
+              onBecomeCursor={handleRocketBecomeCursor}
+              onFinished={handleRocketFinished}
+              prefersReducedMotion={prefersReducedMotion}
+            />
+          )}
+        </div>
+        <div
+          ref={whiteoutFlashRef}
+          aria-hidden="true"
+          className="fixed inset-0 pointer-events-none z-[8]"
+          style={{
+            opacity: 0,
+            willChange: 'opacity, transform',
+            transformOrigin: '50% 50%',
+            background:
+              'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.72) 28%, rgba(224, 242, 254, 0.34) 62%, rgba(255, 255, 255, 0.14) 100%)',
+          }}
+        />
       </div>
     );
   }
@@ -378,44 +447,76 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
     >
       <h1 className="sr-only">Think. Create. Discover. Portfolio by Garv Shaw</h1>
 
-      {/* 1. Ambient 3D floating particle field */}
-      <IntroScene
-        elapsedTimeRef={elapsedTimeRef}
-        scrollProgressRef={scrollProgressRef}
-        isTransitioningRef={isTransitioningRef}
-        onWebGLError={handleWebGLError}
-      />
-
-      {/* 2. White sand THINK. -> CREATE. -> DISCOVER. on the same entry page */}
-      {!sandFinished && (
-        <ParticleScene
-          timelineSecRef={timelineSecRef}
-          isExitingRef={isSandExitingRef}
-          exitProgressRef={sandExitProgressRef}
-          isHoveringEnterRef={isHoveringEnterRef}
-          prefersReducedMotion={prefersReducedMotion}
+      {/* Impact radial shake container spanning entry universe, typography & landing rocket */}
+      <div
+        ref={impactShakeWrapRef}
+        className="fixed inset-0 w-full h-full"
+        style={{ willChange: 'transform', transformOrigin: '50% 50%' }}
+      >
+        {/* 1. Ambient 3D floating particle field */}
+        <IntroScene
+          elapsedTimeRef={elapsedTimeRef}
+          scrollProgressRef={scrollProgressRef}
+          isTransitioningRef={isTransitioningRef}
           onWebGLError={handleWebGLError}
         />
-      )}
 
-      {/* 3. SVG Knockout Slide ("PORTFOLIO  BY  GARV SHAW") -> Center PORTFOLIO -> Zoom through transparent 'T' */}
-      <IntroOverlay
-        scrollProgressRef={scrollProgressRef}
-        zoomProgressRef={zoomProgressRef}
-        portalRevealRef={portalRevealRef}
-        isAudioOn={isAudioOn}
-        onToggleAudio={handleToggleAudio}
-        isTransitioning={isTransitioning}
-      />
+        {/* 2. White sand THINK. -> CREATE. -> DISCOVER. on the same entry page */}
+        {!sandFinished && (
+          <ParticleScene
+            timelineSecRef={timelineSecRef}
+            isExitingRef={isSandExitingRef}
+            exitProgressRef={sandExitProgressRef}
+            isHoveringEnterRef={isHoveringEnterRef}
+            prefersReducedMotion={prefersReducedMotion}
+            onWebGLError={handleWebGLError}
+          />
+        )}
 
-      {/* 4. Real Rocket breaks out from middle of universe splitting particles, lands in center, and converts into cursor */}
-      {rocketLaunchStarted && !rocketFinished && (
-        <EntryRocketLanding
-          onBecomeCursor={handleRocketBecomeCursor}
-          onFinished={handleRocketFinished}
-          prefersReducedMotion={prefersReducedMotion}
+        {/* 3. SVG Knockout Slide ("PORTFOLIO  BY  GARV SHAW") -> Center PORTFOLIO -> Zoom through transparent 'T' */}
+        <IntroOverlay
+          scrollProgressRef={scrollProgressRef}
+          zoomProgressRef={zoomProgressRef}
+          portalRevealRef={portalRevealRef}
+          isAudioOn={isAudioOn}
+          onToggleAudio={handleToggleAudio}
+          isTransitioning={isTransitioning}
         />
-      )}
+
+        {/* 4. 5-Scene WebGL Three.js + GSAP Cinematic Rocket Arrival, Landing Impact & Cursor Particle Morph (with 2D fallback if WebGL fails) */}
+        {rocketLaunchStarted &&
+          !rocketFinished &&
+          (rocketWebGlFailed ? (
+            <EntryRocketLanding
+              onCenterImpact={handleRocketCenterImpact}
+              onBecomeCursor={handleRocketBecomeCursor}
+              onFinished={handleRocketFinished}
+              prefersReducedMotion={prefersReducedMotion}
+            />
+          ) : (
+            <RocketFlightAnimation
+              onCenterImpact={handleRocketCenterImpact}
+              onBecomeCursor={handleRocketBecomeCursor}
+              onFinished={handleRocketFinished}
+              onWebGLError={() => setRocketWebGlFailed(true)}
+              prefersReducedMotion={prefersReducedMotion}
+            />
+          ))}
+      </div>
+
+      {/* 5. Soft radial whiteout flash overlay on center rocket touchdown */}
+      <div
+        ref={whiteoutFlashRef}
+        aria-hidden="true"
+        className="fixed inset-0 pointer-events-none z-[8]"
+        style={{
+          opacity: 0,
+          willChange: 'opacity, transform',
+          transformOrigin: '50% 50%',
+          background:
+            'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.72) 28%, rgba(224, 242, 254, 0.34) 62%, rgba(255, 255, 255, 0.14) 100%)',
+        }}
+      />
     </motion.div>
   );
 };

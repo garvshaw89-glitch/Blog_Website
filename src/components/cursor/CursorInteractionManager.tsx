@@ -3,9 +3,163 @@ import { MotionValue, useMotionValue, useSpring } from 'motion/react';
 import { useCursor, CursorType, CursorTheme } from '../../context/CursorContext';
 import { useReducedMotion } from '../../hooks/cursor/useReducedMotion';
 import { applyMagneticAttraction, resetMagneticElement } from '../../hooks/cursor/useCursor';
+import { SingularityInteractionState } from '../../context/SingularityInteractionEngine';
 import { TrailPoint } from './CursorTrail';
 import { MicroParticle } from './CursorMicroParticles';
 import { RippleEvent } from './CursorRipple';
+
+export type CursorMode = 'normal' | 'fast' | 'hover' | 'click' | 'text-restore';
+
+export interface CursorVisualTargets {
+  mode: CursorMode;
+  cursorType: 'default' | 'project' | 'drag' | 'button' | 'link' | 'text';
+  labelText: string;
+  targetScale: number;
+  targetThrust: number;
+  targetAlphaMult: number;
+  restoreNativeCursor: boolean;
+  hoverGlow: number;
+}
+
+/**
+ * CursorInteractionController:
+ * Lightweight zero-rerender controller translating DOM targets, pointer velocity,
+ * click bursts, and active text selection into physical parameters for RocketCursor.
+ */
+export class CursorInteractionController {
+  private lastClickAt = 0;
+
+  public notifyClick(now: number): void {
+    this.lastClickAt = now;
+  }
+
+  public isOverTextContext(el: EventTarget | null): boolean {
+    if (!(el instanceof Element)) return false;
+    const textEl = el.closest(
+      'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select, [contenteditable="true"], [data-cursor="text"]'
+    );
+    if (textEl) return true;
+
+    const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+    if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) {
+      const anchor = sel.anchorNode?.parentElement;
+      if (anchor && anchor.contains(el)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public evaluate(
+    state: SingularityInteractionState,
+    pointerSpeedPx: number,
+    now: number,
+    hoveredElement?: EventTarget | null
+  ): CursorVisualTargets {
+    const isClickActive = now - this.lastClickAt < 260;
+    const overText =
+      state.hoverType === 'text' ||
+      state.customCursor === 'text' ||
+      this.isOverTextContext(hoveredElement ?? null);
+
+    if (overText) {
+      return {
+        mode: 'text-restore',
+        cursorType: 'text',
+        labelText: '',
+        targetScale: 0.78,
+        targetThrust: 0.5,
+        targetAlphaMult: 0,
+        restoreNativeCursor: true,
+        hoverGlow: 0,
+      };
+    }
+
+    const customCursor = state.customCursor;
+    const customLabel = state.customCursorLabel;
+
+    if (
+      customCursor === 'project' ||
+      customCursor === 'view' ||
+      state.hoverType === 'project'
+    ) {
+      return {
+        mode: isClickActive ? 'click' : 'hover',
+        cursorType: 'project',
+        labelText: customLabel || 'OPEN',
+        targetScale: 1.16,
+        targetThrust: 1.38,
+        targetAlphaMult: 1,
+        restoreNativeCursor: false,
+        hoverGlow: 1,
+      };
+    }
+
+    if (customCursor === 'image') {
+      return {
+        mode: isClickActive ? 'click' : 'hover',
+        cursorType: 'project',
+        labelText: customLabel || 'EXPLORE',
+        targetScale: 1.15,
+        targetThrust: 1.35,
+        targetAlphaMult: 1,
+        restoreNativeCursor: false,
+        hoverGlow: 0.95,
+      };
+    }
+
+    if (customCursor === 'drag') {
+      return {
+        mode: isClickActive ? 'click' : 'hover',
+        cursorType: 'drag',
+        labelText: '← DRAG →',
+        targetScale: 1.12,
+        targetThrust: 1.24,
+        targetAlphaMult: 1,
+        restoreNativeCursor: false,
+        hoverGlow: 0.8,
+      };
+    }
+
+    if (customCursor === 'button' || state.hoverType === 'button') {
+      return {
+        mode: isClickActive ? 'click' : 'hover',
+        cursorType: 'button',
+        labelText: customLabel || 'VIEW ↗',
+        targetScale: 1.12,
+        targetThrust: 1.26,
+        targetAlphaMult: 1,
+        restoreNativeCursor: false,
+        hoverGlow: 0.85,
+      };
+    }
+
+    if (customCursor === 'link' || state.hoverType === 'link') {
+      return {
+        mode: isClickActive ? 'click' : 'hover',
+        cursorType: 'link',
+        labelText: customLabel || 'VISIT ↗',
+        targetScale: 1.1,
+        targetThrust: 1.22,
+        targetAlphaMult: 1,
+        restoreNativeCursor: false,
+        hoverGlow: 0.78,
+      };
+    }
+
+    const isFast = pointerSpeedPx > 10.5;
+    return {
+      mode: isClickActive ? 'click' : isFast ? 'fast' : 'normal',
+      cursorType: 'default',
+      labelText: '',
+      targetScale: isFast ? 1.04 : 1,
+      targetThrust: isFast ? 1.45 : 1,
+      targetAlphaMult: 1,
+      restoreNativeCursor: false,
+      hoverGlow: isFast ? 0.35 : 0,
+    };
+  }
+}
 
 interface InteractionManagerRenderProps {
   mouseX: MotionValue<number>;

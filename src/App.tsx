@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
-import { CustomCursor } from './components/ui/CustomCursor';
+import { RocketCursor } from './components/cursor/RocketCursor';
 import { LuxuryIntro } from './components/intro/LuxuryIntro';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { MotionParticleWorld } from './components/atmosphere/MotionParticleWorld';
@@ -121,8 +121,8 @@ export default function App() {
         {/* 1. Thin Animated Scroll Tracker */}
         <ScrollProgressBar />
 
-        {/* 2. Desktop High-End Custom Cursor with Multi-State Labels */}
-        <CustomCursor enabled={isRocketCursorActive} />
+        {/* 2. Desktop High-End Rocket Cursor with Particle Morph Continuity */}
+        <RocketCursor enabled={isRocketCursorActive} />
 
         {/* 3. Global Command Palette (Cmd + K) */}
         <CommandPalette

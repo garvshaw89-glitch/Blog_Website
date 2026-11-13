@@ -55,10 +55,14 @@
     html.custom-cursor-enabled [data-magnetic] {
       cursor: none !important;
     }
-    html.custom-cursor-enabled input,
+    html.custom-cursor-enabled input:not([type="button"]):not([type="submit"]):not([type="reset"]),
     html.custom-cursor-enabled textarea,
-    html.custom-cursor-enabled [contenteditable="true"] {
+    html.custom-cursor-enabled [contenteditable="true"],
+    html.custom-cursor-enabled [data-cursor="text"] {
       cursor: text !important;
+    }
+    html.custom-cursor-enabled select {
+      cursor: pointer !important;
     }
   }
 
