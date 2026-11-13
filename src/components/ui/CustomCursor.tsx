@@ -301,12 +301,13 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
 
       if (!prefersReducedMotion && targetAlphaMultRef.current > 0.1) {
         const angleRad = (rocketAngleRef.current * Math.PI) / 180;
+        const rocketCursorScale = currentScaleRef.current * 1.35;
         for (let i = 0; i < 18; i++) {
           spawnExhaustParticle(
             rocketPos.current.x,
             rocketPos.current.y,
             angleRad,
-            currentScaleRef.current,
+            rocketCursorScale,
             2.3,
             i % 3 === 0 ? 'amber' : i % 2 === 0 ? 'white' : 'cyan'
           );
@@ -378,9 +379,8 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
         ((isFinePointer ? targetAlphaMultRef.current : 0) - currentAlphaMultRef.current) * damp;
 
       const angleRad = (rocketAngleRef.current * Math.PI) / 180;
-      const cosA = Math.cos(angleRad);
-      const sinA = Math.sin(angleRad);
       const sc = currentScaleRef.current;
+      const rocketCursorScale = sc * 1.35;
       const thrust = currentThrustRef.current;
 
       // Emit subtle clean exhaust micro-sparks ONLY on active flight/boost (keeps miniature rocket razor-sharp)
@@ -399,7 +399,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
             rocketPos.current.x,
             rocketPos.current.y,
             angleRad,
-            sc,
+            rocketCursorScale,
             isBoosting ? 1.55 : 0.75 + Math.min(speed * 0.035, 1.0)
           );
         }
@@ -461,7 +461,6 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = 1.5;
 
-          const rocketCursorScale = sc * 0.96;
           drawRealRocket(
             ctx,
             rocketCursorScale,

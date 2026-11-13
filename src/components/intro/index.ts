@@ -5,6 +5,7 @@ export { TextParticleFormation } from './TextParticleFormation';
 export { AtmosphericDust } from './AtmosphericDust';
 export { EntryComposition } from './EntryComposition';
 export { EntryRocketLanding } from './EntryRocketLanding';
+export { ScrollToViewPrompt } from './ScrollToViewPrompt';
 export { RocketFlightAnimation } from './rocket/RocketFlightAnimation';
 export { UniverseScene } from './rocket/UniverseScene';
 export { RocketModel } from './rocket/RocketModel';

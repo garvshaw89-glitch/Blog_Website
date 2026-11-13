@@ -5,6 +5,7 @@ import { IntroScene } from './IntroScene';
 import { IntroOverlay } from './IntroOverlay';
 import { WebGlFallback } from './WebGlFallback';
 import { EntryRocketLanding } from './EntryRocketLanding';
+import { ScrollToViewPrompt } from './ScrollToViewPrompt';
 import { RocketFlightAnimation } from './rocket/RocketFlightAnimation';
 import { introAudio } from './introAudio';
 import { entrySequenceManager } from './entrySequenceManager';
@@ -32,6 +33,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
   const [sandFinished, setSandFinished] = useState(false);
   const [rocketLaunchStarted, setRocketLaunchStarted] = useState(false);
   const [rocketFinished, setRocketFinished] = useState(false);
+  const [showScrollPrompt, setShowScrollPrompt] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [webGlFailed, setWebGlFailed] = useState(false);
   const [rocketWebGlFailed, setRocketWebGlFailed] = useState(false);
@@ -44,6 +46,8 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
   const isHoveringEnterRef = useRef(false);
   const rocketLaunchedRef = useRef(false);
   const rocketCursorReadyRef = useRef(false);
+  const scrollPromptStartedRef = useRef(false);
+  const scrollPromptDoneRef = useRef(false);
 
   const portalRevealRef = useRef(0);
   const portalReadyForScrollRef = useRef(false);
@@ -142,35 +146,38 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
       const safetyUnlockSec = prefersReducedMotion ? 1.6 : 16.2;
       if (!rocketCursorReadyRef.current && t >= safetyUnlockSec) {
         rocketCursorReadyRef.current = true;
-        portalReadyForScrollRef.current = true;
         onRocketCursorReadyRef.current?.();
+        if (!scrollPromptStartedRef.current) {
+          scrollPromptStartedRef.current = true;
+          setShowScrollPrompt(true);
+        }
       }
 
-      // Trigger smooth white-sand dissolution after DISCOVER. settles (or immediately if user starts scrolling)
+      // Trigger smooth white-sand dissolution after DISCOVER. settles
       const holdEnd = prefersReducedMotion ? 1.2 : SAND_HOLD_END_SEC;
-      if (!isSandExitingRef.current && (t >= holdEnd || scrollTargetRef.current > 0.002)) {
+      if (!isSandExitingRef.current && t >= holdEnd) {
         isSandExitingRef.current = true;
       }
 
       if (isSandExitingRef.current && sandExitProgressRef.current < 1) {
-        const speedMult = scrollTargetRef.current > 0.01 ? 1.65 : 1.0;
         const nextExit = Math.min(
-          sandExitProgressRef.current + (dt * speedMult) / SAND_DISSOLVE_SEC,
+          sandExitProgressRef.current + dt / SAND_DISSOLVE_SEC,
           1
         );
         sandExitProgressRef.current = nextExit;
 
-        // Smoothly cross-reveal PORTFOLIO BY GARV SHAW on the same page as sand exhales
-        portalRevealRef.current = Math.max(
-          portalRevealRef.current,
-          Math.min(Math.max((nextExit - 0.15) / 0.7, 0), 1)
-        );
-
         if (nextExit >= 1 && !sandMarkedDone) {
           sandMarkedDone = true;
-          portalRevealRef.current = 1;
           setSandFinished(true);
         }
+      }
+
+      // Slide & reveal PORTFOLIO BY GARV SHAW smoothly ONLY after "Scroll To View" particle popup dissolves
+      if (scrollPromptDoneRef.current && portalRevealRef.current < 1) {
+        portalRevealRef.current = Math.min(
+          1,
+          portalRevealRef.current + dt / (prefersReducedMotion ? 0.35 : 0.95)
+        );
       }
 
       // Slow, steady glide while holding Arrow / Page / Space keys (once portal is unlocked)
@@ -267,9 +274,18 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
   const handleRocketBecomeCursor = useCallback(() => {
     if (!rocketCursorReadyRef.current) {
       rocketCursorReadyRef.current = true;
-      portalReadyForScrollRef.current = true;
       onRocketCursorReadyRef.current?.();
+      if (!scrollPromptStartedRef.current) {
+        scrollPromptStartedRef.current = true;
+        setShowScrollPrompt(true);
+      }
     }
+  }, []);
+
+  const handleScrollPromptComplete = useCallback(() => {
+    scrollPromptDoneRef.current = true;
+    portalReadyForScrollRef.current = true;
+    setShowScrollPrompt(false);
   }, []);
 
   const handleRocketFinished = useCallback(() => {
@@ -416,6 +432,12 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
               prefersReducedMotion={prefersReducedMotion}
             />
           )}
+          {showScrollPrompt && (
+            <ScrollToViewPrompt
+              onComplete={handleScrollPromptComplete}
+              prefersReducedMotion={prefersReducedMotion}
+            />
+          )}
         </div>
         <div
           ref={whiteoutFlashRef}
@@ -502,9 +524,17 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
               prefersReducedMotion={prefersReducedMotion}
             />
           ))}
+
+        {/* 5. Particle-assembled 15px "Scroll To View" popup before PORTFOLIO BY GARV SHAW slides in */}
+        {showScrollPrompt && (
+          <ScrollToViewPrompt
+            onComplete={handleScrollPromptComplete}
+            prefersReducedMotion={prefersReducedMotion}
+          />
+        )}
       </div>
 
-      {/* 5. Soft radial whiteout flash overlay on center rocket touchdown */}
+      {/* 6. Soft radial whiteout flash overlay on center rocket touchdown */}
       <div
         ref={whiteoutFlashRef}
         aria-hidden="true"

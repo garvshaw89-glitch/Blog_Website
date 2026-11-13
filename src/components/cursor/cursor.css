@@ -43,8 +43,8 @@
 
 .cursor-view-label {
   position: absolute;
-  top: 18px;
-  left: 16px;
+  top: 24px;
+  left: 22px;
   font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
   font-size: 8.5px !important;
   font-weight: 700 !important;

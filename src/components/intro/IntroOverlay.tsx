@@ -185,7 +185,8 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
           const t1 = Math.min(Math.max(p / 0.56, 0), 1);
           const startX1 = vw * 0.82;
           const endX1 = -(totalWidth + vw * 0.08);
-          const tx = startX1 + (endX1 - startX1) * t1;
+          const revealSlide = (1 - smootherstep(reveal)) * Math.min(220, vw * 0.22);
+          const tx = startX1 + (endX1 - startX1) * t1 + revealSlide;
           transformAttr = `translate(${tx.toFixed(2)}, 0)`;
         } else {
           // Phase 2: "PORTFOLIO" glides smoothly into the middle of the screen

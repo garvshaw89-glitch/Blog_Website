@@ -497,8 +497,8 @@ export const RocketFlightAnimation: React.FC<RocketFlightAnimationProps> = ({
           2 * Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * distToPlane;
         const worldPerPx = visibleHeightWorld / curVh;
 
-        // Match ~27px length of RocketCursor (local height ~5.04 -> scale such that nose-to-nozzle ~ 27px)
-        const targetCursorScale = Math.max(0.032, (27 * worldPerPx) / 5.04);
+        // Match ~38px length of RocketCursor (local height ~5.04 -> scale such that nose-to-nozzle ~ 38px)
+        const targetCursorScale = Math.max(0.044, (38 * worldPerPx) / 5.04);
         const targetRotZ = THREE.MathUtils.degToRad(28); // Tilts nose upper-left (-28deg CSS) matching RocketCursor
 
         // Offset rocket center so its nose tip (local y = +2.62) rests precisely at (tipWorldX, tipWorldY)
