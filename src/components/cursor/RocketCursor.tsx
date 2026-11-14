@@ -1,13 +1,16 @@
 import React from 'react';
 import { CustomCursor, CustomCursorProps } from '../ui/CustomCursor';
 
+export type AsteroidCursorProps = CustomCursorProps;
 export type RocketCursorProps = CustomCursorProps;
 
 /**
- * RocketCursor:
- * Desktop interactive miniature particle rocket cursor with velocity banking,
- * hover boost, click bursts, native text-input restoration, and mobile touch feedback.
+ * AsteroidCursor:
+ * Sculpted miniature cratered asteroid cursor anchored directly onto the crashed
+ * entry asteroid landing transition, replacing the default OS cursor on fine pointers.
  */
-export const RocketCursor: React.FC<RocketCursorProps> = (props) => {
+export const AsteroidCursor: React.FC<AsteroidCursorProps> = (props) => {
   return <CustomCursor {...props} />;
 };
+
+export const RocketCursor = AsteroidCursor;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
-import { RocketCursor } from './components/cursor/RocketCursor';
+import { AsteroidCursor } from './components/cursor/RocketCursor';
 import { LuxuryIntro } from './components/intro/LuxuryIntro';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { MilkyWayGalaxy } from './components/atmosphere/MilkyWayGalaxy';
@@ -121,8 +121,8 @@ export default function App() {
         {/* 1. Thin Animated Scroll Tracker */}
         <ScrollProgressBar />
 
-        {/* 2. Desktop High-End Rocket Cursor with Particle Morph Continuity */}
-        <RocketCursor enabled={isRocketCursorActive} />
+        {/* 2. Desktop Sculpted Asteroid Cursor transformed from Entry Crash */}
+        <AsteroidCursor enabled={isRocketCursorActive} />
 
         {/* 3. Global Command Palette (Cmd + K) */}
         <CommandPalette

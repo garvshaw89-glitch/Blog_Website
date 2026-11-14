@@ -4,9 +4,9 @@ import { ParticleScene } from './ParticleScene';
 import { IntroScene } from './IntroScene';
 import { IntroOverlay } from './IntroOverlay';
 import { WebGlFallback } from './WebGlFallback';
-import { EntryRocketLanding } from './EntryRocketLanding';
+import { EntryAsteroidLanding } from './EntryAsteroidLanding';
 import { ScrollToViewPrompt } from './ScrollToViewPrompt';
-import { RocketFlightAnimation } from './rocket/RocketFlightAnimation';
+import { AsteroidFlightAnimation } from './asteroid/AsteroidFlightAnimation';
 import { introAudio } from './introAudio';
 import { entrySequenceManager } from './entrySequenceManager';
 
@@ -425,7 +425,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
             prefersReducedMotion={prefersReducedMotion}
           />
           {rocketLaunchStarted && !rocketFinished && (
-            <EntryRocketLanding
+            <EntryAsteroidLanding
               onCenterImpact={handleRocketCenterImpact}
               onBecomeCursor={handleRocketBecomeCursor}
               onFinished={handleRocketFinished}
@@ -505,18 +505,18 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
           isTransitioning={isTransitioning}
         />
 
-        {/* 4. 5-Scene WebGL Three.js + GSAP Cinematic Rocket Arrival, Landing Impact & Cursor Particle Morph (with 2D fallback if WebGL fails) */}
+        {/* 4. 3D WebGL Milky Way Asteroid Swarm, Screen Crash Impact & Shrink-to-Cursor Conversion (with 2D fallback) */}
         {rocketLaunchStarted &&
           !rocketFinished &&
           (rocketWebGlFailed ? (
-            <EntryRocketLanding
+            <EntryAsteroidLanding
               onCenterImpact={handleRocketCenterImpact}
               onBecomeCursor={handleRocketBecomeCursor}
               onFinished={handleRocketFinished}
               prefersReducedMotion={prefersReducedMotion}
             />
           ) : (
-            <RocketFlightAnimation
+            <AsteroidFlightAnimation
               onCenterImpact={handleRocketCenterImpact}
               onBecomeCursor={handleRocketBecomeCursor}
               onFinished={handleRocketFinished}
