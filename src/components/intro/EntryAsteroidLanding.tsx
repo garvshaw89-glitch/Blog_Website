@@ -263,7 +263,11 @@ export const EntryAsteroidLanding: React.FC<EntryAsteroidLandingProps> = ({
             const destY = hasPointer ? eng.clientY : cy;
 
             const curX = cx + (destX - cx) * smooth;
-            const curY = cy + (destY - cy) * smooth;
+            const curY = cy + (destY - cy) * smooth - Math.sin(shrinkP * Math.PI) * 28 * (1 - shrinkP);
+
+            if (shrinkP > 0.05 && shrinkP < 0.94 && Math.random() < 0.55) {
+              spawnTrailEmber(curX, curY, 0.35 * (1 - shrinkP));
+            }
 
             if (elapsed >= BECOME_CURSOR_SEC && !cursorActivated) {
               cursorActivated = true;

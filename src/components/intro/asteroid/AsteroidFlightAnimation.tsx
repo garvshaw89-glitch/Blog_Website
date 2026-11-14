@@ -160,19 +160,19 @@ export const AsteroidFlightAnimation: React.FC<AsteroidFlightAnimationProps> = (
     camera.position.copy(baseCamPos);
     camera.lookAt(0, 0, 0);
 
-    // Three-point celestial asteroid lighting (warm solar key + Milky Way cyan rim + dim bounce)
-    const ambientLight = new THREE.AmbientLight(0x94a3b8, 0.45);
+    // Authentic deep-space asteroid terminator lighting (high sun contrast + Milky Way rim)
+    const ambientLight = new THREE.AmbientLight(0x64748b, 0.16);
     scene.add(ambientLight);
 
-    const solarKey = new THREE.DirectionalLight(0xfff4e0, 2.8);
+    const solarKey = new THREE.DirectionalLight(0xfff6e5, 3.6);
     solarKey.position.set(-7.5, 6.2, 8.5);
     scene.add(solarKey);
 
-    const milkyWayRim = new THREE.DirectionalLight(0x38bdf8, 1.45);
+    const milkyWayRim = new THREE.DirectionalLight(0x38bdf8, 1.75);
     milkyWayRim.position.set(8.0, -4.5, -6.5);
     scene.add(milkyWayRim);
 
-    const rearHighlight = new THREE.PointLight(0xfb923c, 0.8, 22);
+    const rearHighlight = new THREE.PointLight(0xfb923c, 0.9, 22);
     rearHighlight.position.set(0, 0, 4.5);
     scene.add(rearHighlight);
 
@@ -192,20 +192,22 @@ export const AsteroidFlightAnimation: React.FC<AsteroidFlightAnimationProps> = (
     const rockMat = new THREE.MeshStandardMaterial({
       map: textures.albedoMap,
       bumpMap: textures.bumpMap,
-      bumpScale: 0.065,
+      bumpScale: 0.115,
       roughnessMap: textures.roughnessMap,
-      roughness: 0.88,
-      metalness: 0.14,
+      roughness: 0.92,
+      metalness: 0.08,
+      envMapIntensity: 0.24,
       vertexColors: true,
     });
 
     const heroRockMat = new THREE.MeshStandardMaterial({
       map: textures.albedoMap,
       bumpMap: textures.bumpMap,
-      bumpScale: 0.085,
+      bumpScale: 0.13,
       roughnessMap: textures.roughnessMap,
-      roughness: 0.84,
-      metalness: 0.18,
+      roughness: 0.9,
+      metalness: 0.1,
+      envMapIntensity: 0.26,
       vertexColors: true,
       emissiveMap: textures.emissiveMap,
       emissive: new THREE.Color(0xff6b1a),
@@ -215,16 +217,16 @@ export const AsteroidFlightAnimation: React.FC<AsteroidFlightAnimationProps> = (
     });
 
     const variantGeos = [
-      buildCraggyAsteroidGeometry(101, isLowPower ? 2 : 3, 7),
-      buildCraggyAsteroidGeometry(209, isLowPower ? 2 : 3, 8),
-      buildCraggyAsteroidGeometry(317, isLowPower ? 2 : 3, 6),
-      buildCraggyAsteroidGeometry(433, isLowPower ? 2 : 3, 9),
-      buildCraggyAsteroidGeometry(547, isLowPower ? 2 : 3, 7),
+      buildCraggyAsteroidGeometry(101, isLowPower ? 2 : 3, 10),
+      buildCraggyAsteroidGeometry(209, isLowPower ? 2 : 3, 11),
+      buildCraggyAsteroidGeometry(317, isLowPower ? 2 : 3, 9),
+      buildCraggyAsteroidGeometry(433, isLowPower ? 2 : 3, 12),
+      buildCraggyAsteroidGeometry(547, isLowPower ? 2 : 3, 10),
     ];
-    const heroGeo = buildCraggyAsteroidGeometry(773, isLowPower ? 3 : 4, 12);
+    const heroGeo = buildCraggyAsteroidGeometry(773, isLowPower ? 3 : 4, 16);
 
     // 1. Passing Asteroid Swarm streaking from side of the Milky Way
-    const swarmCount = isLowPower ? 20 : 34;
+    const swarmCount = isLowPower ? 24 : 38;
     const passingAsteroids: PassingAsteroidItem[] = [];
     const swarmGroup = new THREE.Group();
     scene.add(swarmGroup);
@@ -529,13 +531,22 @@ export const AsteroidFlightAnimation: React.FC<AsteroidFlightAnimationProps> = (
             const curScale = THREE.MathUtils.lerp(1.05, targetWorldScale, smooth);
             heroPivot.scale.setScalar(curScale);
 
-            // Decelerate spin as asteroid settles into pointer orientation
+            // Decelerate spin cleanly as asteroid slides onto cursor
             const spinDamp = Math.max(0, 1 - shrinkT);
             heroMesh.rotation.x += dt * 1.4 * spinDamp;
             heroMesh.rotation.y += dt * 1.8 * spinDamp;
             heroMesh.rotation.z += dt * 0.9 * spinDamp;
 
-            heroRockMat.emissiveIntensity = Math.max(0.04, 0.25 * (1 - shrinkT));
+            // Emit subtle stardust/ember micro-wake while sliding to the user's cursor
+            if (shrinkT > 0.04 && shrinkT < 0.95) {
+              emitAccum += dt * (isLowPower ? 18 : 30);
+              while (emitAccum >= 1) {
+                emitAccum -= 1;
+                spawnTrailEmber(heroPivot.position, 0.45 * (1 - shrinkT));
+              }
+            }
+
+            heroRockMat.emissiveIntensity = Math.max(0.04, 0.28 * (1 - shrinkT));
 
             if (elapsed >= BECOME_CURSOR_SEC) {
               if (!cursorActivated) {

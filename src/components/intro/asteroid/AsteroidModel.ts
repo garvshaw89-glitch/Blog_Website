@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 
 /**
- * Deterministic 3D hash + value noise / FBM + spherical impact-crater
- * sculpting for photorealistic PBR asteroids with zero external texture fetches.
+ * Photorealistic procedural 3D asteroid sculpter & PBR texture bundle.
+ * Combines angular Voronoi boulder planes, ridged multifractal strata,
+ * multi-scale spherical craters with crisp raised ejecta rims, and high-contrast
+ * carbonaceous regolith / silicate PBR textures with zero external asset fetches.
  */
 
 function fract(v: number): number {
@@ -44,14 +46,14 @@ function noise3(x: number, y: number, z: number): number {
   return nxy0 + (nxy1 - nxy0) * uz;
 }
 
-function fbm3(x: number, y: number, z: number, octaves = 4): number {
+function fbm3(x: number, y: number, z: number, octaves = 5): number {
   let value = 0;
   let amp = 0.5;
   let freq = 1;
   for (let i = 0; i < octaves; i++) {
     value += amp * (noise3(x * freq, y * freq, z * freq) * 2 - 1);
-    freq *= 2.07;
-    amp *= 0.48;
+    freq *= 2.09;
+    amp *= 0.49;
   }
   return value;
 }
@@ -60,6 +62,11 @@ interface CraterSpec {
   dir: THREE.Vector3;
   radius: number;
   depth: number;
+}
+
+interface BoulderPlane {
+  normal: THREE.Vector3;
+  cut: number;
 }
 
 function seededRand(seed: number): () => number {
@@ -72,7 +79,7 @@ function seededRand(seed: number): () => number {
 }
 
 /**
- * Sculpt a realistic jagged, cratered asteroid BufferGeometry from a subdivided icosphere.
+ * Sculpt an irregular, angular, deeply cratered rocky asteroid BufferGeometry.
  */
 export function buildCraggyAsteroidGeometry(
   seed: number,
@@ -83,20 +90,34 @@ export function buildCraggyAsteroidGeometry(
   const pos = geo.attributes.position as THREE.BufferAttribute;
   const rand = seededRand(seed);
 
-  // Asymmetric tri-axial asteroid proportions (like 433 Eros / Bennu / Vesta)
-  const stretchX = 0.88 + rand() * 0.48;
-  const stretchY = 0.72 + rand() * 0.36;
-  const stretchZ = 0.82 + rand() * 0.42;
-  const offsetSeed = new THREE.Vector3(rand() * 31, rand() * 31, rand() * 31);
+  // Asymmetric bilobed / elongated asteroid axes
+  const stretchX = 0.85 + rand() * 0.55;
+  const stretchY = 0.68 + rand() * 0.38;
+  const stretchZ = 0.78 + rand() * 0.45;
+  const offsetSeed = new THREE.Vector3(rand() * 41, rand() * 41, rand() * 41);
 
+  // Subtle planar cleavage planes that give real fractured rock silhouettes
+  const planes: BoulderPlane[] = [];
+  for (let p = 0; p < 5; p++) {
+    const theta = rand() * Math.PI * 2;
+    const u = rand() * 2 - 1;
+    const s = Math.sqrt(Math.max(0, 1 - u * u));
+    planes.push({
+      normal: new THREE.Vector3(s * Math.cos(theta), u, s * Math.sin(theta)).normalize(),
+      cut: 0.72 + rand() * 0.22,
+    });
+  }
+
+  // Multi-scale impact craters (2-3 large basin craters + several crisp mid/small craters)
   const craters: CraterSpec[] = [];
   for (let i = 0; i < craterCount; i++) {
     const theta = rand() * Math.PI * 2;
     const u = rand() * 2 - 1;
     const s = Math.sqrt(Math.max(0, 1 - u * u));
     const dir = new THREE.Vector3(s * Math.cos(theta), u, s * Math.sin(theta)).normalize();
-    const radius = 0.16 + Math.pow(rand(), 1.45) * 0.34;
-    const depth = radius * (0.36 + rand() * 0.24);
+    const isBasin = i < 3;
+    const radius = isBasin ? 0.34 + rand() * 0.2 : 0.11 + Math.pow(rand(), 1.35) * 0.24;
+    const depth = radius * (isBasin ? 0.42 : 0.38 + rand() * 0.24);
     craters.push({ dir, radius, depth });
   }
 
@@ -108,44 +129,54 @@ export function buildCraggyAsteroidGeometry(
     v.fromBufferAttribute(pos, i).normalize();
     n.copy(v);
 
-    // Large geological lobes + ridged fracture strata
+    // Large rocky lobes + sharp fractured ridges + gritty boulder micro-bump
     const macro = fbm3(
-      n.x * 1.45 + offsetSeed.x,
-      n.y * 1.45 + offsetSeed.y,
-      n.z * 1.45 + offsetSeed.z,
-      3
+      n.x * 1.35 + offsetSeed.x,
+      n.y * 1.35 + offsetSeed.y,
+      n.z * 1.35 + offsetSeed.z,
+      4
     );
-    const ridgeRaw = 1 - Math.abs(
-      fbm3(
-        n.x * 3.1 + offsetSeed.y,
-        n.y * 3.1 + offsetSeed.z,
-        n.z * 3.1 + offsetSeed.x,
-        3
-      )
-    );
-    const ridges = Math.pow(Math.max(0, ridgeRaw), 2.1) * 0.16;
-    const micro = fbm3(n.x * 7.5 + seed, n.y * 7.5 - seed, n.z * 7.5, 2) * 0.045;
+    const ridgeRaw =
+      1 -
+      Math.abs(
+        fbm3(
+          n.x * 2.8 + offsetSeed.y,
+          n.y * 2.8 + offsetSeed.z,
+          n.z * 2.8 + offsetSeed.x,
+          4
+        )
+      );
+    const ridges = Math.pow(Math.max(0, ridgeRaw), 2.35) * 0.22;
+    const microBoulders = fbm3(n.x * 8.5 + seed, n.y * 8.5 - seed, n.z * 8.5, 3) * 0.055;
 
-    let radius = 1.0 + macro * 0.22 + ridges + micro;
+    let radius = 1.0 + macro * 0.26 + ridges + microBoulders;
+
+    // Soft rock cleavage facet flattening
+    for (let p = 0; p < planes.length; p++) {
+      const pl = planes[p];
+      const dot = n.dot(pl.normal);
+      if (dot > pl.cut) {
+        radius -= (dot - pl.cut) * 0.48;
+      }
+    }
+
     let craterTint = 1.0;
 
-    // Carve concave spherical impact bowls with raised ejecta rims
+    // Carve concave spherical impact bowls with raised rocky ejecta rims
     for (let c = 0; c < craters.length; c++) {
       const cr = craters[c];
       const dist = n.distanceTo(cr.dir);
-      if (dist < cr.radius * 1.32) {
+      if (dist < cr.radius * 1.35) {
         const q = dist / cr.radius;
         if (q < 1.0) {
-          // Concave crater bowl
           const bowl = Math.cos(q * Math.PI * 0.5);
-          radius -= Math.pow(bowl, 1.35) * cr.depth;
-          craterTint = Math.min(craterTint, 0.62 + 0.38 * q);
+          radius -= Math.pow(bowl, 1.45) * cr.depth;
+          craterTint = Math.min(craterTint, 0.48 + 0.52 * q);
         } else {
-          // Subtle raised crater rim
-          const rimT = (q - 1.0) / 0.32;
+          const rimT = (q - 1.0) / 0.35;
           const rim = Math.sin((1 - rimT) * Math.PI);
-          radius += rim * cr.depth * 0.28;
-          craterTint = Math.max(craterTint, 1.08);
+          radius += rim * cr.depth * 0.32;
+          craterTint = Math.max(craterTint, 1.14);
         }
       }
     }
@@ -157,11 +188,11 @@ export function buildCraggyAsteroidGeometry(
       n.z * radius * stretchZ
     );
 
-    // Vertex ambient-occlusion / mineral tint (darkened inside craters, brighter on ridges)
-    const ao = Math.min(1.12, Math.max(0.42, craterTint * (0.85 + ridges * 1.1)));
+    // Rich dark carbonaceous regolith variation (warm grey-brown ridges, darker crater floors)
+    const ao = Math.min(1.18, Math.max(0.32, craterTint * (0.78 + ridges * 1.15)));
     colors[i * 3] = ao;
-    colors[i * 3 + 1] = ao * 0.98;
-    colors[i * 3 + 2] = ao * 0.95;
+    colors[i * 3 + 1] = ao * 0.96;
+    colors[i * 3 + 2] = ao * 0.91;
   }
 
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -178,8 +209,9 @@ export interface AsteroidTextureBundle {
 }
 
 /**
- * Generates procedural 512x512 carbonaceous/silicate rocky asteroid PBR textures:
- * albedo (SRGBColorSpace), bump, roughness, and molten re-entry fissure emissive map.
+ * Generates high-detail 512x512 real carbonaceous/silicate asteroid PBR maps:
+ * dark charcoal regolith, dusty grey ejecta, deep micro-craters, sharp mineral fissures,
+ * high matte roughness contrast, and glowing ablation cracks on the hero asteroid.
  */
 export function createAsteroidTextures(maxAnisotropy: number): AsteroidTextureBundle {
   const size = 512;
@@ -204,44 +236,44 @@ export function createAsteroidTextures(maxAnisotropy: number): AsteroidTextureBu
   emissiveCanvas.height = size;
   const eCtx = emissiveCanvas.getContext('2d')!;
 
-  // Base regolith slate/brown-grey albedo + high matte roughness + mid bump
-  aCtx.fillStyle = '#6c665f';
+  // Richer, darker asteroid slate/basalt base so sunlight creates real space contrast
+  aCtx.fillStyle = '#4e4a44';
   aCtx.fillRect(0, 0, size, size);
-  bCtx.fillStyle = '#808080';
+  bCtx.fillStyle = '#787878';
   bCtx.fillRect(0, 0, size, size);
-  rCtx.fillStyle = '#d8d8d8';
+  rCtx.fillStyle = '#e0e0e0';
   rCtx.fillRect(0, 0, size, size);
   eCtx.fillStyle = '#000000';
   eCtx.fillRect(0, 0, size, size);
 
-  const rand = seededRand(4219);
+  const rand = seededRand(8471);
 
-  // Layer stony silicate splotches & iron mineral patches
-  for (let i = 0; i < 420; i++) {
+  // Layer stony silicate patches & iron-rich basalt strata
+  for (let i = 0; i < 480; i++) {
     const x = rand() * size;
     const y = rand() * size;
-    const r = 6 + rand() * 34;
+    const r = 5 + rand() * 32;
     const bright = rand();
 
     const grad = aCtx.createRadialGradient(x, y, 0, x, y, r);
-    if (bright > 0.62) {
-      grad.addColorStop(0, 'rgba(176, 170, 162, 0.24)');
-      grad.addColorStop(1, 'rgba(176, 170, 162, 0)');
-    } else if (bright > 0.28) {
-      grad.addColorStop(0, 'rgba(92, 85, 78, 0.28)');
-      grad.addColorStop(1, 'rgba(92, 85, 78, 0)');
+    if (bright > 0.68) {
+      grad.addColorStop(0, 'rgba(154, 148, 138, 0.28)');
+      grad.addColorStop(1, 'rgba(154, 148, 138, 0)');
+    } else if (bright > 0.3) {
+      grad.addColorStop(0, 'rgba(66, 61, 56, 0.32)');
+      grad.addColorStop(1, 'rgba(66, 61, 56, 0)');
     } else {
-      grad.addColorStop(0, 'rgba(38, 34, 31, 0.34)');
-      grad.addColorStop(1, 'rgba(38, 34, 31, 0)');
+      grad.addColorStop(0, 'rgba(26, 23, 21, 0.38)');
+      grad.addColorStop(1, 'rgba(26, 23, 21, 0)');
     }
     aCtx.fillStyle = grad;
     aCtx.beginPath();
     aCtx.arc(x, y, r, 0, Math.PI * 2);
     aCtx.fill();
 
-    const bVal = Math.floor(70 + bright * 145);
+    const bVal = Math.floor(45 + bright * 185);
     const bGrad = bCtx.createRadialGradient(x, y, 0, x, y, r);
-    bGrad.addColorStop(0, `rgba(${bVal}, ${bVal}, ${bVal}, 0.26)`);
+    bGrad.addColorStop(0, `rgba(${bVal}, ${bVal}, ${bVal}, 0.32)`);
     bGrad.addColorStop(1, `rgba(${bVal}, ${bVal}, ${bVal}, 0)`);
     bCtx.fillStyle = bGrad;
     bCtx.beginPath();
@@ -249,54 +281,53 @@ export function createAsteroidTextures(maxAnisotropy: number): AsteroidTextureBu
     bCtx.fill();
   }
 
-  // Paint micro-craters onto maps for crisp up-close detail
-  for (let i = 0; i < 85; i++) {
+  // Dense micro-cratering with dark pit centers & dusty bright rims
+  for (let i = 0; i < 120; i++) {
     const x = rand() * size;
     const y = rand() * size;
-    const r = 3 + rand() * 16;
+    const r = 2.5 + rand() * 15;
 
-    // Dark crater pit on albedo & bump
-    const cg = aCtx.createRadialGradient(x, y, r * 0.15, x, y, r);
-    cg.addColorStop(0, 'rgba(34, 31, 29, 0.55)');
-    cg.addColorStop(0.7, 'rgba(68, 63, 59, 0.35)');
-    cg.addColorStop(0.9, 'rgba(195, 189, 180, 0.28)');
-    cg.addColorStop(1, 'rgba(195, 189, 180, 0)');
+    const cg = aCtx.createRadialGradient(x, y, r * 0.1, x, y, r);
+    cg.addColorStop(0, 'rgba(20, 18, 17, 0.68)');
+    cg.addColorStop(0.65, 'rgba(54, 50, 46, 0.42)');
+    cg.addColorStop(0.88, 'rgba(178, 172, 162, 0.32)');
+    cg.addColorStop(1, 'rgba(178, 172, 162, 0)');
     aCtx.fillStyle = cg;
     aCtx.beginPath();
     aCtx.arc(x, y, r, 0, Math.PI * 2);
     aCtx.fill();
 
     const bg = bCtx.createRadialGradient(x, y, 0, x, y, r);
-    bg.addColorStop(0, 'rgba(24, 24, 24, 0.72)');
-    bg.addColorStop(0.75, 'rgba(72, 72, 72, 0.35)');
-    bg.addColorStop(0.92, 'rgba(225, 225, 225, 0.45)');
+    bg.addColorStop(0, 'rgba(12, 12, 12, 0.85)');
+    bg.addColorStop(0.72, 'rgba(62, 62, 62, 0.42)');
+    bg.addColorStop(0.91, 'rgba(242, 242, 242, 0.58)');
     bg.addColorStop(1, 'rgba(128, 128, 128, 0)');
     bCtx.fillStyle = bg;
     bCtx.beginPath();
     bCtx.arc(x, y, r, 0, Math.PI * 2);
     bCtx.fill();
 
-    // Slightly smoother exposed bedrock rim on roughness map
-    rCtx.strokeStyle = 'rgba(140, 140, 140, 0.35)';
-    rCtx.lineWidth = 1.4;
+    rCtx.strokeStyle = 'rgba(148, 148, 148, 0.38)';
+    rCtx.lineWidth = 1.3;
     rCtx.beginPath();
     rCtx.arc(x, y, r * 0.88, 0, Math.PI * 2);
     rCtx.stroke();
   }
 
-  // Fine geological crack network + glowing magma fissures for hero re-entry
-  for (let f = 0; f < 22; f++) {
+  // Sharp rocky fault cracks & hot glowing magma veins
+  for (let f = 0; f < 28; f++) {
     let px = rand() * size;
     let py = rand() * size;
     let dir = rand() * Math.PI * 2;
-    const segs = 6 + Math.floor(rand() * 7);
+    const segs = 6 + Math.floor(rand() * 8);
 
-    aCtx.strokeStyle = 'rgba(22, 20, 19, 0.45)';
-    aCtx.lineWidth = 1.1;
-    bCtx.strokeStyle = 'rgba(20, 20, 20, 0.65)';
-    bCtx.lineWidth = 1.6;
-    eCtx.strokeStyle = f % 3 === 0 ? 'rgba(255, 175, 72, 0.95)' : 'rgba(249, 115, 22, 0.75)';
-    eCtx.lineWidth = f % 3 === 0 ? 1.8 : 1.1;
+    aCtx.strokeStyle = 'rgba(15, 13, 12, 0.55)';
+    aCtx.lineWidth = 1.25;
+    bCtx.strokeStyle = 'rgba(12, 12, 12, 0.82)';
+    bCtx.lineWidth = 1.9;
+    eCtx.strokeStyle =
+      f % 3 === 0 ? 'rgba(255, 185, 78, 0.96)' : 'rgba(249, 115, 22, 0.78)';
+    eCtx.lineWidth = f % 3 === 0 ? 1.9 : 1.15;
 
     aCtx.beginPath();
     bCtx.beginPath();
@@ -306,8 +337,8 @@ export function createAsteroidTextures(maxAnisotropy: number): AsteroidTextureBu
     eCtx.moveTo(px, py);
 
     for (let s = 0; s < segs; s++) {
-      dir += (rand() - 0.5) * 1.15;
-      const len = 10 + rand() * 18;
+      dir += (rand() - 0.5) * 1.25;
+      const len = 8 + rand() * 17;
       px += Math.cos(dir) * len;
       py += Math.sin(dir) * len;
       aCtx.lineTo(px, py);
@@ -320,14 +351,14 @@ export function createAsteroidTextures(maxAnisotropy: number): AsteroidTextureBu
     eCtx.stroke();
   }
 
-  // Mineral grit noise
-  for (let i = 0; i < 1800; i++) {
+  // Regolith gravel & mineral grit noise
+  for (let i = 0; i < 2400; i++) {
     const x = rand() * size;
     const y = rand() * size;
-    const s = 0.8 + rand() * 1.6;
-    aCtx.fillStyle = rand() > 0.5 ? 'rgba(225, 220, 212, 0.22)' : 'rgba(20, 18, 17, 0.28)';
+    const s = 0.7 + rand() * 1.8;
+    aCtx.fillStyle = rand() > 0.45 ? 'rgba(205, 200, 190, 0.24)' : 'rgba(15, 13, 12, 0.34)';
     aCtx.fillRect(x, y, s, s);
-    bCtx.fillStyle = rand() > 0.5 ? 'rgba(235, 235, 235, 0.25)' : 'rgba(30, 30, 30, 0.25)';
+    bCtx.fillStyle = rand() > 0.5 ? 'rgba(245, 245, 245, 0.34)' : 'rgba(18, 18, 18, 0.34)';
     bCtx.fillRect(x, y, s, s);
   }
 
