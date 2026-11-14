@@ -42,7 +42,10 @@ function hasWebGLSupport(): boolean {
   }
 }
 
-const VERTEX_SHADER = /* glsl */ `
+// ============================================================================
+// PURE DOT & FINE SAND MILKY WAY GALAXY SHADER (Zero shadow/cloud planes)
+// ============================================================================
+const STAR_VERTEX_SHADER = /* glsl */ `
   uniform float uTime;
   uniform float uPixelRatio;
   uniform float uScrollProgress;
@@ -58,13 +61,13 @@ const VERTEX_SHADER = /* glsl */ `
   uniform float uRocketActive;
   uniform float uRocketWake;
 
-  attribute float aLayer;    // 0: Galactic Core & Bar, 1: Spiral Arms, 2: Glowing Nebula Clouds, 3: Deep Celestial Stars
-  attribute float aRadius;   // Normalized galactic radius [0..1+]
-  attribute float aAngle;    // Initial galactic polar angle
-  attribute float aHeight;   // Vertical thickness offset above/below galactic disk
-  attribute float aSize;     // Base particle radius
-  attribute float aSparkle;  // 0..1: star brilliance / diffraction glint probability
-  attribute float aColorKey; // 0..1: spectral stellar temperature (warm core -> blue-white arm -> violet nebula)
+  attribute float aLayer;    // 0: Galactic Bulge & Bar, 1: Spiral Arm Stars, 2: Fine Flowing Galactic Sand, 3: Deep Celestial Stars
+  attribute float aRadius;   // Normalized galactic radius [0..1.15]
+  attribute float aAngle;    // Initial polar angle
+  attribute float aHeight;   // Vertical disk height
+  attribute float aSize;     // Grain / star dot size
+  attribute float aSparkle;  // 0..1: brilliance / crisp star glint
+  attribute float aColorKey; // 0..1: stellar color palette blend
 
   varying float vAlpha;
   varying float vColorKey;
@@ -82,87 +85,91 @@ const VERTEX_SHADER = /* glsl */ `
   void main() {
     float motion = mix(1.0, 0.14, uReducedMotion);
     float t = uTime * motion;
-    float scrollSpin = uScrollProgress * 0.85 + clamp(uScrollVelocity * 0.0025, -0.35, 0.35);
+    float s = uScrollProgress;
+    float velKick = clamp(uScrollVelocity * 0.0045, -0.55, 0.55) * motion;
 
     vec3 p = vec3(0.0);
-    float baseAlpha = 0.7;
+    float baseAlpha = 0.78;
     float boost = 0.0;
 
     if (aLayer < 2.5) {
-      // Differential galactic rotation: inner bulge rotates smoothly faster than outer halo
-      float angularSpeed = (0.042 / (0.35 + aRadius * 0.92)) * motion;
-      float theta = aAngle + t * angularSpeed + scrollSpin * (0.4 + 0.6 * (1.0 - min(aRadius, 1.0)));
+      // Differential galactic rotation + visible continuous spin & fly-through on scroll
+      float orbitalRate = (0.038 / (0.28 + aRadius * 0.92)) * motion;
+      float scrollSpin = s * (2.65 + (1.0 - min(aRadius, 1.0)) * 1.15) + velKick * 0.85;
+      float theta = aAngle + t * orbitalRate + scrollSpin;
 
-      float rWorld = aRadius * mix(9.8, 12.6, clamp(uAspect - 0.7, 0.0, 1.0));
+      float rWorld = aRadius * mix(10.8, 13.6, clamp(uAspect - 0.7, 0.0, 1.0));
       float xPlane = cos(theta) * rWorld;
       float zPlane = sin(theta) * rWorld;
 
-      // Slight barred-spiral elongation inside the inner galactic core
+      // Central barred galactic bulge elongation
       if (aLayer < 0.5) {
-        vec2 barPos = rot2(0.35) * vec2(xPlane * 1.38, zPlane * 0.72);
+        vec2 barPos = rot2(0.38) * vec2(xPlane * 1.42, zPlane * 0.68);
         xPlane = barPos.x;
         zPlane = barPos.y;
       }
 
-      // Gentle vertical undulation of the Milky Way galactic warp
-      float warp = sin(theta * 2.0 + rWorld * 0.32 - t * 0.25) * 0.28 * smoothstep(2.5, 9.0, rWorld);
-      float yPlane = aHeight + warp;
+      // Subtle S-shaped galactic disk wave + fine sand drift harmonic
+      float sandDrift = aLayer > 1.5
+        ? sin(theta * 3.0 - t * 0.55 + aRadius * 8.0) * 0.18
+        : 0.0;
+      float warp = sin(theta * 2.0 + rWorld * 0.34 - t * 0.22) * 0.24 * smoothstep(2.2, 9.5, rWorld);
+      float yPlane = aHeight + warp + sandDrift;
 
       vec3 galPos = vec3(xPlane, yPlane, zPlane);
 
-      // Sculpted cinematic Milky Way orientation: diagonal grand sweep across viewport
-      float pitchX = 1.06 + uScrollProgress * 0.24; // ~61 deg tilt showing spiral structure + core depth
-      float bankZ  = -0.42 + sin(t * 0.12) * 0.04;
+      // Synced 3D tilt/bank transformation driven smoothly by scroll progress
+      float pitchX = 1.14 - sin(s * 3.14159) * 0.46 + s * 0.14;
+      float bankZ  = -0.36 + s * 0.62 + sin(t * 0.1) * 0.03;
 
-      // Tilt around X
       float cx = cos(pitchX), sx = sin(pitchX);
       vec3 tilted = vec3(galPos.x, galPos.y * cx - galPos.z * sx, galPos.y * sx + galPos.z * cx);
 
-      // Bank diagonally around Z
       float cz = cos(bankZ), sz = sin(bankZ);
       p = vec3(tilted.x * cz - tilted.y * sz, tilted.x * sz + tilted.y * cz, tilted.z);
 
-      // Slight offset so the radiant core frames editorial typography gracefully
-      p.x += 0.85;
-      p.y += 0.25 - uScrollProgress * 0.9;
-      p.z -= 1.2;
+      // Synchronized spatial travel during scroll
+      p.x += 0.15 - sin(s * 4.2) * 1.4;
+      p.y += 0.05 + cos(s * 3.5) * 0.7 - s * 0.55;
+      p.z -= 1.35 + sin(s * 2.8) * 1.1;
 
       if (aLayer < 0.5) {
-        // Galactic Bulge & Bar
-        baseAlpha = mix(0.95, 0.52, smoothstep(0.0, 0.32, aRadius));
-        boost = 0.55 * (1.0 - smoothstep(0.0, 0.28, aRadius));
+        // Dense Golden Core Dots
+        baseAlpha = mix(0.98, 0.62, smoothstep(0.0, 0.30, aRadius));
+        boost = 0.52 * (1.0 - smoothstep(0.0, 0.25, aRadius));
       } else if (aLayer < 1.5) {
-        // Luminous Spiral Arms & Star Clusters
-        baseAlpha = mix(0.88, 0.36, smoothstep(0.18, 1.05, aRadius));
+        // Crisp Spiral Arm Stars & Spur Dots
+        baseAlpha = mix(0.94, 0.42, smoothstep(0.18, 1.08, aRadius));
         boost = aSparkle * 0.55;
       } else {
-        // Soft Volumetric Nebula Dust Cloud Band
-        baseAlpha = mix(0.24, 0.09, smoothstep(0.1, 1.0, aRadius));
-        boost = 0.25;
+        // Fine Luminous Galactic Sand Grains along the spiral streams
+        baseAlpha = mix(0.76, 0.32, smoothstep(0.08, 1.05, aRadius));
+        boost = 0.28;
       }
     } else {
-      // Layer 3: Deep Foreground/Background Celestial Starfield
+      // Layer 3: Deep Parallax Foreground & Outer Halo Dots
       p = position;
-      p.x += sin(t * 0.08 + aAngle) * 0.35;
-      p.y += cos(t * 0.07 + aRadius * 6.0) * 0.3 - uScrollProgress * 1.4;
-      baseAlpha = mix(0.32, 0.82, aSparkle);
-      boost = aSparkle * 0.35;
+      p.x += sin(t * 0.06 + aAngle) * 0.3 - sin(s * 3.14159) * 1.8;
+      p.y += cos(t * 0.05 + aRadius * 6.0) * 0.25 - s * 3.4;
+      p.z += s * 1.6;
+      baseAlpha = mix(0.42, 0.90, aSparkle);
+      boost = aSparkle * 0.34;
     }
 
-    // Interactive gravitational swirl around the rocket cursor
-    float halfW = max(12.0 * max(uAspect, 0.85), 10.0);
+    // Smooth pointer gravitational eddy
+    float halfW = max(12.2 * max(uAspect, 0.85), 10.0);
     vec2 pointerWorld = vec2(uPointer.x * halfW * 0.78, uPointer.y * 6.8);
     vec2 toStar = p.xy - pointerWorld;
     float pDist = length(toStar);
-    float wakeRadius = 4.2 + uPointerEnergy * 2.0;
-    float wake = smoothstep(wakeRadius, 0.0, pDist) * (0.48 + uPointerEnergy * 0.95);
+    float wakeRadius = 4.0 + uPointerEnergy * 2.0;
+    float wake = smoothstep(wakeRadius, 0.0, pDist) * (0.42 + uPointerEnergy * 0.85);
 
     if (wake > 0.001) {
       vec2 radialDir = pDist > 0.001 ? toStar / pDist : vec2(0.0, 1.0);
       vec2 tangentDir = vec2(-radialDir.y, radialDir.x);
-      float swirl = wake * (1.1 + uPointerEnergy * 0.9);
-      p.xy += radialDir * (wake * 0.95) + tangentDir * (sin(swirl) * 0.88);
-      p.z += wake * 1.5;
+      float swirl = wake * (1.0 + uPointerEnergy * 0.85);
+      p.xy += radialDir * (wake * 0.8) + tangentDir * (sin(swirl) * 0.78);
+      p.z += wake * 1.35;
     }
 
     // Click Supernova Ripple Wave
@@ -175,56 +182,59 @@ const VERTEX_SHADER = /* glsl */ `
       float fade = 1.0 - smoothstep(0.0, 2.4, uClickAge);
       ripple = band * fade;
       vec2 cDir = cDist > 0.001 ? (p.xy - clickWorld) / cDist : vec2(1.0, 0.0);
-      p.xy += cDir * ripple * 1.35;
-      p.z += ripple * 1.9;
+      p.xy += cDir * ripple * 1.25;
+      p.z += ripple * 1.8;
     }
 
-    // Rocket Launch Shockwave Wake ('R' key)
+    // Rocket Launch Exhaust Wake ('R' key)
     float rocketGlow = 0.0;
     if (uRocketActive > 0.5) {
       vec3 rOff = p - uRocketPos * vec3(0.28, 0.28, 0.35);
       float rDist = length(rOff);
       float rInf = exp(-rDist * 0.32) * uRocketWake;
       vec3 pushDir = rDist > 0.001 ? rOff / rDist : vec3(0.0, 1.0, 0.0);
-      p += pushDir * rInf * 3.0;
+      p += pushDir * rInf * 2.8;
       rocketGlow = clamp(rInf * 1.4, 0.0, 1.0);
     }
 
     vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mvPosition;
 
-    // Gentle readability breathing room directly under central foreground headline
+    // Bright across opening screen & transparent PORTFOLIO cutout; gently soften in center during scrolled sections
     vec2 ndcPos = gl_Position.xy / max(gl_Position.w, 0.001);
     float centerDist = length(ndcPos * vec2(0.85, 1.15));
-    float centerBalance = mix(0.66, 1.0, smoothstep(0.08, 0.72, centerDist));
+    float readDim = smoothstep(0.08, 0.38, uScrollProgress);
+    float centerFloor = mix(0.98, 0.60, readDim);
+    float centerBalance = mix(centerFloor, 1.0, smoothstep(0.08, 0.74, centerDist));
 
-    float twinkle = 0.72 + 0.28 * sin(t * (1.5 + aColorKey * 3.2) + aAngle * 13.7 + aRadius * 31.4);
-    float perspectiveScale = 23.0 / max(-mvPosition.z, 3.0);
+    float twinkle = 0.76 + 0.24 * sin(t * (1.4 + aColorKey * 2.9) + aAngle * 15.1 + aRadius * 29.7);
+    float perspectiveScale = 22.0 / max(-mvPosition.z, 3.0);
 
-    float nebulaScale = aLayer > 1.5 && aLayer < 2.5 ? 4.4 : 1.0;
-    float starFlare = aLayer < 1.5 || aLayer > 2.5 ? mix(1.0, 2.35, smoothstep(0.76, 1.0, aSparkle)) : 1.0;
-    float interactiveScale = 1.0 + wake * 0.55 + ripple * 0.8 + rocketGlow * 0.85;
+    // Pure crisp dots & fine sand grains (zero giant cloud smudges)
+    float isSand = (aLayer > 1.5 && aLayer < 2.5) ? 1.0 : 0.0;
+    float starFlare = (1.0 - isSand) * mix(1.0, 1.75, smoothstep(0.84, 1.0, aSparkle)) + isSand;
+    float interactiveScale = 1.0 + wake * 0.45 + ripple * 0.65 + rocketGlow * 0.75 + abs(velKick) * 0.22;
 
-    float ptSize = aSize * nebulaScale * starFlare * perspectiveScale * uPixelRatio * interactiveScale * (0.92 + 0.08 * twinkle);
-    float maxPt = (aLayer > 1.5 && aLayer < 2.5) ? 46.0 * uPixelRatio : 20.0 * uPixelRatio;
+    float ptSize = aSize * starFlare * perspectiveScale * uPixelRatio * interactiveScale * (0.94 + 0.06 * twinkle);
+    float maxPt = mix(11.5 * uPixelRatio, 4.2 * uPixelRatio, isSand);
 
-    gl_PointSize = clamp(ptSize, 1.35 * uPixelRatio, maxPt);
+    gl_PointSize = clamp(ptSize, 1.1 * uPixelRatio, maxPt);
 
-    vAlpha = clamp((baseAlpha * centerBalance + wake * 0.42 + ripple * 0.62 + rocketGlow * 0.68) * uGlowIntensity, 0.0, 1.0);
+    vAlpha = clamp((baseAlpha * centerBalance + wake * 0.4 + ripple * 0.6 + rocketGlow * 0.65) * uGlowIntensity, 0.0, 1.0);
     vColorKey = aColorKey;
     vSparkle = aSparkle;
     vLayer = aLayer;
-    vBoost = clamp(boost + wake * 0.7 + ripple * 0.95 + rocketGlow, 0.0, 1.6);
+    vBoost = clamp(boost + wake * 0.65 + ripple * 0.9 + rocketGlow, 0.0, 1.6);
     vTwinkle = twinkle;
   }
 `;
 
-const FRAGMENT_SHADER = /* glsl */ `
+const STAR_FRAGMENT_SHADER = /* glsl */ `
   uniform float uOpacity;
   uniform float uGlowIntensity;
   uniform vec3 uCoreGold;
   uniform vec3 uArmBlue;
-  uniform vec3 uNebulaViolet;
+  uniform vec3 uNebulaRose;
   uniform vec3 uSectionAccent;
 
   varying float vAlpha;
@@ -239,45 +249,46 @@ const FRAGMENT_SHADER = /* glsl */ `
     float r = length(uv) * 2.0; // 0 center .. 1 edge
     if (r > 1.0) discard;
 
-    // Color synthesis across stellar populations
+    // Stellar dot & fine sand grain spectral palette
     vec3 starColor;
     if (vLayer < 0.5) {
-      // Radiant champagne-gold galactic core & warm giant bulge
-      starColor = mix(vec3(1.0, 0.96, 0.86), uCoreGold, smoothstep(0.15, 0.85, vColorKey));
+      // Warm golden-ivory galactic bulge dots
+      starColor = mix(vec3(1.0, 0.96, 0.86), uCoreGold, smoothstep(0.12, 0.88, vColorKey));
     } else if (vLayer < 1.5) {
-      // Spiral arms: brilliant blue-white young stars, cyan nurseries, subtle gold giants
-      vec3 blueWhite = mix(vec3(0.92, 0.96, 1.0), uArmBlue, smoothstep(0.15, 0.75, vColorKey));
-      vec3 nebulaTint = mix(blueWhite, uNebulaViolet, smoothstep(0.72, 1.0, vColorKey));
-      starColor = mix(nebulaTint, uSectionAccent, 0.18 + vBoost * 0.22);
+      // Spiral arms: brilliant blue-white OB dots, diamond white stars, warm gold & subtle rose pockets
+      vec3 blueWhite = mix(vec3(0.95, 0.97, 1.0), uArmBlue, smoothstep(0.18, 0.72, vColorKey));
+      vec3 warmGiant = mix(blueWhite, uCoreGold, smoothstep(0.70, 0.88, vColorKey));
+      vec3 h2Tint = mix(warmGiant, uNebulaRose, smoothstep(0.88, 1.0, vColorKey));
+      starColor = mix(h2Tint, uSectionAccent, 0.12 + vBoost * 0.16);
     } else if (vLayer < 2.5) {
-      // Volumetric Milky Way nebula clouds (amber core haze -> sapphire/violet arm mist)
-      vec3 haze = mix(uCoreGold * 0.92, uNebulaViolet, smoothstep(0.12, 0.78, vColorKey));
-      starColor = mix(haze, uArmBlue, smoothstep(0.65, 1.0, vColorKey) * 0.65);
+      // Fine champagne-silver & cyan-tinted cosmic sand particles
+      vec3 sandMix = mix(uCoreGold, vec3(0.92, 0.95, 1.0), smoothstep(0.15, 0.68, vColorKey));
+      starColor = mix(sandMix, uArmBlue, smoothstep(0.68, 1.0, vColorKey) * 0.72);
     } else {
-      // Deep celestial starfield
-      starColor = mix(vec3(0.88, 0.93, 1.0), uCoreGold, step(0.82, vColorKey) * 0.6);
+      // Deep halo stars
+      starColor = mix(vec3(0.92, 0.95, 1.0), uCoreGold, step(0.76, vColorKey) * 0.65);
     }
 
     float intensity = 0.0;
     if (vLayer > 1.5 && vLayer < 2.5) {
-      // Soft atmospheric nebula cloud gaussian falloff (zero sharp edges)
-      intensity = exp(-r * r * 3.6) * 0.45 * uGlowIntensity;
+      // Crisp micro sand grain dot (sharp falloff, zero haze)
+      intensity = smoothstep(1.0, 0.18, r) * 0.92 * uGlowIntensity;
     } else {
-      // Crisp luminous star core + soft halo + subtle 4-point optical diffraction spikes on bright stars
-      float core = exp(-r * r * 16.0);
-      float halo = exp(-r * r * 3.8) * (0.28 + 0.46 * smoothstep(0.55, 1.0, vSparkle) + vBoost * 0.22);
+      // Crisp luminous star dot + tight airy glow + subtle diffraction spike on brightest stars
+      float core = exp(-r * r * 18.0);
+      float tightHalo = exp(-r * r * 5.2) * (0.20 + 0.34 * smoothstep(0.62, 1.0, vSparkle) + vBoost * 0.18);
 
-      float glintMask = smoothstep(0.89, 1.0, vSparkle);
-      float spikeX = exp(-abs(uv.y) * 28.0) * exp(-abs(uv.x) * 4.2);
-      float spikeY = exp(-abs(uv.x) * 28.0) * exp(-abs(uv.y) * 4.2);
-      float spikes = (spikeX + spikeY) * 0.55 * glintMask * vTwinkle;
+      float glintMask = smoothstep(0.92, 1.0, vSparkle);
+      float spikeX = exp(-abs(uv.y) * 34.0) * exp(-abs(uv.x) * 4.8);
+      float spikeY = exp(-abs(uv.x) * 34.0) * exp(-abs(uv.y) * 4.8);
+      float spikes = (spikeX + spikeY) * 0.42 * glintMask * vTwinkle;
 
-      intensity = (core + halo + spikes) * uGlowIntensity;
-      starColor = mix(starColor, vec3(0.99, 0.99, 1.0), clamp(core * 0.75 + spikes * 0.55, 0.0, 0.94));
+      intensity = (core + tightHalo + spikes) * uGlowIntensity;
+      starColor = mix(starColor, vec3(0.99, 0.99, 1.0), clamp(core * 0.82 + spikes * 0.5, 0.0, 0.96));
     }
 
     float finalAlpha = clamp(intensity * vAlpha * uOpacity, 0.0, 1.0);
-    if (finalAlpha < 0.005) discard;
+    if (finalAlpha < 0.008) discard;
 
     gl_FragColor = vec4(starColor, finalAlpha);
   }
@@ -320,8 +331,8 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
     const width = window.innerWidth || 1280;
     const height = window.innerHeight || 720;
 
-    const camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 120);
-    camera.position.set(0, 0, 14.5);
+    const camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 140);
+    camera.position.set(0, 0, 14.2);
 
     let renderer: THREE.WebGLRenderer;
     try {
@@ -351,8 +362,8 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
     canvas.style.pointerEvents = 'none';
     container.appendChild(canvas);
 
-    // Deterministic PRNG + Gaussian helper for realistic spiral arm scatter
-    let seed = 420619;
+    // Deterministic PRNG + Gaussian scatter for rich Milky Way spiral & sand distribution
+    let seed = 791347;
     const rand = () => {
       seed = (seed * 1664525 + 1013904223) >>> 0;
       return seed / 4294967296;
@@ -363,7 +374,7 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
     };
 
-    const particleCount = isMobile ? 9000 : 17500;
+    const particleCount = isMobile ? 14000 : 28000;
     const positions = new Float32Array(particleCount * 3);
     const aLayer = new Float32Array(particleCount);
     const aRadius = new Float32Array(particleCount);
@@ -373,75 +384,76 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
     const aSparkle = new Float32Array(particleCount);
     const aColorKey = new Float32Array(particleCount);
 
-    const armCount = 4;
-    const armTightness = 3.25;
+    const mainArms = 2;
+    const tightness = 3.45;
 
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
       const roll = rand();
 
       if (roll < 0.22) {
-        // 0: Radiant Galactic Core & Central Bar
+        // 0: Dense Golden Galactic Core & Central Bar Dots
         aLayer[i] = 0;
-        const r = Math.pow(rand(), 1.85) * 0.28;
+        const r = Math.pow(rand(), 1.9) * 0.28;
         aRadius[i] = r;
         aAngle[i] = rand() * Math.PI * 2;
-        aHeight[i] = randGauss() * (0.58 * (1.0 - r * 2.2));
+        aHeight[i] = randGauss() * (0.48 * (1.0 - r * 2.0));
         aSparkle[i] = rand();
-        aSize[i] = aSparkle[i] > 0.9 ? 1.55 + rand() * 1.1 : 0.65 + rand() * 0.85;
+        aSize[i] = aSparkle[i] > 0.91 ? 1.35 + rand() * 0.85 : 0.45 + rand() * 0.65;
         aColorKey[i] = rand();
-      } else if (roll < 0.68) {
-        // 1: Logarithmic Milky Way Spiral Arms + Trailing Spurs
+      } else if (roll < 0.66) {
+        // 1: Crisp Two Main Spiral Arms + Two Secondary Arms & Spur Dots
         aLayer[i] = 1;
-        const r = 0.12 + Math.pow(rand(), 0.92) * 0.98;
-        const armIndex = i % armCount;
-        const armBaseAngle = (armIndex / armCount) * Math.PI * 2;
-        // Classic logarithmic spiral twist + organic star-cluster scatter
-        const spiralTwist = Math.log(1.0 + r * 5.2) * armTightness;
-        const angularSpread = randGauss() * (0.22 + r * 0.28);
-        // Occasional inter-arm spur stars for natural Milky Way richness
-        const isSpur = rand() < 0.18;
+        const r = 0.09 + Math.pow(rand(), 0.94) * 1.04;
+        const isSecondary = rand() < 0.38;
+        const armIdx = i % mainArms;
+        const baseAngle =
+          (armIdx / mainArms) * Math.PI * 2 + (isSecondary ? Math.PI * 0.5 : 0);
+
+        const spiralTwist = Math.log(1.0 + r * 5.2) * tightness;
+        const armSpread = (isSecondary ? 0.26 : 0.16) + r * 0.24;
+        const isSpur = rand() < 0.22;
         const angle =
-          armBaseAngle +
+          baseAngle +
           spiralTwist +
-          angularSpread +
-          (isSpur ? (rand() - 0.5) * 0.9 : 0);
+          randGauss() * armSpread +
+          (isSpur ? (rand() - 0.5) * 0.85 : 0);
 
         aRadius[i] = r;
         aAngle[i] = angle;
-        aHeight[i] = randGauss() * (0.14 + 0.26 * r);
+        aHeight[i] = randGauss() * (0.09 + 0.20 * r);
         aSparkle[i] = rand();
         aSize[i] =
-          aSparkle[i] > 0.91
-            ? 1.7 + rand() * 1.35
+          aSparkle[i] > 0.92
+            ? 1.5 + rand() * 1.05
             : aSparkle[i] > 0.72
-            ? 1.1 + rand() * 0.8
-            : 0.55 + rand() * 0.65;
-        aColorKey[i] = Math.min(Math.max(r * 0.6 + rand() * 0.45, 0), 1);
-      } else if (roll < 0.86) {
-        // 2: Volumetric Milky Way Nebula Dust Clouds (gives luminous misty band glow)
+            ? 0.9 + rand() * 0.65
+            : 0.42 + rand() * 0.52;
+        aColorKey[i] = Math.min(Math.max(r * 0.45 + rand() * 0.58, 0), 1);
+      } else if (roll < 0.88) {
+        // 2: Fine Flowing Galactic Sand Grains tracing the Milky Way disk & arms
         aLayer[i] = 2;
-        const r = 0.06 + Math.pow(rand(), 0.95) * 0.94;
-        const armIndex = i % armCount;
-        const armBaseAngle = (armIndex / armCount) * Math.PI * 2;
-        const spiralTwist = Math.log(1.0 + r * 5.2) * armTightness;
+        const r = 0.04 + Math.pow(rand(), 0.88) * 1.0;
+        const armIdx = i % 4;
+        const baseAngle = (armIdx / 4) * Math.PI * 2;
+        const spiralTwist = Math.log(1.0 + r * 5.2) * tightness;
         aRadius[i] = r;
-        aAngle[i] = armBaseAngle + spiralTwist + randGauss() * 0.34;
-        aHeight[i] = randGauss() * 0.24;
+        aAngle[i] = baseAngle + spiralTwist + randGauss() * 0.34;
+        aHeight[i] = randGauss() * 0.16;
         aSparkle[i] = rand();
-        aSize[i] = 1.6 + rand() * 1.9;
-        aColorKey[i] = Math.min(Math.max(r * 0.75 + rand() * 0.3, 0), 1);
+        aSize[i] = 0.42 + rand() * 0.62;
+        aColorKey[i] = Math.min(Math.max(r * 0.65 + rand() * 0.38, 0), 1);
       } else {
-        // 3: Deep Celestial Starfield & Distant Halo Clusters
+        // 3: Deep Parallax Foreground & Outer Halo Dots
         aLayer[i] = 3;
-        positions[i3] = (rand() - 0.5) * 34.0;
-        positions[i3 + 1] = (rand() - 0.5) * 20.0;
-        positions[i3 + 2] = -14.0 + rand() * 18.0;
+        positions[i3] = (rand() - 0.5) * 38.0;
+        positions[i3 + 1] = (rand() - 0.5) * 24.0;
+        positions[i3 + 2] = -16.0 + rand() * 20.0;
         aRadius[i] = rand();
         aAngle[i] = rand() * Math.PI * 2;
         aHeight[i] = 0;
         aSparkle[i] = rand();
-        aSize[i] = aSparkle[i] > 0.88 ? 1.45 + rand() * 1.1 : 0.45 + rand() * 0.65;
+        aSize[i] = aSparkle[i] > 0.89 ? 1.3 + rand() * 0.85 : 0.38 + rand() * 0.52;
         aColorKey[i] = rand();
       }
     }
@@ -455,14 +467,14 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
     geometry.setAttribute('aSize', new THREE.BufferAttribute(aSize, 1));
     geometry.setAttribute('aSparkle', new THREE.BufferAttribute(aSparkle, 1));
     geometry.setAttribute('aColorKey', new THREE.BufferAttribute(aColorKey, 1));
-    geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 50);
+    geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0, 0), 60);
 
     const accentTarget = new THREE.Color(0x38bdf8);
     const accentCurrent = new THREE.Color(0x38bdf8);
 
     const material = new THREE.ShaderMaterial({
-      vertexShader: VERTEX_SHADER,
-      fragmentShader: FRAGMENT_SHADER,
+      vertexShader: STAR_VERTEX_SHADER,
+      fragmentShader: STAR_FRAGMENT_SHADER,
       transparent: true,
       depthWrite: false,
       depthTest: false,
@@ -483,9 +495,9 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
         uRocketPos: { value: new THREE.Vector3(0, -20, 0) },
         uRocketActive: { value: 0 },
         uRocketWake: { value: 0 },
-        uCoreGold: { value: new THREE.Color(0xf4cf8b) },     // Warm golden galactic bulge
-        uArmBlue: { value: new THREE.Color(0x60d2ff) },      // Luminous blue-cyan star nurseries
-        uNebulaViolet: { value: new THREE.Color(0x8b7cf8) }, // Deep cosmic indigo-violet dust
+        uCoreGold: { value: new THREE.Color(0xf6ca84) },
+        uArmBlue: { value: new THREE.Color(0x7ad6ff) },
+        uNebulaRose: { value: new THREE.Color(0xe57fa6) },
         uSectionAccent: { value: accentCurrent.clone() },
       },
     });
@@ -594,11 +606,11 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       interactionEngine.step();
       const s = stateRef.current;
 
-      const dampFactor = 1 - Math.exp(-8.5 * dt);
-      smoothedPointerX += (s.ndcX - smoothedPointerX) * dampFactor;
-      smoothedPointerY += (s.ndcY - smoothedPointerY) * dampFactor;
+      const pointerDamp = 1 - Math.exp(-8.5 * dt);
+      smoothedPointerX += (s.ndcX - smoothedPointerX) * pointerDamp;
+      smoothedPointerY += (s.ndcY - smoothedPointerY) * pointerDamp;
       smoothedScrollProgress +=
-        (s.scrollProgress - smoothedScrollProgress) * (1 - Math.exp(-6.0 * dt));
+        (s.scrollProgress - smoothedScrollProgress) * (1 - Math.exp(-5.5 * dt));
 
       accentCurrent.lerp(accentTarget, 1 - Math.exp(-3.2 * dt));
 
@@ -618,10 +630,16 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       material.uniforms.uRocketWake.value = s.rocketEmitter.wakeIntensity;
       material.uniforms.uSectionAccent.value.copy(accentCurrent);
 
-      // Gentle 3D galactic vantage parallax responding to cursor & scroll
-      camera.position.x = smoothedPointerX * 0.65;
-      camera.position.y = smoothedPointerY * 0.38 - smoothedScrollProgress * 0.7;
-      camera.lookAt(0, -smoothedScrollProgress * 0.55, 0);
+      // Cinematic curved 3D scroll fly-through across the Milky Way galaxy
+      const sp = smoothedScrollProgress;
+      const camX = smoothedPointerX * 0.65 - Math.sin(sp * Math.PI * 1.4) * 2.1;
+      const camY = smoothedPointerY * 0.38 + Math.sin(sp * Math.PI * 2.0) * 1.15 - sp * 0.45;
+      const camZ = 14.2 - Math.sin(sp * Math.PI) * 3.1;
+      camera.position.set(camX, camY, camZ);
+
+      const lookX = -Math.sin(sp * 3.2) * 0.65;
+      const lookY = -sp * 0.45;
+      camera.lookAt(lookX, lookY, -1.2);
 
       renderer.render(scene, camera);
       scheduleNext();
