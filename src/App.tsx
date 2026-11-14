@@ -5,7 +5,7 @@ import { ScrollProgressBar } from './components/ScrollProgressBar';
 import { RocketCursor } from './components/cursor/RocketCursor';
 import { LuxuryIntro } from './components/intro/LuxuryIntro';
 import { CommandPalette } from './components/ui/CommandPalette';
-import { MotionParticleWorld } from './components/atmosphere/MotionParticleWorld';
+import { MilkyWayGalaxy } from './components/atmosphere/MilkyWayGalaxy';
 import { SectionProgressHUD } from './components/ui/SectionProgressHUD';
 import { EasterEggToast } from './components/ui/EasterEggToast';
 import { Navbar } from './components/Navbar';
@@ -165,12 +165,13 @@ export default function App() {
           />
         </div>
 
-        {/* Luxury Interactive Particle Universe (Award-Winning Creative Studio Experience) */}
-        <MotionParticleWorld paused={showIntro} />
+        {/* Interactive 3D Luminous Milky Way Galaxy Particle Field */}
+        <MilkyWayGalaxy paused={showIntro} />
 
         <div className="relative z-10 flex flex-col">
           {/* 1. HERO / LANDING PAGE with Identity Core */}
           <HeroSection
+            entered={!showIntro}
             onContactClick={handleScrollToContact}
             onExploreClick={handleScrollToProjects}
           />
