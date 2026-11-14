@@ -1,15 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Command, ExternalLink, Menu, X, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { motion } from 'motion/react';
+import { Command, Menu, X, Sparkles } from 'lucide-react';
 import { interactionEngine } from '../context/SingularityInteractionEngine';
 
 interface NavbarProps {
+  entered?: boolean;
   onContactClick?: () => void;
   onOpenCommandPalette?: () => void;
   onReplayIntro?: () => void;
   id?: string;
 }
 
+const BRAND_CHARS = 'GARV SHAW'.split('');
+
 export const Navbar: React.FC<NavbarProps> = ({
+  entered = true,
   onContactClick,
   onOpenCommandPalette,
   onReplayIntro,
@@ -18,6 +23,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [activeSection, setActiveSection] = useState<string>('hero');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
+
+  const brandAnchorRef = useRef<HTMLSpanElement | null>(null);
+  const [startOffset, setStartOffset] = useState<{ x: number; y: number } | null>(null);
+  const [isBrandSettled, setIsBrandSettled] = useState(false);
+  const prevEnteredRef = useRef(false);
+
+  const [prefersReducedMotion] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false
+  );
 
   useEffect(() => {
     const unsubscribe = interactionEngine.subscribe((state) => {
@@ -30,6 +46,37 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => unsubscribe();
   }, []);
 
+  // Measure center-to-top-left glide offset cleanly right when user enters the main page
+  useLayoutEffect(() => {
+    if (!entered) {
+      prevEnteredRef.current = false;
+      setStartOffset(null);
+      setIsBrandSettled(false);
+      return;
+    }
+
+    if (prevEnteredRef.current) return;
+    prevEnteredRef.current = true;
+
+    if (prefersReducedMotion || !brandAnchorRef.current) {
+      setStartOffset({ x: 0, y: 0 });
+      setIsBrandSettled(true);
+      return;
+    }
+
+    const rect = brandAnchorRef.current.getBoundingClientRect();
+    const startScale = window.innerWidth < 640 ? 1.85 : 2.35;
+    const scaledWidth = rect.width * startScale;
+    const centerX = Math.max(0, window.innerWidth * 0.5 - scaledWidth * 0.5);
+    const centerY = window.innerHeight * 0.42;
+
+    setStartOffset({
+      x: centerX - rect.left,
+      y: centerY - rect.top,
+    });
+    setIsBrandSettled(false);
+  }, [entered, prefersReducedMotion]);
+
   const scrollToSection = (sectionId: string) => {
     setMobileMenuOpen(false);
     if (sectionId === 'contact' && onContactClick) {
@@ -41,6 +88,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       el.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  const shouldAnimateBrand = entered && startOffset !== null && !prefersReducedMotion;
 
   return (
     <header
@@ -59,14 +108,90 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             data-cursor="button"
             data-cursor-label="TOP"
-            className="flex items-center gap-2 group text-left cursor-pointer"
+            className="flex items-center gap-2 group text-left cursor-pointer relative"
           >
-            <span className="font-editorial text-sm sm:text-base font-bold tracking-tight text-[#F2F3F5] group-hover:text-white transition-colors">
-              GARV SHAW
+            {/* Invisible layout anchor ensures exact top-left resting box coordinates */}
+            <span
+              ref={brandAnchorRef}
+              className="font-editorial text-sm sm:text-base font-bold tracking-tight inline-block relative"
+              style={{ opacity: entered ? 1 : 0 }}
+            >
+              <span aria-hidden="true" className="opacity-0 pointer-events-none select-none">
+                GARV SHAW
+              </span>
+
+              {shouldAnimateBrand ? (
+                <motion.span
+                  key="garv-shaw-entrance"
+                  className="inline-flex items-baseline whitespace-nowrap absolute left-0 top-0 pointer-events-none"
+                  style={{ transformOrigin: '0% 50%', willChange: 'transform, opacity, filter' }}
+                  initial={{
+                    x: startOffset.x,
+                    y: startOffset.y,
+                    scale: typeof window !== 'undefined' && window.innerWidth < 640 ? 1.85 : 2.35,
+                    opacity: 0,
+                    filter: 'blur(10px)',
+                    letterSpacing: '0.28em',
+                    textShadow: '0 0 28px rgba(125, 211, 252, 0.95)',
+                  }}
+                  animate={{
+                    x: [startOffset.x, startOffset.x, 0],
+                    y: [startOffset.y, startOffset.y, 0],
+                    scale: [
+                      typeof window !== 'undefined' && window.innerWidth < 640 ? 1.85 : 2.35,
+                      typeof window !== 'undefined' && window.innerWidth < 640 ? 1.95 : 2.45,
+                      1,
+                    ],
+                    opacity: [0, 1, 1],
+                    filter: ['blur(10px)', 'blur(0px)', 'blur(0px)'],
+                    letterSpacing: ['0.28em', '0.16em', '-0.025em'],
+                    textShadow: [
+                      '0 0 28px rgba(125, 211, 252, 0.95)',
+                      '0 0 22px rgba(56, 189, 248, 0.72)',
+                      '0 0 0px rgba(56, 189, 248, 0)',
+                    ],
+                  }}
+                  transition={{
+                    duration: 2.25,
+                    times: [0, 0.44, 1],
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  onAnimationComplete={() => setIsBrandSettled(true)}
+                >
+                  {BRAND_CHARS.map((ch, idx) => (
+                    <motion.span
+                      key={idx}
+                      className="inline-block text-[#F2F3F5] group-hover:text-white transition-colors"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        duration: 0.55,
+                        delay: idx * 0.045,
+                        ease: [0.16, 1, 0.3, 1],
+                      }}
+                    >
+                      {ch === ' ' ? '\u00A0' : ch}
+                    </motion.span>
+                  ))}
+                </motion.span>
+              ) : (
+                <span className="absolute left-0 top-0 text-[#F2F3F5] group-hover:text-white transition-colors whitespace-nowrap">
+                  GARV SHAW
+                </span>
+              )}
             </span>
-            <span className="hidden lg:inline-block font-mono text-[10px] text-[#626A73] tracking-widest pl-1 border-l border-white/10">
+
+            <motion.span
+              initial={false}
+              animate={{
+                opacity: entered && (isBrandSettled || prefersReducedMotion) ? 1 : 0,
+                x: entered && (isBrandSettled || prefersReducedMotion) ? 0 : -10,
+              }}
+              transition={{ duration: 0.45, ease: 'easeOut' }}
+              className="hidden lg:inline-block font-mono text-[10px] text-[#626A73] tracking-widest pl-1 border-l border-white/10"
+            >
               SYS // 2026
-            </span>
+            </motion.span>
           </button>
 
           {/* Dynamic Sticky Section Indicator in Navbar */}

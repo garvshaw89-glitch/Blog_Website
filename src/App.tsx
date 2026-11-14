@@ -139,6 +139,7 @@ export default function App() {
 
         {/* 6. Transforming Floating Navbar */}
         <Navbar
+          entered={!showIntro}
           onContactClick={handleScrollToContact}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onReplayIntro={handleReplayIntro}
