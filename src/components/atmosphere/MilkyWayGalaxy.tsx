@@ -882,7 +882,7 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
     <div
       ref={mountRef}
       aria-hidden="true"
-      className={`MilkyWayGalaxy fixed inset-0 w-full h-full pointer-events-none z-[1] overflow-hidden ${className}`.trim()}
+      className={`MilkyWayGalaxy fixed inset-0 w-full h-full pointer-events-none z-[2] overflow-hidden ${className}`.trim()}
     />
   );
 };

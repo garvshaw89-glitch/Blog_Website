@@ -78,9 +78,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     const rect = brandAnchorRef.current.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const heroFontSize = vw < 420 ? 36 : vw < 640 ? 42 : 50;
+    let heroFontSize = 110;
 
-    // Measure exact rendered dimensions of a 50px hero string in the same editorial font
+    // Measure exact rendered dimensions of 110px hero string in the same editorial font
     const measureEl = document.createElement('span');
     measureEl.textContent = 'GARV SHAW';
     measureEl.className = 'font-editorial font-bold tracking-tight whitespace-nowrap';
@@ -90,12 +90,20 @@ export const Navbar: React.FC<NavbarProps> = ({
     measureEl.style.fontSize = `${heroFontSize}px`;
     measureEl.style.lineHeight = '1';
     document.body.appendChild(measureEl);
-    const heroRect = measureEl.getBoundingClientRect();
+    let heroRect = measureEl.getBoundingClientRect();
+
+    // Clamp cleanly on narrow mobile/tablet screens so the 110px title never clips horizontally
+    const maxAllowedW = Math.max(240, vw - 48);
+    if (heroRect.width > maxAllowedW) {
+      heroFontSize = Math.max(36, Math.floor((heroFontSize * maxAllowedW) / heroRect.width));
+      measureEl.style.fontSize = `${heroFontSize}px`;
+      heroRect = measureEl.getBoundingClientRect();
+    }
     document.body.removeChild(measureEl);
 
     const endScale = rect.width / Math.max(1, heroRect.width);
     const startX = (vw - heroRect.width) * 0.5;
-    const startY = vh * 0.43 - heroRect.height * 0.5;
+    const startY = vh * 0.44 - heroRect.height * 0.5;
 
     setGlide({
       startX,
@@ -325,11 +333,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
       </header>
 
-      {/* Big 50px Futuristic Center-to-Top-Left Corner Entrance for GARV SHAW */}
+      {/* Monumental 110px Futuristic Center-to-Top-Left Corner Entrance for GARV SHAW */}
       <AnimatePresence>
         {showFloatingHeroBrand && glide && (
           <motion.div
-            key="garv-shaw-50px-entrance"
+            key="garv-shaw-110px-entrance"
             aria-hidden="true"
             className="fixed left-0 top-0 z-50 pointer-events-none select-none"
             style={{
@@ -341,45 +349,45 @@ export const Navbar: React.FC<NavbarProps> = ({
               y: glide.startY,
               scale: 1,
               opacity: 0,
-              filter: 'blur(14px)',
+              filter: 'blur(16px)',
             }}
             animate={{
               x: [glide.startX, glide.startX, glide.endX],
               y: [glide.startY, glide.startY, glide.endY],
-              scale: [1.08, 1, glide.endScale],
+              scale: [1.04, 1, glide.endScale],
               opacity: [0, 1, 1],
-              filter: ['blur(14px)', 'blur(0px)', 'blur(0px)'],
+              filter: ['blur(16px)', 'blur(0px)', 'blur(0px)'],
             }}
             transition={{
-              duration: 2.55,
+              duration: 2.75,
               times: [0, 0.48, 1],
               ease: [0.22, 1, 0.36, 1],
             }}
             onAnimationComplete={() => setIsBrandSettled(true)}
           >
             <div className="relative inline-block">
-              {/* Futuristic targeting brackets around 50px title in center, dissolving on slide */}
+              {/* Futuristic targeting brackets around 110px title in center, dissolving on slide */}
               <motion.div
-                initial={{ opacity: 0, scaleX: 1.3 }}
-                animate={{ opacity: [0, 0.9, 0.9, 0], scaleX: [1.3, 1, 1, 0.92] }}
-                transition={{ duration: 1.5, times: [0, 0.25, 0.72, 1], ease: 'easeOut' }}
-                className="absolute -inset-x-5 -inset-y-2.5 pointer-events-none"
+                initial={{ opacity: 0, scaleX: 1.25 }}
+                animate={{ opacity: [0, 0.9, 0.9, 0], scaleX: [1.25, 1, 1, 0.92] }}
+                transition={{ duration: 1.55, times: [0, 0.25, 0.72, 1], ease: 'easeOut' }}
+                className="absolute -inset-x-7 -inset-y-4 pointer-events-none"
               >
-                <span className="absolute left-0 top-0 w-3 h-3 border-t border-l border-cyan-400/85" />
-                <span className="absolute right-0 top-0 w-3 h-3 border-t border-r border-cyan-400/85" />
-                <span className="absolute left-0 bottom-0 w-3 h-3 border-b border-l border-cyan-400/85" />
-                <span className="absolute right-0 bottom-0 w-3 h-3 border-b border-r border-cyan-400/85" />
+                <span className="absolute left-0 top-0 w-5 h-5 border-t-[1.5px] border-l-[1.5px] border-cyan-400/85" />
+                <span className="absolute right-0 top-0 w-5 h-5 border-t-[1.5px] border-r-[1.5px] border-cyan-400/85" />
+                <span className="absolute left-0 bottom-0 w-5 h-5 border-b-[1.5px] border-l-[1.5px] border-cyan-400/85" />
+                <span className="absolute right-0 bottom-0 w-5 h-5 border-b-[1.5px] border-r-[1.5px] border-cyan-400/85" />
               </motion.div>
 
               {/* Futuristic horizontal plasma trace underline */}
               <motion.div
                 initial={{ scaleX: 0, opacity: 0 }}
                 animate={{ scaleX: [0, 1, 1, 0], opacity: [0, 0.95, 0.85, 0] }}
-                transition={{ duration: 1.45, times: [0, 0.3, 0.75, 1], ease: 'easeInOut' }}
-                className="absolute left-0 right-0 -bottom-2 h-[1.5px] origin-center bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_16px_rgba(56,189,248,0.85)]"
+                transition={{ duration: 1.5, times: [0, 0.3, 0.75, 1], ease: 'easeInOut' }}
+                className="absolute left-0 right-0 -bottom-3 h-[2px] origin-center bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_20px_rgba(56,189,248,0.9)]"
               />
 
-              {/* Crisp 50px Editorial Typography with Staggered Hologram Reveal & Laser Sweep */}
+              {/* Crisp 110px Editorial Typography with Staggered Hologram Reveal & Laser Sweep */}
               <div
                 className="relative font-editorial font-bold tracking-tight leading-none whitespace-nowrap overflow-hidden"
                 style={{ fontSize: `${glide.heroFontSize}px` }}
@@ -390,9 +398,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="inline-block text-[#F2F3F5]"
                     style={{
                       textShadow:
-                        '0 0 26px rgba(56, 189, 248, 0.65), 0 0 54px rgba(126, 167, 255, 0.35)',
+                        '0 0 32px rgba(56, 189, 248, 0.68), 0 0 68px rgba(126, 167, 255, 0.38)',
                     }}
-                    initial={{ opacity: 0, y: 18, scaleY: 0.7 }}
+                    initial={{ opacity: 0, y: 24, scaleY: 0.7 }}
                     animate={{ opacity: 1, y: 0, scaleY: 1 }}
                     transition={{
                       duration: 0.45,
@@ -410,7 +418,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   initial={{ x: '-115%', opacity: 0 }}
                   animate={{ x: ['-115%', '120%'], opacity: [0, 0.9, 0.9, 0] }}
                   transition={{ duration: 1.05, delay: 0.28, ease: 'easeInOut' }}
-                  className="absolute inset-y-0 w-24 pointer-events-none"
+                  className="absolute inset-y-0 w-36 pointer-events-none"
                   style={{
                     background:
                       'linear-gradient(90deg, transparent 0%, rgba(125,211,252,0.55) 45%, rgba(255,255,255,0.88) 50%, rgba(56,189,248,0.5) 55%, transparent 100%)',

@@ -179,10 +179,12 @@ export default function App() {
 
           {/* DUAL-DIRECTION INFINITE MARQUEE */}
           <MarqueeSection />
+        </div>
 
-          {/* 2. ABOUT / IDENTITY */}
-          <AboutSection onContactClick={handleScrollToContact} />
+        {/* 2. ABOUT / IDENTITY (emerges from under MilkyWayGalaxy z-[2] into foreground z-10) */}
+        <AboutSection onContactClick={handleScrollToContact} />
 
+        <div className="relative z-10 flex flex-col">
           {/* 3. CAPABILITIES (Interactive Editorial Typography) */}
           <CapabilitiesSection id="capabilities" />
 
