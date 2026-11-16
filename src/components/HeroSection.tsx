@@ -27,7 +27,7 @@ interface HeadlineItem {
 const HEADLINE_ROTATIONS: HeadlineItem[] = [
   {
     id: 'garv-shaw',
-    prefix: '01 // ARCHITECT',
+    prefix: '01 · ARCHITECT',
     primary: 'GARV SHAW.',
     highlight: 'SHAW',
     subline: 'DIGITAL ARCHITECT & FULL-STACK SYSTEMS ENGINEER',
@@ -36,7 +36,7 @@ const HEADLINE_ROTATIONS: HeadlineItem[] = [
   },
   {
     id: 'building-systems',
-    prefix: '02 // SYSTEMS',
+    prefix: '02 · SYSTEMS',
     primary: 'INTELLIGENT SYSTEMS.',
     highlight: 'INTELLIGENT',
     subline: 'AUTONOMOUS REASONING, CLOUD RUNTIMES & DISTRIBUTED PLATFORMS',
@@ -45,7 +45,7 @@ const HEADLINE_ROTATIONS: HeadlineItem[] = [
   },
   {
     id: 'turning-ai',
-    prefix: '03 // LAB EXPERIMENTS',
+    prefix: '03 · RESEARCH',
     primary: 'AI TO INNOVATION.',
     highlight: 'INNOVATION',
     subline: 'REASONING PIPELINES, HIGH-FREQUENCY QUANT & SCALED PRODUCTS',
@@ -169,9 +169,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       >
         <div className="w-full max-w-7xl mx-auto my-auto flex flex-col items-center">
           {/* Dynamic Rotating Display Headline Box with Fixed Height Budget to prevent layout jumps */}
-          <div className="text-center w-full mb-6 max-w-5xl mx-auto">
-            {/* Subtle Editorial Sequence Counter (Zero-Pill Discipline) */}
-            <div className="flex items-center justify-center gap-3 mb-5 font-mono text-[10px] tracking-widest text-[#626A73]">
+          <div className="text-center w-full mb-8 max-w-5xl mx-auto">
+            {/* Subtle Editorial Sequence Counter */}
+            <div className="flex items-center justify-center gap-4 mb-5 font-mono text-[10px] tracking-widest text-[#626A73]">
               {HEADLINE_ROTATIONS.map((item, i) => (
                 <button
                   key={item.id}
@@ -179,12 +179,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   onClick={() => setRotationIndex(i)}
                   aria-label={`Jump to headline: ${item.primary}`}
                   data-cursor="button"
-                  className={`transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    i === rotationIndex ? 'text-[#F2F3F5] font-semibold' : 'text-[#626A73] hover:text-[#A7ADB5]'
+                  className={`transition-colors cursor-pointer pb-1 border-b ${
+                    i === rotationIndex
+                      ? 'text-[#F2F3F5] font-semibold border-cyan-400'
+                      : 'text-[#626A73] border-transparent hover:text-[#A7ADB5]'
                   }`}
                 >
-                  <span>{`0${i + 1}`}</span>
-                  {i === rotationIndex && <span className="w-1 h-1 rounded-full bg-[#FF9D38]" />}
+                  {`0${i + 1}`}
                 </button>
               ))}
             </div>
@@ -200,17 +201,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                   className="flex flex-col items-center justify-center w-full px-2"
                 >
-                  {/* Micro Category Eyebrow with Editorial Dashes */}
+                  {/* Micro Category Eyebrow with Editorial Hairlines */}
                   <div className="flex items-center gap-2.5 sm:gap-3 mb-2.5 sm:mb-3">
                     <span className="w-6 sm:w-10 h-[1px] bg-white/20" />
                     <span className="font-mono text-[10px] sm:text-xs font-medium uppercase tracking-[0.25em] text-[#A7ADB5]">
-                      {currentRotation.id === 'turning-ai' ? (
-                        <>
-                          <span className="text-[#FF9D38] font-semibold">03</span> // LAB EXPERIMENTS
-                        </>
-                      ) : (
-                        currentRotation.prefix
-                      )}
+                      {currentRotation.prefix}
                     </span>
                     <span className="w-6 sm:w-10 h-[1px] bg-white/20" />
                   </div>
@@ -263,12 +258,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-4 text-[#A7ADB5] font-sans text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed font-light px-2"
+              className="mt-4 text-[#A7ADB5] font-sans text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed font-light px-2 [text-wrap:balance]"
             >
               Architecting intelligent systems and digital products at the intersection of{' '}
               <strong className="text-[#F2F3F5] font-normal">Artificial Intelligence</strong>,{' '}
               <strong className="text-[#F2F3F5] font-normal">Cloud Infrastructure</strong>, and{' '}
-              <strong className="text-[#F2F3F5] font-normal">Distributed Runtimes</strong>.
+              <strong className="text-cyan-300 font-normal">Distributed Runtimes</strong>.
             </motion.p>
           </div>
 

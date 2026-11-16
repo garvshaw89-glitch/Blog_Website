@@ -1,212 +1,276 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Cpu, Cloud, Terminal, Grid3X3, Hammer } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import {
+  Sparkles,
+  Cpu,
+  Cloud,
+  Terminal,
+  Layers,
+  Activity,
+} from 'lucide-react';
 import { ArchitectAvatar } from './ArchitectAvatar';
 
 interface IdentityCoreState {
+  id: string;
   word: string;
   subtext: string;
   themeColor: string;
+  highlights: string[];
   icon: React.ReactNode;
-  geometryType: 'orbital' | 'neural' | 'cloud' | 'code' | 'grid' | 'build';
 }
 
 const IDENTITY_STATES: IdentityCoreState[] = [
   {
-    word: 'GARV',
-    subtext: 'DIGITAL ARCHITECT',
-    themeColor: '#22d3ee',
-    icon: <Sparkles className="w-5 h-5 text-cyan-300" />,
-    geometryType: 'orbital',
-  },
-  {
-    word: 'AI',
-    subtext: 'NEURAL REASONING & AGENTS',
+    id: 'architect',
+    word: 'ARCHITECT',
+    subtext: 'INTELLIGENT SYSTEMS DESIGN',
     themeColor: '#38bdf8',
-    icon: <Cpu className="w-5 h-5 text-sky-400" />,
-    geometryType: 'neural',
+    highlights: ['Multi-Agent AI', 'Distributed Runtimes', 'Financial Systems'],
+    icon: <Sparkles className="w-4 h-4 text-sky-300" />,
   },
   {
-    word: 'CLOUD',
-    subtext: 'DISTRIBUTED EDGE SYSTEMS',
+    id: 'ai',
+    word: 'AI ENGINE',
+    subtext: 'NEURAL REASONING & AGENTS',
+    themeColor: '#22d3ee',
+    highlights: ['Structured Tool Use', 'Vector Retrieval', 'Streaming Inference'],
+    icon: <Cpu className="w-4 h-4 text-cyan-300" />,
+  },
+  {
+    id: 'cloud',
+    word: 'CLOUD EDGE',
+    subtext: 'MULTI-REGION INFRASTRUCTURE',
     themeColor: '#818cf8',
-    icon: <Cloud className="w-5 h-5 text-indigo-400" />,
-    geometryType: 'cloud',
+    highlights: ['Cloud Run Containers', 'Serverless Compute', 'Edge Caching'],
+    icon: <Cloud className="w-4 h-4 text-indigo-300" />,
   },
   {
-    word: 'CODE',
-    subtext: 'SYSTEM ARCHITECTURE',
+    id: 'runtimes',
+    word: 'RUNTIMES',
+    subtext: 'DISTRIBUTED EDGE & STREAMS',
     themeColor: '#34d399',
-    icon: <Terminal className="w-5 h-5 text-emerald-400" />,
-    geometryType: 'code',
+    highlights: ['WebSocket Telemetry', 'Zero-Copy Buffers', 'Async Workers'],
+    icon: <Activity className="w-4 h-4 text-emerald-300" />,
   },
   {
+    id: 'systems',
     word: 'SYSTEMS',
-    subtext: 'FULL-STACK INFRASTRUCTURE',
+    subtext: 'DETERMINISTIC ARCHITECTURE',
     themeColor: '#a78bfa',
-    icon: <Grid3X3 className="w-5 h-5 text-purple-400" />,
-    geometryType: 'grid',
+    highlights: ['Strict Type Schemas', 'State Machines', 'Zero-Lag UI'],
+    icon: <Layers className="w-4 h-4 text-violet-300" />,
   },
   {
-    word: 'BUILD',
-    subtext: 'PRODUCTS × FINANCE × COMMERCE',
-    themeColor: '#f43f5e',
-    icon: <Hammer className="w-5 h-5 text-rose-400" />,
-    geometryType: 'build',
+    id: 'build',
+    word: 'PRODUCTS',
+    subtext: 'FINANCE × APPLIED SOFTWARE',
+    themeColor: '#fbbf24',
+    highlights: ['Quant Terminals', 'Compensation OS', 'High-Craft UX'],
+    icon: <Terminal className="w-4 h-4 text-amber-300" />,
   },
+];
+
+// Perimeter distributed runtime mesh points rendered on a 640x400 architectural SVG field
+const MESH_NODES = [
+  { id: 'edge-n', label: 'EDGE', x: 76, y: 78 },
+  { id: 'infer-n', label: 'INFER', x: 564, y: 78 },
+  { id: 'stream-n', label: 'STREAM', x: 46, y: 200 },
+  { id: 'worker-n', label: 'WORKER', x: 594, y: 200 },
+  { id: 'cache-n', label: 'CACHE', x: 76, y: 322 },
+  { id: 'state-n', label: 'STATE', x: 564, y: 322 },
+];
+
+const MESH_PATHS = [
+  'M 76 78 Q 200 130 320 200',
+  'M 564 78 Q 440 130 320 200',
+  'M 46 200 Q 180 200 320 200',
+  'M 594 200 Q 460 200 320 200',
+  'M 76 322 Q 200 270 320 200',
+  'M 564 322 Q 440 270 320 200',
+  'M 76 78 Q 320 24 564 78',
+  'M 76 322 Q 320 376 564 322',
 ];
 
 export const IdentityCore: React.FC = () => {
   const [index, setIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
+    if (isPaused || prefersReducedMotion) return;
     const timer = setInterval(() => {
       setIndex((prev) => (prev + 1) % IDENTITY_STATES.length);
-    }, 3200);
+    }, 3400);
     return () => clearInterval(timer);
-  }, []);
+  }, [isPaused, prefersReducedMotion]);
 
   const current = IDENTITY_STATES[index];
 
   return (
-    <div className="relative w-full max-w-2xl h-[320px] sm:h-[380px] md:h-[420px] mx-auto flex items-center justify-center select-none pointer-events-auto">
-      {/* Background Interactive Ambient Aura */}
-      <motion.div
-        animate={{
-          scale: [1, 1.15, 1],
-          opacity: [0.18, 0.32, 0.18],
-        }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute w-72 sm:w-96 h-72 sm:h-96 rounded-full blur-[90px] pointer-events-none"
+    <div
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      className="relative w-full max-w-3xl min-h-[340px] sm:min-h-[400px] mx-auto flex items-center justify-center select-none pointer-events-auto"
+    >
+      {/* Subtle Ambient Aura Matched to Active Discipline */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute w-72 sm:w-96 h-72 sm:h-96 rounded-full blur-[96px] opacity-20 transition-colors duration-700"
         style={{ backgroundColor: current.themeColor }}
       />
 
-      {/* Surrounding Geometric Systems tailored to current active identity */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        {/* Orbital Gyroscope rings */}
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-          className="absolute w-[260px] sm:w-[320px] md:w-[380px] h-[260px] sm:h-[320px] md:h-[380px] rounded-full border border-white/10 border-dashed"
+      {/* Precision Orbital Rings & Distributed Runtime Topology Mesh */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
+      >
+        <div
+          className="absolute w-[280px] sm:w-[360px] h-[280px] sm:h-[360px] rounded-full border border-white/[0.06] transition-colors duration-500"
+          style={{ borderColor: `${current.themeColor}22` }}
         />
+        <div className="absolute w-[350px] sm:w-[440px] h-[350px] sm:h-[440px] rounded-full border border-dashed border-white/[0.05]" />
 
-        <motion.div
-          animate={{ rotate: -360 }}
-          transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
-          className="absolute w-[200px] sm:w-[250px] md:w-[300px] h-[200px] sm:h-[250px] md:h-[300px] rounded-full border border-white/15"
-          style={{ borderColor: `${current.themeColor}33` }}
-        />
+        <svg
+          viewBox="0 0 640 400"
+          preserveAspectRatio="xMidYMid meet"
+          className="hidden sm:block w-full h-full max-w-[680px] opacity-80"
+        >
+          {MESH_PATHS.map((d, i) => (
+            <g key={i}>
+              <path
+                d={d}
+                fill="none"
+                stroke={
+                  i % 2 === index % 2
+                    ? `${current.themeColor}55`
+                    : 'rgba(255,255,255,0.08)'
+                }
+                strokeWidth={i % 2 === index % 2 ? '1.35' : '0.9'}
+                className="transition-all duration-500"
+              />
+              {!prefersReducedMotion && i < 6 && i % 2 === index % 2 && (
+                <circle r="2.4" fill={current.themeColor}>
+                  <animateMotion
+                    dur={`${2.6 + (i % 3) * 0.4}s`}
+                    repeatCount="indefinite"
+                    path={d}
+                  />
+                </circle>
+              )}
+            </g>
+          ))}
 
-        {/* Dynamic Nodes around perimeter based on geometryType */}
-        {current.geometryType === 'orbital' && (
-          <>
-            {[0, 90, 180, 270].map((deg, i) => (
-              <motion.div
-                key={`orb-${i}`}
-                animate={{ rotate: [deg, deg + 360] }}
-                transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
-                className="absolute w-[260px] sm:w-[320px] h-[260px] sm:h-[320px] rounded-full flex items-start justify-center"
-              >
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-300 shadow-[0_0_12px_#22d3ee]" />
-              </motion.div>
-            ))}
-          </>
-        )}
-
-        {current.geometryType === 'neural' && (
-          <div className="absolute inset-8 border border-sky-500/20 rounded-3xl flex items-center justify-between p-4">
-            <span className="text-[10px] font-mono text-sky-400">LAYER_01: INPUT</span>
-            <span className="text-[10px] font-mono text-sky-400">LAYER_04: INFERENCE</span>
-          </div>
-        )}
-
-        {current.geometryType === 'cloud' && (
-          <div className="absolute w-[300px] h-[160px] border border-indigo-500/25 rounded-2xl flex flex-col justify-between p-3 font-mono text-[9px] text-indigo-300">
-            <div className="flex justify-between">
-              <span>REGION: ASIA-SOUTH1</span>
-              <span>PING: 14MS</span>
-            </div>
-            <div className="flex justify-between">
-              <span>PODS: 12/12 HEALTHY</span>
-              <span>UPTIME: 99.99%</span>
-            </div>
-          </div>
-        )}
-
-        {current.geometryType === 'code' && (
-          <div className="absolute inset-x-4 top-4 flex justify-between gap-3 font-mono text-[9px] text-emerald-400/60 overflow-hidden">
-            <span className="truncate">async function orchestrate() &#123;</span>
-            <span className="truncate">return await synthesize(); &#125;</span>
-          </div>
-        )}
-
-        {current.geometryType === 'grid' && (
-          <div className="absolute w-[280px] h-[280px] border border-purple-500/20 grid grid-cols-3 grid-rows-3 gap-1 p-2">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} className="border border-purple-500/10 rounded-sm" />
-            ))}
-          </div>
-        )}
-
-        {current.geometryType === 'build' && (
-          <div className="absolute w-[240px] h-[240px] border border-rose-500/30 rotate-45" />
-        )}
+          {MESH_NODES.map((node, i) => {
+            const highlighted = i % 2 === index % 2;
+            return (
+              <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
+                <circle
+                  r={highlighted ? 4.5 : 3}
+                  fill={highlighted ? current.themeColor : '#1e293b'}
+                  stroke={highlighted ? '#ffffff' : 'rgba(255,255,255,0.22)'}
+                  strokeWidth="1"
+                />
+                <text
+                  y={node.y > 200 ? 18 : -12}
+                  textAnchor="middle"
+                  fill={highlighted ? '#cbd5e1' : '#64748b'}
+                  fontSize="9"
+                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                  letterSpacing="2"
+                >
+                  {node.label}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
       </div>
 
-      {/* Center Interactive Core Entity */}
+      {/* Center Frosted Architectural Focal Card */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={current.word}
-          initial={{ opacity: 0, scale: 0.85, filter: 'blur(10px)', y: 12 }}
-          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 }}
-          exit={{ opacity: 0, scale: 1.15, filter: 'blur(10px)', y: -12 }}
-          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-10 flex flex-col items-center text-center p-6 sm:p-7 rounded-3xl bg-[#08090B]/90 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl max-w-sm w-full mx-4"
+          key={current.id}
+          initial={
+            prefersReducedMotion
+              ? { opacity: 0 }
+              : { opacity: 0, scale: 0.94, y: 10 }
+          }
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={
+            prefersReducedMotion
+              ? { opacity: 0 }
+              : { opacity: 0, scale: 1.03, y: -10 }
+          }
+          transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 flex flex-col items-center text-center p-6 sm:p-8 rounded-[28px] bg-[#070A10]/92 border border-white/[0.11] shadow-[0_28px_80px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.08)] max-w-md w-full mx-4"
         >
-          {/* Garv Shaw Profile Avatar with Interactive Dot-Matrix Particle Effect */}
-          <div className="relative mb-4 group cursor-pointer" title="Garv Shaw - Verified Digital Architect">
-            <div className="relative">
-              <ArchitectAvatar size={76} interactive={true} />
+          {/* Top Index & Clean Metadata Row */}
+          <div className="w-full flex items-center justify-between pb-4 mb-5 border-b border-white/[0.07]">
+            <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-[#A7ADB5]">
               <span
-                className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#08090B] shadow-[0_0_8px_#34d399] z-10"
-                title="Status: Verified Online"
-              />
+                className="tabular-nums font-semibold"
+                style={{ color: current.themeColor }}
+              >
+                0{index + 1}
+              </span>
+              <span aria-hidden="true" className="text-white/20">
+                ·
+              </span>
+              <span>{current.subtext}</span>
             </div>
+            <span className="shrink-0">{current.icon}</span>
           </div>
 
-          {/* Top category label & icon */}
-          <div className="flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-white/5 border border-white/10">
-            {current.icon}
-            <span
-              className="font-mono text-[10px] tracking-widest font-semibold uppercase"
-              style={{ color: current.themeColor }}
-            >
-              CORE // {index + 1} OF {IDENTITY_STATES.length}
-            </span>
+          {/* Interactive Dot-Matrix Portrait */}
+          <div className="mb-4">
+            <ArchitectAvatar size={72} interactive={true} />
           </div>
 
-          {/* Morphing Headline Text */}
-          <h2 className="font-editorial text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white uppercase leading-none drop-shadow-[0_10px_25px_rgba(0,0,0,0.8)]">
+          {/* Primary Sculpted Title */}
+          <h2 className="font-editorial text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[#F2F3F5] uppercase leading-none">
             {current.word}
           </h2>
 
-          {/* Supporting Domain Description */}
-          <p className="font-mono text-xs text-neutral-300 uppercase tracking-widest mt-3">
-            {current.subtext}
-          </p>
-
-          {/* Micro dots navigation for manual preview */}
-          <div className="flex items-center gap-1.5 mt-5">
-            {IDENTITY_STATES.map((state, i) => (
-              <button
-                key={state.word}
-                onClick={() => setIndex(i)}
-                aria-label={`Select identity state ${state.word}`}
-                className={`h-1 rounded-full transition-all duration-300 cursor-pointer ${
-                  i === index ? 'w-6 bg-white' : 'w-1.5 bg-white/20 hover:bg-white/40'
-                }`}
-              />
+          {/* Unboxed Architectural Capabilities Row */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 font-mono text-[11px] text-[#A7ADB5]">
+            {current.highlights.map((item, idx) => (
+              <React.Fragment key={item}>
+                {idx > 0 && (
+                  <span aria-hidden="true" className="text-white/20">
+                    ·
+                  </span>
+                )}
+                <span className="whitespace-nowrap">{item}</span>
+              </React.Fragment>
             ))}
+          </div>
+
+          {/* Interactive State Selector Bar */}
+          <div
+            role="tablist"
+            aria-label="Select engineering discipline"
+            className="mt-6 pt-4 border-t border-white/[0.07] w-full flex items-center justify-between gap-1 overflow-x-auto"
+          >
+            {IDENTITY_STATES.map((state, i) => {
+              const isSelected = i === index;
+              return (
+                <button
+                  key={state.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => setIndex(i)}
+                  data-cursor="button"
+                  className={`px-2.5 py-1 rounded-lg font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                    isSelected
+                      ? 'bg-white text-black font-semibold'
+                      : 'text-[#626A73] hover:text-[#F2F3F5] hover:bg-white/[0.05]'
+                  }`}
+                >
+                  {state.word.split(' ')[0]}
+                </button>
+              );
+            })}
           </div>
         </motion.div>
       </AnimatePresence>
