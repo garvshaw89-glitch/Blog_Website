@@ -297,35 +297,9 @@ const GALAXY_VERTEX_SHADER = /* glsl */ `
       p.z += s * 1.6;
     }
 
-    // Smooth pointer gravitational eddy
-    float halfW = max(12.2 * max(uAspect, 0.85), 10.0);
-    vec2 pointerWorld = vec2(uPointer.x * halfW * 0.85, uPointer.y * 7.2);
-    vec2 toStar = p.xy - pointerWorld;
-    float pDist = length(toStar);
-    float wakeRadius = 4.4 + uPointerEnergy * 2.2;
-    float wake = smoothstep(wakeRadius, 0.0, pDist) * (0.42 + uPointerEnergy * 0.88);
-
-    if (wake > 0.001) {
-      vec2 radialDir = pDist > 0.001 ? toStar / pDist : vec2(0.0, 1.0);
-      vec2 tangentDir = vec2(-radialDir.y, radialDir.x);
-      float swirl = wake * (1.1 + uPointerEnergy * 0.88);
-      p.xy += radialDir * (wake * 0.85) + tangentDir * (sin(swirl) * 0.82);
-      p.z += wake * 1.35;
-    }
-
-    // Click Supernova Ripple Wave
+    // Keep galaxy particles cohesive around cursor (no radial separation wake)
+    float wake = 0.0;
     float ripple = 0.0;
-    if (uClickAge > 0.0 && uClickAge < 2.4) {
-      vec2 clickWorld = vec2(uClickOrigin.x * halfW * 0.85, uClickOrigin.y * 7.2);
-      float cDist = length(p.xy - clickWorld);
-      float waveFront = uClickAge * 12.0;
-      float band = exp(-pow((cDist - waveFront) * 0.85, 2.0));
-      float fade = 1.0 - smoothstep(0.0, 2.4, uClickAge);
-      ripple = band * fade;
-      vec2 cDir = cDist > 0.001 ? (p.xy - clickWorld) / cDist : vec2(1.0, 0.0);
-      p.xy += cDir * ripple * 1.4;
-      p.z += ripple * 1.9;
-    }
 
     // Rocket Launch Exhaust Wake ('R' key)
     float rocketGlow = 0.0;

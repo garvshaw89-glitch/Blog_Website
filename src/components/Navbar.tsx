@@ -154,51 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 GARV SHAW
               </span>
-
-              <motion.span
-                initial={false}
-                animate={{
-                  opacity: entered && (isBrandSettled || prefersReducedMotion) ? 1 : 0,
-                  x: entered && (isBrandSettled || prefersReducedMotion) ? 0 : -10,
-                }}
-                transition={{ duration: 0.45, ease: 'easeOut' }}
-                className="hidden lg:inline-block font-mono text-[10px] text-[#626A73] tracking-widest pl-1 border-l border-white/10"
-              >
-                SYS // 2026
-              </motion.span>
             </button>
-
-            {/* Dynamic Sticky Section Indicator in Navbar */}
-            {hasScrolled && (
-              <div className="hidden lg:flex items-center gap-1.5 pl-2.5 border-l border-white/10 animate-fadeIn">
-                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-300 font-semibold">
-                  {activeSection === 'hero-section'
-                    ? 'HERO'
-                    : activeSection === 'about'
-                    ? 'ABOUT'
-                    : activeSection === 'capabilities'
-                    ? 'CAPABILITIES'
-                    : activeSection === 'digital-dna'
-                    ? 'DIGITAL DNA'
-                    : activeSection === 'projects'
-                    ? 'PROJECTS'
-                    : activeSection === 'github-telemetry'
-                    ? 'GITHUB'
-                    : activeSection === 'journey'
-                    ? 'JOURNEY'
-                    : activeSection === 'constellation'
-                    ? 'CONSTELLATION'
-                    : activeSection === 'writing'
-                    ? 'WRITING'
-                    : activeSection === 'ai-lab'
-                    ? 'AI LAB'
-                    : activeSection === 'contact'
-                    ? 'CONTACT'
-                    : activeSection.toUpperCase()}
-                </span>
-              </div>
-            )}
           </div>
 
           {/* Desktop Top-Center/Right: Editorial Nav Links */}
@@ -208,17 +164,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <button
               type="button"
-              onClick={() => scrollToSection('writing')}
+              onClick={() => scrollToSection('about')}
               data-cursor="link"
-              data-cursor-label="READ"
+              data-cursor-label="ABOUT"
               className={`transition-colors hover:text-[#F2F3F5] cursor-pointer flex items-center gap-1.5 ${
-                activeSection === 'writing' ? 'text-[#F2F3F5]' : ''
+                activeSection === 'about' ? 'text-[#F2F3F5]' : ''
               }`}
             >
-              {activeSection === 'writing' && (
+              {activeSection === 'about' && (
                 <span className="w-1 h-1 rounded-full bg-[#7EA7FF]" />
               )}
-              <span>WRITING</span>
+              <span>ABOUT</span>
             </button>
 
             <span className="text-white/10">/</span>
@@ -242,17 +198,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               type="button"
-              onClick={() => scrollToSection('about')}
+              onClick={() => scrollToSection('writing')}
               data-cursor="link"
-              data-cursor-label="ABOUT"
+              data-cursor-label="READ"
               className={`transition-colors hover:text-[#F2F3F5] cursor-pointer flex items-center gap-1.5 ${
-                activeSection === 'about' ? 'text-[#F2F3F5]' : ''
+                activeSection === 'writing' ? 'text-[#F2F3F5]' : ''
               }`}
             >
-              {activeSection === 'about' && (
+              {activeSection === 'writing' && (
                 <span className="w-1 h-1 rounded-full bg-[#7EA7FF]" />
               )}
-              <span>ABOUT</span>
+              <span>WRITING</span>
             </button>
 
             <span className="text-white/10">/</span>
@@ -273,21 +229,25 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </nav>
 
-          {/* Top-Right: Quick Actions (Intro Replay, Command Palette) */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Top-Right: Transparent Editorial Quick Actions (Intro Replay, Command Palette) */}
+          <div className="flex items-center gap-4 text-[11px] font-mono tracking-widest uppercase text-[#A7ADB5]">
             {onReplayIntro && (
               <button
                 type="button"
                 onClick={onReplayIntro}
-                data-cursor="button"
+                data-cursor="link"
                 data-cursor-label="INTRO"
                 aria-label="Replay Cinematic Entrance Experience"
                 title="Replay Cinematic Entrance Experience"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-white/[0.08] hover:border-cyan-400/40 bg-[#11151A]/60 hover:bg-[#171C22] text-[#A7ADB5] hover:text-cyan-300 font-mono text-[10px] tracking-wider transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 bg-transparent text-[#A7ADB5] hover:text-cyan-300 transition-colors cursor-pointer"
               >
                 <Sparkles className="w-3 h-3 text-cyan-400" />
                 <span className="hidden sm:inline">INTRO</span>
               </button>
+            )}
+
+            {onReplayIntro && onOpenCommandPalette && (
+              <span className="hidden sm:inline text-white/10">/</span>
             )}
 
             {onOpenCommandPalette && (
@@ -295,14 +255,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 id="cmd-palette-trigger"
                 onClick={onOpenCommandPalette}
-                data-cursor="button"
+                data-cursor="link"
                 data-cursor-label="CMD"
                 aria-label="Open Command Palette"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-white/[0.08] hover:border-white/20 bg-[#11151A]/60 hover:bg-[#171C22] text-[#A7ADB5] hover:text-[#F2F3F5] font-mono text-[10px] tracking-wider transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 bg-transparent text-[#A7ADB5] hover:text-[#F2F3F5] transition-colors cursor-pointer"
               >
                 <Command className="w-3 h-3 text-[#7EA7FF]" />
                 <span className="hidden sm:inline">MENU</span>
-                <kbd className="hidden lg:inline text-[9px] text-[#626A73] pl-1 font-sans">⌘K</kbd>
+                <kbd className="hidden lg:inline text-[9px] text-[#626A73] pl-0.5 font-sans">⌘K</kbd>
               </button>
             )}
 
@@ -322,10 +282,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="md:hidden bg-[#0B0E12] border-b border-white/10 px-6 py-6 flex flex-col gap-4 text-xs font-mono tracking-widest uppercase">
             <button
               type="button"
-              onClick={() => scrollToSection('writing')}
+              onClick={() => scrollToSection('about')}
               className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
             >
-              01 // WRITING
+              01 // ABOUT
             </button>
             <button
               type="button"
@@ -336,10 +296,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => scrollToSection('about')}
+              onClick={() => scrollToSection('writing')}
               className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
             >
-              03 // ABOUT
+              03 // WRITING
             </button>
             <button
               type="button"

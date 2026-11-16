@@ -695,26 +695,7 @@ export class SandParticleSystem {
           az += (tz - pz) * stiffness;
         }
 
-        // Localized mouse/touch atmospheric disturbance (gentle deflection, never breaks legibility)
-        if (isSettledInteractive && mouseActive) {
-          const dx = px - mouseWorldX;
-          const dy = py - mouseWorldY;
-          const distSq = dx * dx + dy * dy;
-          if (distSq < interactRadiusSq && distSq > 0.0001) {
-            const dist = Math.sqrt(distSq);
-            const falloff = (1.0 - dist / interactRadius);
-            const smoothFall = falloff * falloff;
-            const invD = 1.0 / dist;
-            // Radial puff + soft tangential swirl
-            const repel = smoothFall * (4.2 + pointerForceBoost * 4.5);
-            const swirl = smoothFall * 2.4;
-            ax += dx * invD * repel - dy * invD * swirl;
-            ay += dy * invD * repel + dx * invD * swirl;
-            az += smoothFall * (s - 0.45) * 2.2;
-          }
-        }
-
-        // Semi-implicit Euler integration with exponential velocity damping
+        // Semi-implicit Euler integration with exponential velocity damping (particles stay cohesive under cursor)
         vx += ax * stepDt;
         vy += ay * stepDt;
         vz += az * stepDt;

@@ -1,11 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { interactionEngine } from '../../context/SingularityInteractionEngine';
 import { applyMagneticAttraction, resetMagneticElement } from '../../hooks/cursor/useCursor';
-import {
-  createRocketSprites,
-  ExhaustParticle,
-  ParticleTone,
-} from '../cursor/rocketBlueprint';
 import { drawRealAsteroid } from '../intro/drawRealAsteroid';
 import { CursorInteractionController } from '../cursor/CursorInteractionManager';
 import '../cursor/cursor.css';
@@ -13,6 +8,14 @@ import '../cursor/cursor.css';
 export interface CustomCursorProps {
   magneticStrength?: number;
   enabled?: boolean;
+}
+
+interface ClickImpactPulse {
+  x: number;
+  y: number;
+  age: number;
+  maxAge: number;
+  isTouch: boolean;
 }
 
 export const CustomCursor: React.FC<CustomCursorProps> = ({
@@ -102,6 +105,8 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
 
     const controller = new CursorInteractionController();
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const clickPulses: ClickImpactPulse[] = [];
+    let isPointerPressed = false;
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     const resizeCanvas = () => {
@@ -112,9 +117,6 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas, { passive: true });
     window.addEventListener('orientationchange', resizeCanvas, { passive: true });
-
-    const { sprites } = createRocketSprites();
-    const debrisPool: ExhaustParticle[] = [];
 
     const engState = interactionEngine.state;
     const hasPointerPos =
@@ -226,101 +228,32 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
       applyInteractionTargets(performance.now());
     });
 
-    const spawnAsteroidEmber = (
-      originX: number,
-      originY: number,
-      scale: number,
-      vxMove: number,
-      vyMove: number,
-      speedBoost: number,
-      toneOverride?: ParticleTone
-    ) => {
-      if (debrisPool.length >= 64) debrisPool.shift();
-
-      // Emit subtly from boulder body behind tip (11px, 11px in local cursor frame)
-      const bodyX = originX + 10.5 * scale + (Math.random() - 0.5) * 6 * scale;
-      const bodyY = originY + 10.5 * scale + (Math.random() - 0.5) * 6 * scale;
-
-      const spreadAngle = Math.random() * Math.PI * 2;
-      const drift = (14 + Math.random() * 34) * speedBoost;
-      const vx = -vxMove * 1.4 + Math.cos(spreadAngle) * drift;
-      const vy = -vyMove * 1.4 + Math.sin(spreadAngle) * drift;
-
-      const r = Math.random();
-      const tone: ParticleTone =
-        toneOverride || (r < 0.45 ? 'amber' : r < 0.8 ? 'white' : 'cyan');
-
-      debrisPool.push({
-        x: bodyX,
-        y: bodyY,
-        vx,
-        vy,
-        size: 1.25 + Math.random() * 1.35,
-        life: 0,
-        maxLife: 0.24 + Math.random() * 0.22,
-        tone,
-      });
-    };
-
-    const spawnTouchFeedbackBurst = (x: number, y: number) => {
-      if (prefersReducedMotion) return;
-      const count = 14;
-      for (let i = 0; i < count; i++) {
-        if (debrisPool.length >= 64) debrisPool.shift();
-        const angle = (i / count) * Math.PI * 2 + Math.random() * 0.35;
-        const speedMag = 28 + Math.random() * 52;
-        const tone: ParticleTone =
-          i % 3 === 0 ? 'amber' : i % 2 === 0 ? 'cyan' : 'white';
-        debrisPool.push({
-          x,
-          y,
-          vx: Math.cos(angle) * speedMag,
-          vy: Math.sin(angle) * speedMag,
-          size: 1.4 + Math.random() * 1.3,
-          life: 0,
-          maxLife: 0.26 + Math.random() * 0.2,
-          tone,
-        });
-      }
-    };
-
     const handlePointerDown = (e: PointerEvent) => {
       const now = performance.now();
       controller.notifyClick(now);
+      isPointerPressed = true;
       boostUntilRef.current = now + 260;
 
-      if (!isFinePointer || e.pointerType === 'touch') {
-        spawnTouchFeedbackBurst(e.clientX, e.clientY);
-        return;
-      }
+      if (clickPulses.length >= 6) clickPulses.shift();
+      clickPulses.push({
+        x: e.clientX,
+        y: e.clientY,
+        age: 0,
+        maxAge: prefersReducedMotion ? 0.22 : 0.42,
+        isTouch: e.pointerType === 'touch' || !isFinePointer,
+      });
+    };
 
-      // Micro impact rock-ember burst on click
-      if (!prefersReducedMotion && targetAlphaMultRef.current > 0.1) {
-        const count = 16;
-        for (let i = 0; i < count; i++) {
-          if (debrisPool.length >= 64) debrisPool.shift();
-          const ang = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
-          const spd = 36 + Math.random() * 68;
-          const tone: ParticleTone = i % 3 === 0 ? 'amber' : i % 2 === 0 ? 'white' : 'cyan';
-          debrisPool.push({
-            x: cursorPos.current.x + 8 * currentScaleRef.current,
-            y: cursorPos.current.y + 8 * currentScaleRef.current,
-            vx: Math.cos(ang) * spd,
-            vy: Math.sin(ang) * spd,
-            size: 1.35 + Math.random() * 1.4,
-            life: 0,
-            maxLife: 0.24 + Math.random() * 0.18,
-            tone,
-          });
-        }
-      }
+    const handlePointerUp = () => {
+      isPointerPressed = false;
     };
 
     window.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    window.addEventListener('pointerup', handlePointerUp, { passive: true });
+    window.addEventListener('pointercancel', handlePointerUp, { passive: true });
 
     let rafId = 0;
     let prevTime = performance.now();
-    let emitAccumulator = 0;
 
     const tick = (now: number) => {
       const dt = Math.min((now - prevTime) / 1000, 0.05);
@@ -364,12 +297,16 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
       }
 
       const isBoosting = now < boostUntilRef.current;
-      const desiredScale = isBoosting ? targetScaleRef.current * 1.14 : targetScaleRef.current;
-      const desiredEnergy = isBoosting
-        ? 1.55
+      const desiredScale = isPointerPressed
+        ? targetScaleRef.current * 0.84
+        : isBoosting
+          ? targetScaleRef.current * 1.16
+          : targetScaleRef.current;
+      const desiredEnergy = isPointerPressed || isBoosting
+        ? 1.95
         : Math.min(1.65, (0.28 + speed * 0.04) * targetEnergyRef.current);
 
-      const damp = 1 - Math.exp(-14 * dt);
+      const damp = 1 - Math.exp(-16 * dt);
       currentScaleRef.current += (desiredScale - currentScaleRef.current) * damp;
       currentEnergyRef.current += (desiredEnergy - currentEnergyRef.current) * damp;
       currentAlphaMultRef.current +=
@@ -378,93 +315,91 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
       const sc = currentScaleRef.current;
       const asteroidScale = sc * 1.24;
 
-      // Emit subtle asteroid dust / ember wake when streaking fast
-      if (
-        isFinePointer &&
-        !prefersReducedMotion &&
-        isVisibleRef.current &&
-        currentAlphaMultRef.current > 0.25 &&
-        (speed > 2.8 || isBoosting)
-      ) {
-        const emitRate = isBoosting ? 36 : Math.min(38, speed * 1.15);
-        emitAccumulator += dt * emitRate;
-        while (emitAccumulator >= 1) {
-          emitAccumulator -= 1;
-          spawnAsteroidEmber(
-            cursorPos.current.x,
-            cursorPos.current.y,
-            asteroidScale,
-            dx,
-            dy,
-            isBoosting ? 1.4 : 0.7 + Math.min(speed * 0.03, 0.9)
-          );
-        }
-      }
-
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      // 1. Render crisp Asteroid Impact Click Shockwave Rings right at click point
+      if (clickPulses.length > 0) {
+        for (let i = clickPulses.length - 1; i >= 0; i--) {
+          const pulse = clickPulses[i];
+          pulse.age += dt;
+          if (pulse.age >= pulse.maxAge) {
+            clickPulses.splice(i, 1);
+            continue;
+          }
+
+          const p = pulse.age / pulse.maxAge;
+          const ease = 1 - Math.pow(1 - p, 3);
+          const fade = Math.pow(1 - p, 1.5);
+          const maxR = prefersReducedMotion ? 22 : pulse.isTouch ? 34 : 38;
+
+          ctx.save();
+          ctx.translate(pulse.x, pulse.y);
+
+          // Outer electric-cyan shockwave ring
+          const outerR = 3 + ease * maxR;
+          ctx.strokeStyle = `rgba(125, 211, 252, ${(0.88 * fade).toFixed(3)})`;
+          ctx.lineWidth = Math.max(0.75, 2.1 * (1 - p));
+          ctx.beginPath();
+          ctx.arc(0, 0, outerR, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Inner warm-amber meteorite strike ring
+          const innerR = 2 + ease * (maxR * 0.56);
+          ctx.strokeStyle = `rgba(251, 146, 60, ${(0.78 * fade).toFixed(3)})`;
+          ctx.lineWidth = Math.max(0.65, 1.6 * (1 - p));
+          ctx.beginPath();
+          ctx.arc(0, 0, innerR, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Brief pinpoint impact glint cross right at tip (first 0.16s)
+          if (p < 0.38 && !prefersReducedMotion) {
+            const glintFade = 1 - p / 0.38;
+            const glintLen = 6 + (1 - glintFade) * 6;
+            ctx.strokeStyle = `rgba(255, 251, 235, ${(0.95 * glintFade).toFixed(3)})`;
+            ctx.lineWidth = 1.4 * glintFade;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-glintLen, 0);
+            ctx.lineTo(glintLen, 0);
+            ctx.moveTo(0, -glintLen);
+            ctx.lineTo(0, glintLen);
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        }
+      }
 
       const shouldDrawAsteroid =
         isFinePointer && isVisibleRef.current && currentAlphaMultRef.current > 0.02;
 
-      if (shouldDrawAsteroid || debrisPool.length > 0) {
+      if (shouldDrawAsteroid) {
         const rx = cursorPos.current.x;
         const ry = cursorPos.current.y;
 
-        // 1. Trailing cosmic embers & dust motes
-        if (debrisPool.length > 0) {
-          ctx.globalCompositeOperation = 'lighter';
-          for (let i = debrisPool.length - 1; i >= 0; i--) {
-            const ep = debrisPool[i];
-            ep.life += dt;
-            if (ep.life >= ep.maxLife) {
-              debrisPool.splice(i, 1);
-              continue;
-            }
-            ep.x += ep.vx * dt;
-            ep.y += ep.vy * dt;
-            ep.vx *= 0.93;
-            ep.vy *= 0.93;
+        ctx.save();
+        ctx.translate(rx, ry);
+        ctx.rotate((tiltAngleRef.current * Math.PI) / 180);
 
-            const progress = ep.life / ep.maxLife;
-            const alpha = (1 - progress) * (1 - progress) * 0.62;
-            const drawRadius = ep.size * (1.1 - progress * 0.45) * 1.7;
-            ctx.globalAlpha = alpha;
-            ctx.drawImage(
-              sprites[ep.tone],
-              ep.x - drawRadius,
-              ep.y - drawRadius,
-              drawRadius * 2,
-              drawRadius * 2
-            );
-          }
-          ctx.globalCompositeOperation = 'source-over';
-        }
+        ctx.shadowColor = isPointerPressed || isBoosting
+          ? 'rgba(251, 146, 60, 0.55)'
+          : hoverGlowRef.current > 0.25
+            ? 'rgba(56, 189, 248, 0.45)'
+            : 'rgba(2, 6, 23, 0.68)';
+        ctx.shadowBlur = isPointerPressed || isBoosting ? 10 : hoverGlowRef.current > 0.25 ? 8 : 5;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 1.5;
 
-        // 2. Sculpted 3D-shaded Asteroid Cursor anchored cleanly at (rx, ry) tip
-        if (shouldDrawAsteroid) {
-          ctx.save();
-          ctx.translate(rx, ry);
-          ctx.rotate((tiltAngleRef.current * Math.PI) / 180);
-
-          ctx.shadowColor =
-            hoverGlowRef.current > 0.25
-              ? 'rgba(56, 189, 248, 0.45)'
-              : 'rgba(2, 6, 23, 0.68)';
-          ctx.shadowBlur = hoverGlowRef.current > 0.25 ? 8 : 5;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 1.5;
-
-          drawRealAsteroid(
-            ctx,
-            asteroidScale,
-            currentEnergyRef.current,
-            currentAlphaMultRef.current,
-            timeSec,
-            hoverGlowRef.current
-          );
-          ctx.restore();
-        }
+        drawRealAsteroid(
+          ctx,
+          asteroidScale,
+          currentEnergyRef.current,
+          currentAlphaMultRef.current,
+          timeSec,
+          hoverGlowRef.current
+        );
+        ctx.restore();
 
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = 'source-over';
@@ -484,6 +419,8 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
       window.removeEventListener('mouseleave', handlePointerLeave);
       window.removeEventListener('pointermove', handleRawPointerMove);
       window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
       document.documentElement.classList.remove('custom-cursor-enabled');
       cancelAnimationFrame(rafId);
 
