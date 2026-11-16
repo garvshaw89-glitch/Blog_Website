@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowUpRight, Cpu, Cloud, Terminal, Layers, TrendingUp, DollarSign } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 
 interface CapabilityItem {
   number: string;
@@ -119,135 +119,164 @@ export const CapabilitiesSection: React.FC<CapabilitiesSectionProps> = ({
 
   const content = (
     <div className="max-w-7xl mx-auto">
-        {/* Section Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-16">
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-cyan-400 font-semibold text-xs">02 //</span>
-            <span className="font-mono text-xs uppercase tracking-widest text-neutral-400">
-              CAPABILITIES & CORE DISCIPLINES
-            </span>
-          </div>
-          <span className="font-mono text-xs text-neutral-400">EXPANDABLE DIRECTORY</span>
+      {/* Unified Section Header */}
+      <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-12 sm:mb-14">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-sky-400 font-semibold text-xs">02</span>
+          <span aria-hidden="true" className="text-white/25 font-mono text-xs">·</span>
+          <span className="font-mono text-xs uppercase tracking-[0.2em] text-[#A7ADB5]">
+            CAPABILITIES &amp; CORE DISCIPLINES
+          </span>
         </div>
+        <span className="font-mono text-xs uppercase tracking-widest text-[#626A73]">
+          INTERACTIVE DIRECTORY
+        </span>
+      </div>
 
-        {/* Large Typography Interactive List */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          {/* Left Column: Interactive Headings */}
-          <div className="lg:col-span-7 flex flex-col divide-y divide-white/10">
-            {CAPABILITIES.map((item, idx) => {
-              const isSelected = hoveredIndex === idx;
-              return (
-                <div
-                  key={item.number}
-                  onMouseEnter={() => setHoveredIndex(idx)}
-                  onClick={() => setHoveredIndex(idx)}
-                  data-cursor="button"
-                  data-cursor-label="EXPLORE"
-                  className={`py-8 sm:py-10 transition-all duration-300 cursor-pointer flex flex-col group ${
-                    isSelected ? 'pl-4 sm:pl-6' : 'hover:pl-2 opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-baseline gap-4 sm:gap-6">
-                      <span className="font-mono text-xs text-neutral-400">
-                        {item.number}
-                      </span>
-                      <h3
-                        className={`font-editorial text-2xl sm:text-4xl md:text-5xl font-bold uppercase tracking-tight transition-colors ${
-                          isSelected ? 'text-white' : 'text-neutral-400 group-hover:text-white'
-                        }`}
-                      >
-                        {item.title}
-                      </h3>
-                    </div>
-
-                    <ArrowUpRight
-                      className={`w-6 h-6 transition-all duration-300 ${
-                        isSelected
-                          ? 'opacity-100 text-cyan-400 translate-x-1 -translate-y-1'
-                          : 'opacity-0 group-hover:opacity-60 text-neutral-400'
+      {/* Interactive Directory & Specification Split */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+        {/* Left Column: Interactive Headings */}
+        <div className="lg:col-span-7 flex flex-col divide-y divide-white/[0.08]">
+          {CAPABILITIES.map((item, idx) => {
+            const isSelected = hoveredIndex === idx;
+            return (
+              <div
+                key={item.number}
+                onMouseEnter={() => setHoveredIndex(idx)}
+                onClick={() => setHoveredIndex(idx)}
+                data-cursor="button"
+                data-cursor-label="EXPLORE"
+                className={`py-6 sm:py-7 transition-all duration-300 cursor-pointer flex flex-col group ${
+                  isSelected ? 'pl-3 sm:pl-5' : 'hover:pl-2 opacity-60 hover:opacity-100'
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-baseline gap-4 sm:gap-5">
+                    <span
+                      className="font-mono text-xs tabular-nums transition-colors"
+                      style={{ color: isSelected ? item.visualTheme : '#626A73' }}
+                    >
+                      {item.number}
+                    </span>
+                    <h3
+                      className={`font-editorial text-2xl sm:text-4xl font-bold uppercase tracking-tight transition-colors ${
+                        isSelected ? 'text-[#F2F3F5]' : 'text-[#A7ADB5] group-hover:text-white'
                       }`}
-                    />
+                    >
+                      {item.title}
+                    </h3>
                   </div>
 
-                  {isSelected && (
-                    <motion.p
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="font-mono text-xs text-cyan-400/90 tracking-wider mt-3"
-                    >
-                      {item.tagline}
-                    </motion.p>
-                  )}
+                  <ArrowUpRight
+                    className={`w-5 h-5 transition-all duration-300 shrink-0 ${
+                      isSelected
+                        ? 'opacity-100 translate-x-0.5 -translate-y-0.5'
+                        : 'opacity-0 group-hover:opacity-60 text-[#A7ADB5]'
+                    }`}
+                    style={{ color: isSelected ? item.visualTheme : undefined }}
+                  />
                 </div>
-              );
-            })}
-          </div>
 
-          {/* Right Column: Dynamic Deep Inspector Panel */}
-          <div className="lg:col-span-5 sticky top-28">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={active.number}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                className="p-8 sm:p-10 rounded-3xl bg-[#08090B]/90 border border-white/10 backdrop-blur-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
-              >
-                <div className="flex items-center justify-between pb-6 border-b border-white/10 mb-6">
-                  <span className="font-mono text-xs uppercase tracking-widest text-cyan-400">
+                {isSelected && (
+                  <motion.p
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="font-mono text-xs tracking-wider mt-2.5"
+                    style={{ color: item.visualTheme }}
+                  >
+                    {item.tagline}
+                  </motion.p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Right Column: Precision Specification Inspector */}
+        <div className="lg:col-span-5 lg:sticky lg:top-24">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active.number}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="relative p-6 sm:p-8 rounded-2xl bg-[#070A10]/92 border border-white/[0.09] shadow-[0_24px_65px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] overflow-hidden"
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-20 -right-20 w-48 h-48 rounded-full blur-[65px] opacity-20 transition-colors duration-500"
+                style={{ backgroundColor: active.visualTheme }}
+              />
+
+              <div className="relative z-10">
+                <div className="flex items-center justify-between pb-4 border-b border-white/[0.08] mb-5">
+                  <span
+                    className="font-mono text-[11px] uppercase tracking-[0.2em]"
+                    style={{ color: active.visualTheme }}
+                  >
                     DISCIPLINE SPECIFICATION
                   </span>
-                  <span className="font-mono text-xs font-bold text-white">
+                  <span className="font-mono text-xs font-bold text-[#F2F3F5] tabular-nums">
                     {active.number} / 06
                   </span>
                 </div>
 
-                <h4 className="font-editorial text-2xl sm:text-3xl font-bold uppercase text-white tracking-tight mb-4">
+                <h4 className="font-editorial text-2xl sm:text-3xl font-bold uppercase text-[#F2F3F5] tracking-tight mb-2.5">
                   {active.title}
                 </h4>
 
-                <p className="font-sans text-neutral-300 text-sm sm:text-base leading-relaxed font-light mb-8">
+                <div
+                  className="w-10 h-[2px] mb-4 transition-colors duration-500"
+                  style={{ backgroundColor: active.visualTheme }}
+                />
+
+                <p className="font-sans text-[#A7ADB5] text-sm leading-relaxed font-light mb-6">
                   {active.description}
                 </p>
 
-                {/* Key capabilities list */}
-                <div className="mb-8">
-                  <span className="font-mono text-[11px] uppercase tracking-wider text-neutral-400 block mb-3">
+                {/* Core capabilities hairline rows */}
+                <div className="mb-6">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#626A73] block mb-2.5">
                     CORE CAPABILITIES
                   </span>
-                  <ul className="space-y-2">
+                  <ul className="divide-y divide-white/[0.06] border-y border-white/[0.06]">
                     {active.capabilities.map((cap, i) => (
-                      <li key={i} className="flex items-start gap-2.5 text-xs text-neutral-300 font-sans">
-                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
+                      <li
+                        key={i}
+                        className="py-2 flex items-center justify-between gap-3 text-xs text-[#D5D9DF] font-sans"
+                      >
                         <span>{cap}</span>
+                        <span className="font-mono text-[10px] text-[#626A73] tabular-nums shrink-0">
+                          0{i + 1}
+                        </span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                {/* Technologies */}
+                {/* Production Stack */}
                 <div>
-                  <span className="font-mono text-[11px] uppercase tracking-wider text-neutral-400 block mb-3">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#626A73] block mb-2.5">
                     PRODUCTION STACK
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {active.technologies.map((tech) => (
                       <span
                         key={tech}
-                        className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 font-mono text-[11px] text-neutral-300"
+                        className="px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.09] font-mono text-[11px] text-[#D5D9DF] whitespace-nowrap shrink-0"
                       >
                         {tech}
                       </span>
                     ))}
                   </div>
                 </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
+    </div>
   );
 
   if (inSheet) {
@@ -257,7 +286,7 @@ export const CapabilitiesSection: React.FC<CapabilitiesSectionProps> = ({
   return (
     <section
       id={id}
-      className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
+      className="relative w-full py-20 sm:py-26 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
     >
       {content}
     </section>

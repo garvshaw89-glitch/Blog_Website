@@ -2,17 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { interactionEngine } from '../../context/SingularityInteractionEngine';
 
 const SECTIONS = [
-  { id: 'hero-section', label: '00 // HERO' },
-  { id: 'about', label: '01 // ABOUT' },
-  { id: 'capabilities', label: '02 // CAPABILITIES' },
-  { id: 'digital-dna', label: '03 // DNA' },
-  { id: 'projects', label: '04 // WORK' },
-  { id: 'github-telemetry', label: '05 // GITHUB' },
-  { id: 'journey', label: '06 // JOURNEY' },
-  { id: 'constellation', label: '07 // TOPOLOGY' },
-  { id: 'writing', label: '08 // WRITING' },
-  { id: 'ai-lab', label: '09 // AI LAB' },
-  { id: 'contact', label: '10 // CONTACT' },
+  { id: 'hero-section', label: '00 · HERO' },
+  { id: 'about', label: '01 · ABOUT' },
+  { id: 'capabilities', label: '02 · CAPABILITIES' },
+  { id: 'digital-dna', label: '03 · DNA' },
+  { id: 'projects', label: '04 · WORK' },
+  { id: 'github-telemetry', label: '05 · GITHUB' },
+  { id: 'journey', label: '06 · JOURNEY' },
+  { id: 'constellation', label: '07 · TOPOLOGY' },
+  { id: 'writing', label: '08 · WRITING' },
+  { id: 'ai-lab', label: '09 · AI LAB' },
+  { id: 'contact', label: '10 · CONTACT' },
 ];
 
 export const SectionProgressHUD: React.FC = () => {

@@ -355,7 +355,7 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
                     </div>
                   ) : (
                     <div
-                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-all duration-300 border backdrop-blur-md"
+                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-all duration-300 border"
                       style={{
                         backgroundColor: isFocus
                           ? '#0E1A2D'

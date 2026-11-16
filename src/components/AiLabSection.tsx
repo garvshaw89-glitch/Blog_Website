@@ -1,20 +1,15 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Sparkles,
   Send,
   Loader2,
-  Terminal,
   Database,
-  ArrowRight,
   Bot,
   RotateCcw,
   CheckCircle2,
   Cpu,
-  Layers,
 } from 'lucide-react';
 import { GlitchHeading } from './ui/GlitchHeading';
-import { AI_EXPERIMENTS } from '../data/portfolioData';
 
 interface AiLabSectionProps {
   inSheet?: boolean;
@@ -27,27 +22,30 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'assistant' | 'rag' | 'agent'>('assistant');
 
-  // AI Assistant State
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string; model?: string }>>([
     {
       role: 'assistant',
-      text: "Greetings. I am Garv Shaw's AI Assistant. Ask me anything about Garv's AI engineering, cloud architectures, StockMentor, ArogyaSeva, or technical methodology.",
+      text: "Hello. Ask me about Garv Shaw's AI engineering, cloud architectures, StockMentor, ArogyaSeva, or technical methodology.",
       model: 'gemini-3.8-flash',
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // RAG Simulator State
   const [ragQuery, setRagQuery] = useState('How does Garv handle high-frequency trading updates?');
   const [ragSimilarityScore, setRagSimilarityScore] = useState<number | null>(null);
   const [isSimulatingRag, setIsSimulatingRag] = useState(false);
   const [matchedChunk, setMatchedChunk] = useState<string | null>(null);
 
-  // Agent Simulator State
   const [agentStep, setAgentStep] = useState(0);
   const [isRunningAgent, setIsRunningAgent] = useState(false);
+  const timersRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach((t) => clearTimeout(t));
+    };
+  }, []);
 
   const suggestedPrompts = [
     'What projects use AI and how are they architected?',
@@ -64,7 +62,6 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
     setMessages((prev) => [...prev, userMessage]);
     setPrompt('');
     setIsLoading(true);
-    setErrorMsg(null);
 
     try {
       const response = await fetch('/api/ai-chat', {
@@ -74,9 +71,6 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
       });
 
       if (!response.ok) {
-        if (response.status === 429) {
-          throw new Error('Rate limit reached. Please wait a minute before sending another prompt.');
-        }
         throw new Error('Unable to complete request with AI backend.');
       }
 
@@ -89,13 +83,12 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
           model: data.model || 'gemini-3.8-flash',
         },
       ]);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'An error occurred while generating response.');
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          text: "I am operating in fallback mode. Garv Shaw specializes in AI & Cloud Engineering (Gemini 3.8 Flash, PyTorch, LangChain, Next.js, and Cloud Run). Explore the projects section below to inspect the source code and live deployments.",
+          text: "I am operating in offline knowledge mode. Garv Shaw specializes in AI & Cloud Engineering (Gemini 3.8 Flash, PyTorch, LangChain, Next.js, and Cloud Run). Explore the featured projects above to inspect live deployments.",
           model: 'embedded-knowledge-base',
         },
       ]);
@@ -109,354 +102,331 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
     setRagSimilarityScore(null);
     setMatchedChunk(null);
 
-    setTimeout(() => {
+    const t = window.setTimeout(() => {
       setRagSimilarityScore(0.942);
       setMatchedChunk(
         'Matched Knowledge Chunk #42 [StockMentor Ticker Engine]: Batched WebSocket payloads rendered via requestAnimationFrame using HTML5 Canvas double-buffering to eliminate garbage collection latency at 60 FPS.'
       );
       setIsSimulatingRag(false);
-    }, 600);
+    }, 520);
+    timersRef.current.push(t);
   };
 
   const handleRunAgentWorkflow = () => {
     setIsRunningAgent(true);
     setAgentStep(1);
 
-    setTimeout(() => setAgentStep(2), 700);
-    setTimeout(() => setAgentStep(3), 1400);
-    setTimeout(() => {
+    const t1 = window.setTimeout(() => setAgentStep(2), 550);
+    const t2 = window.setTimeout(() => setAgentStep(3), 1100);
+    const t3 = window.setTimeout(() => {
       setAgentStep(4);
       setIsRunningAgent(false);
-    }, 2100);
+    }, 1650);
+    timersRef.current.push(t1, t2, t3);
   };
 
   const content = (
     <div className="max-w-7xl mx-auto">
-        {/* Section Header */}
-        <div className="text-center mb-12 sm:mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono uppercase tracking-widest mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-            <span>05 // INTERACTIVE LABORATORY</span>
+      {/* Unified Section Header */}
+      <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-12 sm:mb-14">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-sky-400 font-semibold text-xs">09</span>
+          <span aria-hidden="true" className="text-white/25 font-mono text-xs">·</span>
+          <span className="font-mono text-xs uppercase tracking-[0.2em] text-[#A7ADB5]">
+            INTERACTIVE LABORATORY · APPLIED MODELS
+          </span>
+        </div>
+        <span className="font-mono text-xs uppercase tracking-widest text-[#626A73]">
+          AI ENGINEERING LAB
+        </span>
+      </div>
+
+      {/* Editorial Heading */}
+      <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
+        <GlitchHeading className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-[#F2F3F5] mb-3.5">
+          AI ENGINEERING LAB.
+        </GlitchHeading>
+        <p className="font-sans text-[#A7ADB5] text-sm sm:text-base leading-relaxed font-light [text-wrap:balance]">
+          Interact with live AI endpoints, inspect vector similarity retrieval, and step through autonomous agent execution traces.
+        </p>
+      </div>
+
+      {/* Unified Selector Tabs */}
+      <div className="flex flex-wrap items-center justify-center gap-2.5 mb-8">
+        <button
+          type="button"
+          onClick={() => setActiveTab('assistant')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            activeTab === 'assistant'
+              ? 'bg-white text-black font-semibold shadow-[0_0_16px_rgba(255,255,255,0.22)]'
+              : 'bg-white/[0.04] text-[#A7ADB5] hover:text-white hover:bg-white/[0.08] border border-white/[0.09]'
+          }`}
+        >
+          <Bot className="w-3.5 h-3.5" />
+          <span>AI Portfolio Assistant</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('rag')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            activeTab === 'rag'
+              ? 'bg-white text-black font-semibold shadow-[0_0_16px_rgba(255,255,255,0.22)]'
+              : 'bg-white/[0.04] text-[#A7ADB5] hover:text-white hover:bg-white/[0.08] border border-white/[0.09]'
+          }`}
+        >
+          <Database className="w-3.5 h-3.5" />
+          <span>RAG &amp; Semantic Retrieval</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('agent')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+            activeTab === 'agent'
+              ? 'bg-white text-black font-semibold shadow-[0_0_16px_rgba(255,255,255,0.22)]'
+              : 'bg-white/[0.04] text-[#A7ADB5] hover:text-white hover:bg-white/[0.08] border border-white/[0.09]'
+          }`}
+        >
+          <Cpu className="w-3.5 h-3.5" />
+          <span>Autonomous Agent Trace</span>
+        </button>
+      </div>
+
+      {/* Tab 1: AI Portfolio Assistant */}
+      {activeTab === 'assistant' && (
+        <div className="max-w-4xl mx-auto rounded-2xl bg-[#070A10]/92 border border-white/[0.09] p-5 sm:p-7 shadow-[0_24px_65px_rgba(0,0,0,0.85)]">
+          {/* Clean Metadata Bar */}
+          <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.08] mb-4 font-mono text-[11px]">
+            <span className="text-[#A7ADB5] uppercase tracking-[0.18em]">
+              KNOWLEDGE ASSISTANT · GEMINI 3.8 FLASH
+            </span>
+            <span className="text-sky-400 uppercase tracking-widest">READY</span>
           </div>
-          <GlitchHeading className="hero-heading font-display font-black uppercase text-3xl sm:text-5xl md:text-6xl tracking-tight mb-3">
-            AI ENGINEERING LAB
-          </GlitchHeading>
-          <p className="text-slate-300 font-sans text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-            Test live AI models, inspect vector RAG similarity search, and simulate autonomous agent execution loops.
-          </p>
-        </div>
 
-        {/* Experiment Selector Tabs */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
-          <button
-            onClick={() => setActiveTab('assistant')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
-              activeTab === 'assistant'
-                ? 'bg-cyan-500 text-black font-bold shadow-[0_0_20px_rgba(6,182,212,0.5)]'
-                : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10'
-            }`}
-          >
-            <Bot className="w-4 h-4" />
-            <span>Ask Garv&apos;s AI Assistant</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('rag')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
-              activeTab === 'rag'
-                ? 'bg-cyan-500 text-black font-bold shadow-[0_0_20px_rgba(6,182,212,0.5)]'
-                : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10'
-            }`}
-          >
-            <Database className="w-4 h-4" />
-            <span>RAG & Semantic Retrieval</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('agent')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-xs uppercase tracking-wider transition-all cursor-pointer ${
-              activeTab === 'agent'
-                ? 'bg-cyan-500 text-black font-bold shadow-[0_0_20px_rgba(6,182,212,0.5)]'
-                : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10'
-            }`}
-          >
-            <Cpu className="w-4 h-4" />
-            <span>Autonomous Agent Trace</span>
-          </button>
-        </div>
-
-        {/* Tab 1: AI Portfolio Assistant */}
-        {activeTab === 'assistant' && (
-          <div className="max-w-4xl mx-auto rounded-3xl bg-[#070D18]/95 border border-cyan-500/30 p-5 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.85)] backdrop-blur-2xl">
-            {/* Terminal Top Bar */}
-            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-red-500/80" />
-                <span className="w-3 h-3 rounded-full bg-amber-500/80" />
-                <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
-                <span className="font-mono text-xs text-slate-400 ml-2">
-                  garv-ai-assistant // model: gemini-3.8-flash
-                </span>
-              </div>
-              <span className="font-mono text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                ACTIVE
-              </span>
-            </div>
-
-            {/* Suggested Prompt Chips */}
-            <div className="mb-4">
-              <span className="font-mono text-[11px] text-slate-400 uppercase tracking-wider block mb-2">
-                SUGGESTED TECHNICAL INQUIRIES:
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {suggestedPrompts.map((p, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSendPrompt(p)}
-                    className="text-left font-sans text-xs px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-cyan-300 hover:border-cyan-400 hover:bg-cyan-500/10 transition-colors cursor-pointer"
-                  >
-                    &ldquo;{p}&rdquo;
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Messages Scroll Area */}
-            <div className="space-y-4 max-h-[380px] overflow-y-auto pr-2 mb-4">
-              {messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          {/* Suggested Prompt Chips */}
+          <div className="mb-4">
+            <span className="font-mono text-[10px] text-[#626A73] uppercase tracking-[0.2em] block mb-2">
+              SUGGESTED INQUIRIES
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {suggestedPrompts.map((p, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSendPrompt(p)}
+                  className="text-left font-sans text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sky-300 hover:border-sky-400/50 hover:bg-sky-500/10 transition-colors cursor-pointer"
                 >
-                  {m.role === 'assistant' && (
-                    <div className="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center shrink-0 mt-1">
-                      <Sparkles className="w-4 h-4 text-cyan-300" />
-                    </div>
-                  )}
-                  <div
-                    className={`p-4 rounded-2xl max-w-[85%] text-xs sm:text-sm leading-relaxed ${
-                      m.role === 'user'
-                        ? 'bg-cyan-500 text-black font-medium ml-12 rounded-tr-sm'
-                        : 'bg-white/5 border border-white/10 text-slate-200 rounded-tl-sm'
-                    }`}
-                  >
-                    <p className="font-sans whitespace-pre-wrap">{m.text}</p>
-                    {m.model && (
-                      <span className="block mt-2 font-mono text-[9px] uppercase tracking-wider opacity-60">
-                        ENGINE: {m.model}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                  &ldquo;{p}&rdquo;
+                </button>
               ))}
-              {isLoading && (
-                <div className="flex items-center gap-2 text-cyan-400 text-xs font-mono p-3 bg-white/5 rounded-xl border border-white/10 w-fit">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Synthesizing engineering context...</span>
-                </div>
-              )}
             </div>
-
-            {/* Input Bar */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendPrompt();
-              }}
-              className="flex items-center gap-2 pt-2 border-t border-white/10"
-            >
-              <input
-                type="text"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Ask about Garv's engineering architecture, models, or projects..."
-                className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-sans"
-              />
-              <button
-                type="submit"
-                disabled={isLoading || !prompt.trim()}
-                className="p-2.5 rounded-xl bg-cyan-500 text-black hover:bg-cyan-400 disabled:opacity-40 transition-all cursor-pointer shrink-0"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
           </div>
-        )}
 
-        {/* Tab 2: RAG Simulator */}
-        {activeTab === 'rag' && (
-          <div className="max-w-4xl mx-auto rounded-3xl bg-[#070D18]/95 border border-cyan-500/30 p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.85)] backdrop-blur-2xl">
-            <h3 className="font-display font-black text-xl sm:text-2xl text-white uppercase mb-2">
-              RAG Vector Retrieval Simulator
-            </h3>
-            <p className="font-sans text-xs sm:text-sm text-slate-300 leading-relaxed mb-6">
-              Simulates how user queries are converted into high-dimensional embeddings and compared against indexed chunks of Garv&apos;s codebases using cosine similarity.
-            </p>
-
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="font-mono text-xs uppercase tracking-wider text-slate-400 block mb-2">
-                  Sample Query Vector
-                </label>
-                <input
-                  type="text"
-                  value={ragQuery}
-                  onChange={(e) => setRagQuery(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-400 font-sans"
-                />
-              </div>
-
-              <button
-                onClick={handleRunRagSimulation}
-                disabled={isSimulatingRag}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-cyan-500 text-black font-mono font-bold text-xs uppercase hover:bg-cyan-400 transition-colors cursor-pointer"
+          {/* Messages Area */}
+          <div className="space-y-3.5 max-h-[340px] overflow-y-auto pr-2 mb-4">
+            {messages.map((m, i) => (
+              <div
+                key={i}
+                className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {isSimulatingRag ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Computing Vector Distance...</span>
-                  </>
-                ) : (
-                  <>
-                    <Database className="w-4 h-4" />
-                    <span>Execute Cosine Similarity Search</span>
-                  </>
+                {m.role === 'assistant' && (
+                  <div className="w-7 h-7 rounded-lg bg-sky-500/15 border border-sky-400/30 flex items-center justify-center shrink-0 mt-1">
+                    <Sparkles className="w-3.5 h-3.5 text-sky-300" />
+                  </div>
                 )}
-              </button>
-            </div>
-
-            {ragSimilarityScore !== null && matchedChunk && (
-              <div className="p-5 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs text-cyan-400 font-bold uppercase">
-                    Cosine Similarity Score
-                  </span>
-                  <span className="font-mono text-sm font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                    {ragSimilarityScore} (Top Match)
-                  </span>
+                <div
+                  className={`p-3.5 sm:p-4 rounded-2xl max-w-[85%] text-xs sm:text-sm leading-relaxed ${
+                    m.role === 'user'
+                      ? 'bg-sky-400 text-black font-medium ml-12 rounded-tr-sm'
+                      : 'bg-white/[0.04] border border-white/[0.08] text-[#E2E6EC] rounded-tl-sm'
+                  }`}
+                >
+                  <p className="font-sans whitespace-pre-wrap">{m.text}</p>
+                  {m.model && (
+                    <span className="block mt-1.5 font-mono text-[9px] uppercase tracking-wider opacity-60">
+                      ENGINE · {m.model}
+                    </span>
+                  )}
                 </div>
-                <p className="font-mono text-xs text-slate-200 leading-relaxed bg-black/50 p-3 rounded-lg border border-white/10">
-                  {matchedChunk}
-                </p>
-                <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Context window hydrated with verified facts • Ready for LLM inference</span>
-                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex items-center gap-2 text-sky-400 text-xs font-mono p-3 bg-white/[0.04] rounded-xl border border-white/[0.08] w-fit">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Synthesizing engineering context...</span>
               </div>
             )}
           </div>
-        )}
 
-        {/* Tab 3: Autonomous Agent Trace */}
-        {activeTab === 'agent' && (
-          <div className="max-w-4xl mx-auto rounded-3xl bg-[#070D18]/95 border border-cyan-500/30 p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.85)] backdrop-blur-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-display font-black text-xl sm:text-2xl text-white uppercase">
-                  Multi-Step Agent Workflow Trace
-                </h3>
-                <p className="font-sans text-xs sm:text-sm text-slate-300 mt-1">
-                  Step-by-step state machine execution: Goal Formulation → Planning → Tool Invocation → Output Validation.
-                </p>
-              </div>
-              <button
-                onClick={handleRunAgentWorkflow}
-                disabled={isRunningAgent}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-500 text-black font-mono font-bold text-xs uppercase hover:bg-cyan-400 transition-colors cursor-pointer shrink-0"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Run Agent Trace</span>
-              </button>
+          {/* Input Bar */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendPrompt();
+            }}
+            className="flex items-center gap-2 pt-3 border-t border-white/[0.08]"
+          >
+            <input
+              type="text"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Ask about engineering architecture, models, or projects..."
+              className="flex-1 bg-[#0B1018] border border-white/[0.1] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-[#F2F3F5] placeholder-[#626A73] focus:outline-none focus:border-sky-400 font-sans"
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !prompt.trim()}
+              aria-label="Send prompt"
+              className="p-2.5 rounded-xl bg-white text-black hover:bg-sky-300 disabled:opacity-40 transition-colors cursor-pointer shrink-0"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Tab 2: RAG Simulator */}
+      {activeTab === 'rag' && (
+        <div className="max-w-4xl mx-auto rounded-2xl bg-[#070A10]/92 border border-white/[0.09] p-6 sm:p-8 shadow-[0_24px_65px_rgba(0,0,0,0.85)]">
+          <h3 className="font-editorial font-bold text-xl sm:text-2xl text-[#F2F3F5] uppercase mb-2">
+            RAG Vector Retrieval Simulator
+          </h3>
+          <p className="font-sans text-xs sm:text-sm text-[#A7ADB5] leading-relaxed mb-6 font-light">
+            Simulates how queries are converted into high-dimensional embeddings and ranked against indexed codebase chunks via cosine similarity.
+          </p>
+
+          <div className="space-y-4 mb-6">
+            <div>
+              <label className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#626A73] block mb-2">
+                SAMPLE QUERY VECTOR
+              </label>
+              <input
+                type="text"
+                value={ragQuery}
+                onChange={(e) => setRagQuery(e.target.value)}
+                className="w-full bg-[#0B1018] border border-white/[0.1] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-[#F2F3F5] focus:outline-none focus:border-sky-400 font-sans"
+              />
             </div>
 
-            <div className="space-y-3 mt-6">
-              {/* Step 1: Goal */}
-              <div
-                className={`p-4 rounded-xl border transition-all ${
-                  agentStep >= 1
-                    ? 'bg-cyan-950/20 border-cyan-500/40 text-white'
-                    : 'bg-white/5 border-white/10 text-slate-400'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-xs font-bold uppercase text-cyan-400">
-                    STEP 1: INTENT DECOMPOSITION
-                  </span>
-                  <span className="font-mono text-[10px]">
-                    {agentStep >= 1 ? 'COMPLETED' : 'IDLE'}
-                  </span>
-                </div>
-                <p className="font-mono text-xs">
-                  User Objective: Analyze ArogyaSeva WebRTC packet latency and propose optimization.
-                </p>
-              </div>
-
-              {/* Step 2: Tool Execution */}
-              <div
-                className={`p-4 rounded-xl border transition-all ${
-                  agentStep >= 2
-                    ? 'bg-cyan-950/20 border-cyan-500/40 text-white'
-                    : 'bg-white/5 border-white/10 text-slate-400'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-xs font-bold uppercase text-sky-400">
-                    STEP 2: TOOL CALL // inspect_webrtc_signaling()
-                  </span>
-                  <span className="font-mono text-[10px]">
-                    {agentStep >= 2 ? 'COMPLETED' : 'WAITING'}
-                  </span>
-                </div>
-                <p className="font-mono text-xs">
-                  Querying STUN/TURN latency matrix. Result: 68ms roundtrip via Frankfurt edge proxy.
-                </p>
-              </div>
-
-              {/* Step 3: Synthesis */}
-              <div
-                className={`p-4 rounded-xl border transition-all ${
-                  agentStep >= 3
-                    ? 'bg-cyan-950/20 border-cyan-500/40 text-white'
-                    : 'bg-white/5 border-white/10 text-slate-400'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-xs font-bold uppercase text-purple-400">
-                    STEP 3: HEURISTIC VALIDATION & PROPOSAL
-                  </span>
-                  <span className="font-mono text-[10px]">
-                    {agentStep >= 3 ? 'COMPLETED' : 'WAITING'}
-                  </span>
-                </div>
-                <p className="font-mono text-xs">
-                  Recommendation: Implement trickle ICE candidates to eliminate blocking roundtrips.
-                </p>
-              </div>
-
-              {/* Step 4: Verification */}
-              <div
-                className={`p-4 rounded-xl border transition-all ${
-                  agentStep >= 4
-                    ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-200'
-                    : 'bg-white/5 border-white/10 text-slate-400'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-xs font-bold uppercase text-emerald-400">
-                    STEP 4: VERIFICATION AUDIT
-                  </span>
-                  <span className="font-mono text-[10px]">
-                    {agentStep >= 4 ? 'PASSED (0 ERRORS)' : 'WAITING'}
-                  </span>
-                </div>
-                <p className="font-mono text-xs">
-                  Deterministic audit check passed. Changes logged in Engineering Log.
-                </p>
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={handleRunRagSimulation}
+              disabled={isSimulatingRag}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-black font-mono font-semibold text-xs uppercase tracking-wider hover:bg-sky-300 transition-colors cursor-pointer"
+            >
+              {isSimulatingRag ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Computing Vector Distance...</span>
+                </>
+              ) : (
+                <>
+                  <Database className="w-4 h-4" />
+                  <span>Execute Cosine Similarity Search</span>
+                </>
+              )}
+            </button>
           </div>
-        )}
-      </div>
+
+          {ragSimilarityScore !== null && matchedChunk && (
+            <div className="p-5 rounded-xl bg-[#0B1018] border border-sky-400/25 space-y-3">
+              <div className="flex items-center justify-between font-mono text-xs">
+                <span className="text-sky-400 uppercase tracking-wider font-semibold">
+                  Cosine Similarity Score
+                </span>
+                <span className="font-bold text-emerald-400 tabular-nums">
+                  {ragSimilarityScore} · TOP MATCH
+                </span>
+              </div>
+              <p className="font-mono text-xs text-[#E2E6EC] leading-relaxed bg-[#05070B] p-3.5 rounded-lg border border-white/[0.08]">
+                {matchedChunk}
+              </p>
+              <div className="flex items-center gap-2 text-[11px] font-mono text-[#A7ADB5]">
+                <CheckCircle2 className="w-3.5 h-3.5 text-sky-400" />
+                <span>Context window hydrated with verified facts · Ready for inference</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab 3: Autonomous Agent Trace */}
+      {activeTab === 'agent' && (
+        <div className="max-w-4xl mx-auto rounded-2xl bg-[#070A10]/92 border border-white/[0.09] p-6 sm:p-8 shadow-[0_24px_65px_rgba(0,0,0,0.85)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/[0.08]">
+            <div>
+              <h3 className="font-editorial font-bold text-xl sm:text-2xl text-[#F2F3F5] uppercase">
+                Multi-Step Agent Workflow Trace
+              </h3>
+              <p className="font-sans text-xs sm:text-sm text-[#A7ADB5] mt-1 font-light">
+                State machine execution: Goal Formulation → Planning → Tool Invocation → Output Validation.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleRunAgentWorkflow}
+              disabled={isRunningAgent}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white text-black font-mono font-semibold text-xs uppercase tracking-wider hover:bg-sky-300 transition-colors cursor-pointer shrink-0 w-fit"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Run Agent Trace</span>
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {[
+              {
+                step: 1,
+                title: 'STEP 01 · INTENT DECOMPOSITION',
+                desc: 'User Objective: Analyze ArogyaSeva WebRTC packet latency and propose optimization.',
+                accent: 'text-sky-400',
+              },
+              {
+                step: 2,
+                title: 'STEP 02 · TOOL CALL · inspect_webrtc_signaling()',
+                desc: 'Querying STUN/TURN latency matrix. Result: 68ms roundtrip via Frankfurt edge proxy.',
+                accent: 'text-indigo-300',
+              },
+              {
+                step: 3,
+                title: 'STEP 03 · HEURISTIC VALIDATION & PROPOSAL',
+                desc: 'Recommendation: Implement trickle ICE candidates to eliminate blocking roundtrips.',
+                accent: 'text-violet-300',
+              },
+              {
+                step: 4,
+                title: 'STEP 04 · VERIFICATION AUDIT',
+                desc: 'Deterministic audit check passed. Changes logged in Engineering Log.',
+                accent: 'text-emerald-400',
+              },
+            ].map((item) => {
+              const done = agentStep >= item.step;
+              return (
+                <div
+                  key={item.step}
+                  className={`p-4 rounded-xl border transition-colors ${
+                    done
+                      ? 'bg-[#0B111C] border-sky-400/35 text-[#F2F3F5]'
+                      : 'bg-white/[0.03] border-white/[0.08] text-[#626A73]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`font-mono text-xs font-semibold uppercase ${item.accent}`}>
+                      {item.title}
+                    </span>
+                    <span className="font-mono text-[10px] tracking-wider">
+                      {done ? 'COMPLETED' : item.step === 1 ? 'IDLE' : 'WAITING'}
+                    </span>
+                  </div>
+                  <p className="font-mono text-xs">{item.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 
   if (inSheet) {
@@ -466,7 +436,7 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
   return (
     <section
       id={id}
-      className="relative w-full py-24 px-4 sm:px-6 md:px-10 bg-transparent overflow-hidden"
+      className="relative w-full py-20 sm:py-26 px-4 sm:px-6 md:px-10 bg-transparent overflow-hidden"
     >
       {content}
     </section>

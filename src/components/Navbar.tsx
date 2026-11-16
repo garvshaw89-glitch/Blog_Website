@@ -139,7 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         id={id}
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 select-none ${
           hasScrolled
-            ? 'bg-[#050608]/75 backdrop-blur-md border-b border-white/[0.08] pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5'
+            ? 'bg-[#050608]/95 border-b border-white/[0.08] pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.45)]'
             : 'bg-transparent border-b border-transparent pt-[max(1.25rem,env(safe-area-inset-top))] pb-5'
         }`}
       >
@@ -293,28 +293,28 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => scrollToSection('about')}
               className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
             >
-              01 // ABOUT
+              01 · ABOUT
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('projects')}
               className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
             >
-              02 // PROJECTS
+              02 · PROJECTS
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('writing')}
               className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
             >
-              03 // WRITING
+              03 · WRITING
             </button>
             <button
               type="button"
               onClick={() => scrollToSection('contact')}
               className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
             >
-              04 // CONTACT
+              04 · CONTACT
             </button>
             {onReplayIntro && (
               <button

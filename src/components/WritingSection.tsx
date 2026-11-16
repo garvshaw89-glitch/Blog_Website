@@ -192,6 +192,14 @@ export const WritingSection: React.FC<WritingSectionProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTopic, setActiveTopic] = useState<string | null>(null);
 
+  const articleReadStats = useMemo(() => {
+    const map = new Map<string, { totalMin: number; sectionTimes: { heading: string; minutes: number }[] }>();
+    ARTICLES.forEach((a) => {
+      map.set(a.id, getArticleEstimatedTime(a));
+    });
+    return map;
+  }, []);
+
   // Extract all distinct technical topics/tags
   const allTopics = useMemo(() => {
     const set = new Set<string>();
@@ -203,15 +211,11 @@ export const WritingSection: React.FC<WritingSectionProps> = ({
   const filteredArticles = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return ARTICLES.filter((article) => {
-      // Topic tag filter
       if (activeTopic && !article.tags.includes(activeTopic)) {
         return false;
       }
-
-      // If no text query, article matches
       if (!q) return true;
 
-      // Match against title, category, tags, and excerpt
       const matchesTitle = article.title.toLowerCase().includes(q);
       const matchesCategory = article.category.toLowerCase().includes(q);
       const matchesTags = article.tags.some((tag) => tag.toLowerCase().includes(q));
@@ -228,161 +232,150 @@ export const WritingSection: React.FC<WritingSectionProps> = ({
 
   const content = (
     <div className="max-w-7xl mx-auto">
-        {/* Section Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-16">
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-cyan-400 font-semibold text-xs">06 //</span>
-            <span className="font-mono text-xs uppercase tracking-widest text-neutral-400">
-              THINKING & ENGINEERING ESSAYS
-            </span>
-          </div>
-          <span className="font-mono text-xs text-neutral-400">PUBLICATIONS</span>
+      {/* Unified Section Header */}
+      <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-12 sm:mb-14">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-sky-400 font-semibold text-xs">08</span>
+          <span aria-hidden="true" className="text-white/25 font-mono text-xs">·</span>
+          <span className="font-mono text-xs uppercase tracking-[0.2em] text-[#A7ADB5]">
+            THINKING &amp; ENGINEERING ESSAYS
+          </span>
         </div>
+        <span className="font-mono text-xs uppercase tracking-widest text-[#626A73]">
+          PUBLICATIONS
+        </span>
+      </div>
 
-        {/* Section Headline */}
-        <div className="max-w-2xl mb-12">
-          <GlitchHeading className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-white mb-4">
-            WRITING.
-          </GlitchHeading>
-          <p className="font-sans text-neutral-400 text-sm sm:text-base leading-relaxed font-light">
-            Reflections on system architecture, generative AI patterns, cloud infrastructure trade-offs, and digital product design.
-          </p>
-        </div>
+      {/* Section Headline */}
+      <div className="max-w-2xl mb-10">
+        <GlitchHeading className="font-editorial text-4xl sm:text-6xl font-bold uppercase tracking-tight text-[#F2F3F5] mb-3.5">
+          WRITING.
+        </GlitchHeading>
+        <p className="font-sans text-[#A7ADB5] text-sm sm:text-base leading-relaxed font-light [text-wrap:balance]">
+          Reflections on system architecture, generative AI patterns, cloud infrastructure trade-offs, and digital product design.
+        </p>
+      </div>
 
-        {/* Search & Topic Filter Bar */}
-        <div className="mb-10 flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-            {/* Search Input Bar */}
-            <div className="relative flex-1 max-w-xl group">
-              <div className="relative flex items-center bg-[#0B0E12]/80 backdrop-blur-md rounded-lg border border-white/[0.1] focus-within:border-cyan-400/50 focus-within:ring-1 focus-within:ring-cyan-400/20 transition-all duration-300 shadow-inner">
-                <Search className="w-4 h-4 text-neutral-500 group-focus-within:text-cyan-400 ml-3.5 shrink-0 transition-colors" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter articles by title or technical topic..."
-                  aria-label="Filter articles by title or technical topic"
-                  className="w-full bg-transparent text-white placeholder:text-neutral-500 font-sans text-sm px-3 py-2.5 focus:outline-none"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    aria-label="Clear search query"
-                    className="mr-3 p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Results Counter & Clear all */}
-            <div className="flex items-center gap-3 self-end sm:self-center font-mono text-xs">
-              <span className="text-neutral-400">
-                Showing <span className="text-white font-medium">{filteredArticles.length}</span> of {ARTICLES.length}
-              </span>
-              {(searchQuery || activeTopic) && (
+      {/* Search & Topic Filter Bar */}
+      <div className="mb-10 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-xl group">
+            <div className="relative flex items-center bg-[#070A10]/92 rounded-xl border border-white/[0.1] focus-within:border-sky-400/55 focus-within:ring-1 focus-within:ring-sky-400/20 transition-colors">
+              <Search className="w-4 h-4 text-[#626A73] group-focus-within:text-sky-400 ml-3.5 shrink-0 transition-colors" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filter articles by title or technical topic..."
+                aria-label="Filter articles by title or technical topic"
+                className="w-full bg-transparent text-[#F2F3F5] placeholder:text-[#626A73] font-sans text-sm px-3 py-2.5 focus:outline-none"
+              />
+              {searchQuery && (
                 <button
                   type="button"
-                  onClick={handleClearSearch}
-                  className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors ml-1"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search query"
+                  className="mr-3 p-1 rounded hover:bg-white/10 text-[#A7ADB5] hover:text-white transition-colors cursor-pointer"
                 >
-                  Reset
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
           </div>
 
-          {/* Technical Topic Pills for Instant Filtering */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <span className="font-mono text-[11px] text-neutral-400 uppercase tracking-wider mr-1 flex items-center gap-1">
-              <Tag className="w-3 h-3 text-cyan-400" />
-              Topics:
+          <div className="flex items-center gap-3 self-end sm:self-center font-mono text-xs">
+            <span className="text-[#A7ADB5]">
+              Showing <span className="text-[#F2F3F5] font-medium tabular-nums">{filteredArticles.length}</span> of {ARTICLES.length}
             </span>
-            <button
-              type="button"
-              onClick={() => setActiveTopic(null)}
-              className={`px-2.5 py-1 rounded text-[11px] font-mono tracking-wide transition-all ${
-                activeTopic === null
-                  ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/40'
-                  : 'bg-white/[0.03] text-neutral-400 border border-white/[0.06] hover:bg-white/[0.08] hover:text-neutral-200'
-              }`}
-            >
-              All
-            </button>
-            {allTopics.map((topic) => {
-              const isActive = activeTopic === topic;
-              return (
-                <button
-                  key={topic}
-                  type="button"
-                  onClick={() => setActiveTopic(isActive ? null : topic)}
-                  className={`px-2.5 py-1 rounded text-[11px] font-mono tracking-wide transition-all ${
-                    isActive
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm'
-                      : 'bg-white/[0.03] text-neutral-400 border border-white/[0.06] hover:bg-white/[0.08] hover:text-neutral-200'
-                  }`}
-                >
-                  {topic}
-                </button>
-              );
-            })}
+            {(searchQuery || activeTopic) && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="text-sky-400 hover:text-sky-300 underline underline-offset-2 transition-colors ml-1 cursor-pointer"
+              >
+                Reset
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Editorial Articles List */}
-        {filteredArticles.length > 0 ? (
-          <div className="flex flex-col gap-6">
-            <AnimatePresence mode="popLayout">
-              {filteredArticles.map((article) => (
+        {/* Topic Filter Chips */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          <span className="font-mono text-[11px] text-[#626A73] uppercase tracking-wider mr-1 flex items-center gap-1">
+            <Tag className="w-3 h-3 text-sky-400" />
+            Topics:
+          </span>
+          <button
+            type="button"
+            onClick={() => setActiveTopic(null)}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-mono tracking-wide transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+              activeTopic === null
+                ? 'bg-sky-500/15 text-sky-300 border border-sky-500/40'
+                : 'bg-white/[0.03] text-[#A7ADB5] border border-white/[0.07] hover:bg-white/[0.08] hover:text-white'
+            }`}
+          >
+            All
+          </button>
+          {allTopics.map((topic) => {
+            const isActive = activeTopic === topic;
+            return (
+              <button
+                key={topic}
+                type="button"
+                onClick={() => setActiveTopic(isActive ? null : topic)}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-mono tracking-wide transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                  isActive
+                    ? 'bg-sky-500/20 text-sky-300 border border-sky-500/45'
+                    : 'bg-white/[0.03] text-[#A7ADB5] border border-white/[0.07] hover:bg-white/[0.08] hover:text-white'
+                }`}
+              >
+                {topic}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Editorial Articles List */}
+      {filteredArticles.length > 0 ? (
+        <div className="flex flex-col gap-4">
+          <AnimatePresence mode="popLayout">
+            {filteredArticles.map((article) => {
+              const stats = articleReadStats.get(article.id);
+              return (
                 <motion.article
                   key={article.id}
-                  layout
-                  initial={{ opacity: 0, y: 14 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  exit={{ opacity: 0, scale: 0.99 }}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                   onClick={() => setSelectedArticle(article)}
                   data-cursor="link"
                   data-cursor-label="READ"
-                  className="group relative cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-8 rounded-xl bg-[#0B0E12]/50 hover:bg-[#11151A] border border-white/[0.06] hover:border-white/[0.16] hover:-translate-y-1.5 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] shadow-sm hover:shadow-[0_12px_40px_rgba(0,0,0,0.6)]"
+                  className="group relative cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 sm:p-7 rounded-2xl bg-[#070A10]/90 hover:bg-[#0B1018] border border-white/[0.08] hover:border-white/[0.18] transition-all duration-300 shadow-[0_14px_45px_rgba(0,0,0,0.65)]"
                 >
                   {/* Thin Left Accent Line on Hover */}
-                  <div className="absolute left-0 top-6 bottom-6 w-[2px] bg-[#7EA7FF] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-r" />
+                  <div className="absolute left-0 top-6 bottom-6 w-[2px] bg-sky-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-r" />
 
                   <div className="max-w-3xl">
-                    <div className="flex items-center gap-3 font-mono text-[11px] text-[#626A73] mb-3 tracking-wider uppercase">
-                      <span className="text-[#FF9D38] font-bold">{article.number}</span>
-                      <span>/</span>
-                      <span className="text-[#7EA7FF] font-medium">{article.category}</span>
-                      <span>/</span>
-                      <span>{article.readTime}</span>
-                      <span>/</span>
+                    <div className="flex flex-wrap items-center gap-2.5 font-mono text-[11px] text-[#626A73] mb-3 tracking-wider uppercase">
+                      <span className="text-[#FF9D38] font-bold tabular-nums">{article.number}</span>
+                      <span aria-hidden="true">·</span>
+                      <span className="text-sky-400 font-medium">{article.category}</span>
+                      <span aria-hidden="true">·</span>
+                      <span className="inline-flex items-center gap-1 text-[#A7ADB5]">
+                        <Clock className="w-3 h-3 text-sky-400 shrink-0" />
+                        <span>~{stats?.totalMin ?? 5}m read ({stats?.sectionTimes.length ?? 3} parts)</span>
+                      </span>
+                      <span aria-hidden="true">·</span>
                       <span>{article.date}</span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="font-editorial text-2xl sm:text-3xl md:text-4xl font-bold text-[#F2F3F5] tracking-tight group-hover:text-white transition-colors leading-[1.12]">
-                        {article.title}
-                      </h3>
-                      {(() => {
-                        const { totalMin, sectionTimes } = getArticleEstimatedTime(article);
-                        return (
-                          <span
-                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono tracking-wide bg-cyan-500/10 text-cyan-400 border border-cyan-500/25 shadow-sm group-hover:border-cyan-400/40 transition-colors whitespace-nowrap self-center"
-                            title={`Estimated reading breakdown: ${sectionTimes.map((s, i) => `Part ${i + 1} (${s.minutes}m)`).join(', ')}`}
-                          >
-                            <Clock className="w-3 h-3 text-cyan-400 shrink-0" />
-                            <span>~{totalMin}m read</span>
-                            <span className="text-cyan-500/60 font-light">·</span>
-                            <span className="text-[10px] text-cyan-300/80">{sectionTimes.length} parts</span>
-                          </span>
-                        );
-                      })()}
-                    </div>
+                    <h3 className="font-editorial text-2xl sm:text-3xl font-bold text-[#F2F3F5] tracking-tight group-hover:text-white transition-colors leading-[1.15]">
+                      {article.title}
+                    </h3>
 
-                    <p className="mt-3.5 font-sans text-[#A7ADB5] text-sm sm:text-base font-light leading-relaxed">
+                    <p className="mt-3 font-sans text-[#A7ADB5] text-sm sm:text-base font-light leading-relaxed">
                       {article.excerpt}
                     </p>
 
@@ -396,8 +389,8 @@ export const WritingSection: React.FC<WritingSectionProps> = ({
                               e.stopPropagation();
                               setActiveTopic(activeTopic === tag ? null : tag);
                             }}
-                            className={`transition-colors hover:text-cyan-400 ${
-                              activeTopic === tag ? 'text-cyan-400 font-bold underline' : ''
+                            className={`transition-colors hover:text-sky-400 cursor-pointer ${
+                              activeTopic === tag ? 'text-sky-400 font-semibold underline underline-offset-2' : ''
                             }`}
                           >
                             {tag}
@@ -411,35 +404,36 @@ export const WritingSection: React.FC<WritingSectionProps> = ({
                     <span className="font-mono text-xs uppercase tracking-wider text-[#626A73] group-hover:text-[#F2F3F5] transition-colors">
                       READ ESSAY
                     </span>
-                    <ArrowUpRight className="w-4 h-4 text-[#626A73] group-hover:text-[#7EA7FF] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                    <ArrowUpRight className="w-4 h-4 text-[#626A73] group-hover:text-sky-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
                   </div>
                 </motion.article>
-              ))}
-            </AnimatePresence>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl bg-[#070A10]/88 border border-white/[0.08] my-4">
+          <div className="w-11 h-11 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center mb-4 text-sky-400">
+            <Search className="w-5 h-5" />
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center p-12 text-center rounded-xl bg-[#0B0E12]/40 border border-white/[0.08] my-4">
-            <div className="w-12 h-12 rounded-full bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-4 text-cyan-400">
-              <Search className="w-5 h-5" />
-            </div>
-            <h3 className="font-editorial text-xl sm:text-2xl font-bold text-white mb-2">
-              No matching publications found
-            </h3>
-            <p className="font-sans text-neutral-400 text-sm max-w-md mb-6 leading-relaxed">
-              We couldn't find any articles matching &ldquo;
-              <span className="text-cyan-300 font-mono">{searchQuery || activeTopic}</span>
-              &rdquo;. Try searching for topics like Architecture, Generative AI, or Performance.
-            </p>
-            <button
-              type="button"
-              onClick={handleClearSearch}
-              className="px-4 py-2 rounded-lg font-mono text-xs uppercase tracking-wider bg-white/10 hover:bg-white/15 text-white border border-white/10 transition-colors"
-            >
-              Reset Filters
-            </button>
-          </div>
-        )}
-      </div>
+          <h3 className="font-editorial text-xl sm:text-2xl font-bold text-[#F2F3F5] mb-2">
+            No matching publications found
+          </h3>
+          <p className="font-sans text-[#A7ADB5] text-sm max-w-md mb-6 leading-relaxed">
+            No articles matched &ldquo;
+            <span className="text-sky-300 font-mono">{searchQuery || activeTopic}</span>
+            &rdquo;. Try searching for Architecture, Generative AI, or Performance.
+          </p>
+          <button
+            type="button"
+            onClick={handleClearSearch}
+            className="px-4 py-2 rounded-lg font-mono text-xs uppercase tracking-wider bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/10 transition-colors cursor-pointer"
+          >
+            Reset Filters
+          </button>
+        </div>
+      )}
+    </div>
   );
 
   return (
@@ -449,13 +443,12 @@ export const WritingSection: React.FC<WritingSectionProps> = ({
       ) : (
         <section
           id={id}
-          className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
+          className="relative w-full py-20 sm:py-26 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
         >
           {content}
         </section>
       )}
 
-      {/* Reader Modal (portaled above Slide Over window) */}
       <ArticleModal
         article={selectedArticle}
         onClose={() => setSelectedArticle(null)}

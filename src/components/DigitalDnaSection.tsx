@@ -549,7 +549,7 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
   return (
     <section
       id={id}
-      className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
+      className="relative w-full py-20 sm:py-26 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
     >
       {content}
     </section>
