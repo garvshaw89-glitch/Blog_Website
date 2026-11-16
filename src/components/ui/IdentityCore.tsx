@@ -7,89 +7,155 @@ import {
   Terminal,
   Layers,
   Activity,
+  Database,
+  Globe,
+  Radio,
+  ArrowRight,
 } from 'lucide-react';
 import { ArchitectAvatar } from './ArchitectAvatar';
 
-interface IdentityCoreState {
+interface RuntimeState {
   id: string;
+  tabLabel: string;
   word: string;
   subtext: string;
+  summary: string;
   themeColor: string;
   highlights: string[];
+  activeMeshIds: string[];
   icon: React.ReactNode;
 }
 
-const IDENTITY_STATES: IdentityCoreState[] = [
+const RUNTIME_STATES: RuntimeState[] = [
   {
     id: 'architect',
+    tabLabel: 'ARCHITECT',
     word: 'ARCHITECT',
     subtext: 'INTELLIGENT SYSTEMS DESIGN',
+    summary:
+      'Systems architecture uniting low-latency interfaces, async workers, and multi-region cloud delivery.',
     themeColor: '#38bdf8',
-    highlights: ['Multi-Agent AI', 'Distributed Runtimes', 'Financial Systems'],
-    icon: <Sparkles className="w-4 h-4 text-sky-300" />,
+    highlights: ['Multi-Agent AI Orchestration', 'Distributed Edge Runtimes', 'Quantitative Financial Systems'],
+    activeMeshIds: ['edge', 'ingress', 'core', 'infer', 'state'],
+    icon: <Sparkles className="w-3.5 h-3.5 text-sky-300" />,
   },
   {
     id: 'ai',
+    tabLabel: 'AI ENGINE',
     word: 'AI ENGINE',
     subtext: 'NEURAL REASONING & AGENTS',
+    summary:
+      'Deterministic LLM reasoning pipelines with structured tool execution and sub-second token streaming.',
     themeColor: '#22d3ee',
-    highlights: ['Structured Tool Use', 'Vector Retrieval', 'Streaming Inference'],
-    icon: <Cpu className="w-4 h-4 text-cyan-300" />,
+    highlights: ['Structured Tool Execution', 'Hybrid Vector Retrieval', 'Sub-Second Stream Inference'],
+    activeMeshIds: ['ingress', 'stream', 'core', 'infer', 'workers'],
+    icon: <Cpu className="w-3.5 h-3.5 text-cyan-300" />,
   },
   {
     id: 'cloud',
+    tabLabel: 'CLOUD',
     word: 'CLOUD EDGE',
     subtext: 'MULTI-REGION INFRASTRUCTURE',
+    summary:
+      'Stateless auto-scaling containers, edge routing tables, and fault-isolated serverless compute clusters.',
     themeColor: '#818cf8',
-    highlights: ['Cloud Run Containers', 'Serverless Compute', 'Edge Caching'],
-    icon: <Cloud className="w-4 h-4 text-indigo-300" />,
+    highlights: ['Stateless Cloud Run Containers', 'Edge Compute Gateways', 'Zero-Downtime Delivery'],
+    activeMeshIds: ['edge', 'stream', 'core', 'workers', 'state'],
+    icon: <Cloud className="w-3.5 h-3.5 text-indigo-300" />,
   },
   {
     id: 'runtimes',
+    tabLabel: 'RUNTIMES',
     word: 'RUNTIMES',
     subtext: 'DISTRIBUTED EDGE & STREAMS',
+    summary:
+      'Coordinated execution fabric routing real-time WebSocket frames, worker pools, and replicated state.',
     themeColor: '#34d399',
-    highlights: ['WebSocket Telemetry', 'Zero-Copy Buffers', 'Async Workers'],
-    icon: <Activity className="w-4 h-4 text-emerald-300" />,
+    highlights: ['Bi-Directional Socket Streams', 'Async Worker Pools', 'Consistent Edge Replication'],
+    activeMeshIds: ['edge', 'ingress', 'stream', 'core', 'infer', 'workers', 'state'],
+    icon: <Activity className="w-3.5 h-3.5 text-emerald-300" />,
   },
   {
     id: 'systems',
+    tabLabel: 'SYSTEMS',
     word: 'SYSTEMS',
     subtext: 'DETERMINISTIC ARCHITECTURE',
+    summary:
+      'Strict compile-time contracts, predictable state machines, and hardware-accelerated spatial interfaces.',
     themeColor: '#a78bfa',
-    highlights: ['Strict Type Schemas', 'State Machines', 'Zero-Lag UI'],
-    icon: <Layers className="w-4 h-4 text-violet-300" />,
+    highlights: ['Typed Schema Boundaries', 'Predictable State Machines', 'GPU-Composited Interfaces'],
+    activeMeshIds: ['ingress', 'core', 'workers', 'state'],
+    icon: <Layers className="w-3.5 h-3.5 text-violet-300" />,
   },
   {
     id: 'build',
+    tabLabel: 'PRODUCTS',
     word: 'PRODUCTS',
     subtext: 'FINANCE × APPLIED SOFTWARE',
+    summary:
+      'Translating quantitative market telemetry, payroll forecasting, and crisp interaction craft into production.',
     themeColor: '#fbbf24',
-    highlights: ['Quant Terminals', 'Compensation OS', 'High-Craft UX'],
-    icon: <Terminal className="w-4 h-4 text-amber-300" />,
+    highlights: ['Quantitative Market Terminals', 'Deterministic Tax & Payroll OS', 'Editorial Interaction Craft'],
+    activeMeshIds: ['edge', 'stream', 'core', 'infer', 'state'],
+    icon: <Terminal className="w-3.5 h-3.5 text-amber-300" />,
   },
 ];
 
-// Perimeter distributed runtime mesh points rendered on a 640x400 architectural SVG field
-const MESH_NODES = [
-  { id: 'edge-n', label: 'EDGE', x: 76, y: 78 },
-  { id: 'infer-n', label: 'INFER', x: 564, y: 78 },
-  { id: 'stream-n', label: 'STREAM', x: 46, y: 200 },
-  { id: 'worker-n', label: 'WORKER', x: 594, y: 200 },
-  { id: 'cache-n', label: 'CACHE', x: 76, y: 322 },
-  { id: 'state-n', label: 'STATE', x: 564, y: 322 },
+interface MeshNodeDef {
+  id: string;
+  label: string;
+  targetStateIndex: number;
+  x: number;
+  y: number;
+  tier: 'ingress' | 'core' | 'compute';
+}
+
+const MESH_NODES: MeshNodeDef[] = [
+  { id: 'edge', label: 'EDGE', targetStateIndex: 2, x: 16, y: 21, tier: 'ingress' },
+  { id: 'ingress', label: 'GATE', targetStateIndex: 4, x: 14, y: 50, tier: 'ingress' },
+  { id: 'stream', label: 'STREAM', targetStateIndex: 3, x: 16, y: 79, tier: 'ingress' },
+  { id: 'core', label: 'CORE', targetStateIndex: 0, x: 50, y: 50, tier: 'core' },
+  { id: 'infer', label: 'INFER', targetStateIndex: 1, x: 84, y: 21, tier: 'compute' },
+  { id: 'workers', label: 'POOL', targetStateIndex: 3, x: 86, y: 50, tier: 'compute' },
+  { id: 'state', label: 'STATE', targetStateIndex: 5, x: 84, y: 79, tier: 'compute' },
 ];
 
-const MESH_PATHS = [
-  'M 76 78 Q 200 130 320 200',
-  'M 564 78 Q 440 130 320 200',
-  'M 46 200 Q 180 200 320 200',
-  'M 594 200 Q 460 200 320 200',
-  'M 76 322 Q 200 270 320 200',
-  'M 564 322 Q 440 270 320 200',
-  'M 76 78 Q 320 24 564 78',
-  'M 76 322 Q 320 376 564 322',
+interface MeshLinkDef {
+  id: string;
+  from: string;
+  to: string;
+  path: string;
+}
+
+const MESH_LINKS: MeshLinkDef[] = [
+  { id: 'edge-core', from: 'edge', to: 'core', path: 'M 160 210 Q 330 240 500 500' },
+  { id: 'ingress-core', from: 'ingress', to: 'core', path: 'M 140 500 Q 320 455 500 500' },
+  { id: 'stream-core', from: 'stream', to: 'core', path: 'M 160 790 Q 330 760 500 500' },
+  { id: 'core-infer', from: 'core', to: 'infer', path: 'M 500 500 Q 670 240 840 210' },
+  { id: 'core-workers', from: 'core', to: 'workers', path: 'M 500 500 Q 680 545 860 500' },
+  { id: 'core-state', from: 'core', to: 'state', path: 'M 500 500 Q 670 760 840 790' },
+  { id: 'edge-infer', from: 'edge', to: 'infer', path: 'M 160 210 Q 500 95 840 210' },
+  { id: 'stream-state', from: 'stream', to: 'state', path: 'M 160 790 Q 500 905 840 790' },
 ];
+
+function getMeshGlyph(id: string) {
+  switch (id) {
+    case 'edge':
+      return <Globe className="w-3.5 h-3.5" />;
+    case 'ingress':
+      return <Layers className="w-3.5 h-3.5" />;
+    case 'stream':
+      return <Radio className="w-3.5 h-3.5" />;
+    case 'infer':
+      return <Sparkles className="w-3.5 h-3.5" />;
+    case 'workers':
+      return <Cpu className="w-3.5 h-3.5" />;
+    case 'state':
+      return <Database className="w-3.5 h-3.5" />;
+    default:
+      return <Activity className="w-3.5 h-3.5" />;
+  }
+}
 
 export const IdentityCore: React.FC = () => {
   const [index, setIndex] = useState(0);
@@ -99,181 +165,298 @@ export const IdentityCore: React.FC = () => {
   useEffect(() => {
     if (isPaused || prefersReducedMotion) return;
     const timer = setInterval(() => {
-      setIndex((prev) => (prev + 1) % IDENTITY_STATES.length);
-    }, 3400);
+      setIndex((prev) => (prev + 1) % RUNTIME_STATES.length);
+    }, 3800);
     return () => clearInterval(timer);
   }, [isPaused, prefersReducedMotion]);
 
-  const current = IDENTITY_STATES[index];
+  const current = RUNTIME_STATES[index];
 
   return (
     <div
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      className="relative w-full max-w-3xl min-h-[340px] sm:min-h-[400px] mx-auto flex items-center justify-center select-none pointer-events-auto"
+      className="relative w-full max-w-3xl mx-auto select-none pointer-events-auto"
     >
-      {/* Subtle Ambient Aura Matched to Active Discipline */}
+      {/* Subtle Ambient Aura Matched to Active Subsystem */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute w-72 sm:w-96 h-72 sm:h-96 rounded-full blur-[96px] opacity-20 transition-colors duration-700"
+        className="pointer-events-none absolute -inset-x-6 -inset-y-4 rounded-full blur-[84px] opacity-15 transition-colors duration-700"
         style={{ backgroundColor: current.themeColor }}
       />
 
-      {/* Precision Orbital Rings & Distributed Runtime Topology Mesh */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
-      >
-        <div
-          className="absolute w-[280px] sm:w-[360px] h-[280px] sm:h-[360px] rounded-full border border-white/[0.06] transition-colors duration-500"
-          style={{ borderColor: `${current.themeColor}22` }}
-        />
-        <div className="absolute w-[350px] sm:w-[440px] h-[350px] sm:h-[440px] rounded-full border border-dashed border-white/[0.05]" />
+      {/* Compact Multi-Plane Architectural Runtime Console */}
+      <div className="relative rounded-2xl bg-[#070A10]/90 border border-white/[0.1] shadow-[0_24px_70px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.08)] overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-12">
+          {/* LEFT STAGE (6 cols): Compact Distributed Mesh */}
+          <div className="md:col-span-6 relative h-[220px] sm:h-[245px] p-3.5 overflow-hidden">
+            {/* Subtle Coordinate Dot Matrix */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 opacity-20"
+              style={{
+                backgroundImage: 'radial-gradient(rgba(148,163,184,0.35) 1px, transparent 1px)',
+                backgroundSize: '22px 22px',
+              }}
+            />
 
-        <svg
-          viewBox="0 0 640 400"
-          preserveAspectRatio="xMidYMid meet"
-          className="hidden sm:block w-full h-full max-w-[680px] opacity-80"
-        >
-          {MESH_PATHS.map((d, i) => (
-            <g key={i}>
-              <path
-                d={d}
-                fill="none"
-                stroke={
-                  i % 2 === index % 2
-                    ? `${current.themeColor}55`
-                    : 'rgba(255,255,255,0.08)'
-                }
-                strokeWidth={i % 2 === index % 2 ? '1.35' : '0.9'}
-                className="transition-all duration-500"
+            {/* Dynamic Center Radial Spotlight */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 transition-all duration-700"
+              style={{
+                background: `radial-gradient(circle at 50% 50%, ${current.themeColor}20 0%, ${current.themeColor}06 40%, transparent 72%)`,
+              }}
+            />
+
+            {/* Concentric Calibration Rings */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+            >
+              <div
+                className="w-[116px] sm:w-[132px] aspect-square rounded-full border transition-colors duration-500"
+                style={{ borderColor: `${current.themeColor}34` }}
               />
-              {!prefersReducedMotion && i < 6 && i % 2 === index % 2 && (
-                <circle r="2.4" fill={current.themeColor}>
-                  <animateMotion
-                    dur={`${2.6 + (i % 3) * 0.4}s`}
-                    repeatCount="indefinite"
-                    path={d}
-                  />
-                </circle>
-              )}
-            </g>
-          ))}
+              <div className="absolute w-[184px] sm:w-[210px] aspect-square rounded-full border border-dashed border-white/[0.06]" />
+            </div>
 
-          {MESH_NODES.map((node, i) => {
-            const highlighted = i % 2 === index % 2;
+            {/* Curved Fiber Mesh & Animated Signal Packets */}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 1000 1000"
+              preserveAspectRatio="none"
+              className="pointer-events-none absolute inset-0 w-full h-full"
+            >
+              <defs>
+                <linearGradient id="runtimeMeshGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor={current.themeColor} stopOpacity="0.45" />
+                  <stop offset="50%" stopColor="#ffffff" stopOpacity="0.82" />
+                  <stop offset="100%" stopColor={current.themeColor} stopOpacity="0.7" />
+                </linearGradient>
+              </defs>
+
+              {MESH_LINKS.map((link, linkIdx) => {
+                const isActive =
+                  current.activeMeshIds.includes(link.from) &&
+                  current.activeMeshIds.includes(link.to);
+
+                return (
+                  <g key={link.id}>
+                    {isActive && (
+                      <path
+                        d={link.path}
+                        fill="none"
+                        stroke={current.themeColor}
+                        strokeOpacity="0.2"
+                        strokeWidth="6"
+                      />
+                    )}
+                    <path
+                      d={link.path}
+                      fill="none"
+                      stroke={isActive ? 'url(#runtimeMeshGrad)' : 'rgba(255,255,255,0.08)'}
+                      strokeWidth={isActive ? '2.2' : '1'}
+                      className="transition-all duration-500"
+                    />
+                    {isActive && !prefersReducedMotion && (
+                      <circle r="4.5" fill={current.themeColor}>
+                        <animateMotion
+                          dur={`${2.0 + (linkIdx % 3) * 0.4}s`}
+                          repeatCount="indefinite"
+                          path={link.path}
+                        />
+                      </circle>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* Interactive Mesh Nodes */}
+            <div className="relative w-full h-full">
+              {MESH_NODES.map((node) => {
+                const isNodeHighlighted = current.activeMeshIds.includes(node.id);
+                const isHub = node.tier === 'core';
+
+                if (isHub) {
+                  return (
+                    <button
+                      key={node.id}
+                      type="button"
+                      onClick={() => setIndex(node.targetStateIndex)}
+                      aria-label="Inspect Runtime Core"
+                      data-cursor="button"
+                      style={{
+                        left: `${node.x}%`,
+                        top: `${node.y}%`,
+                        transform: 'translate(-50%, -50%)',
+                        borderColor: `${current.themeColor}88`,
+                        boxShadow: `0 0 28px ${current.themeColor}34, inset 0 1px 0 rgba(255,255,255,0.16)`,
+                      }}
+                      className="absolute z-20 w-[76px] h-[76px] sm:w-[84px] sm:h-[84px] rounded-full bg-[#090F1A]/95 border flex flex-col items-center justify-center transition-all duration-500 hover:scale-105 cursor-pointer"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-1 rounded-full border border-white/[0.08]"
+                      />
+                      <div className="pointer-events-none">
+                        <ArchitectAvatar size={38} interactive={false} />
+                      </div>
+                      <span className="font-mono text-[8px] uppercase tracking-[0.18em] text-white/85 mt-0.5">
+                        {current.tabLabel}
+                      </span>
+                    </button>
+                  );
+                }
+
+                return (
+                  <button
+                    key={node.id}
+                    type="button"
+                    onClick={() => setIndex(node.targetStateIndex)}
+                    data-cursor="button"
+                    style={{
+                      left: `${node.x}%`,
+                      top: `${node.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                    className={`absolute z-10 flex flex-col items-center group cursor-pointer transition-all duration-300 ${
+                      isNodeHighlighted ? 'opacity-100 scale-100' : 'opacity-45 hover:opacity-90'
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-colors duration-300 ${
+                        isNodeHighlighted
+                          ? 'bg-[#0C1524]/95 text-white'
+                          : 'bg-[#090D16]/90 text-slate-400 group-hover:text-white'
+                      }`}
+                      style={{
+                        borderColor: isNodeHighlighted
+                          ? `${current.themeColor}78`
+                          : 'rgba(255,255,255,0.12)',
+                        boxShadow: isNodeHighlighted
+                          ? `0 0 16px ${current.themeColor}2c`
+                          : '0 4px 12px rgba(0,0,0,0.45)',
+                        color: isNodeHighlighted ? current.themeColor : undefined,
+                      }}
+                    >
+                      {getMeshGlyph(node.id)}
+                    </div>
+                    <span className="mt-1 font-mono text-[8px] sm:text-[9px] font-semibold tracking-[0.14em] text-[#D5D9DF] whitespace-nowrap pointer-events-none">
+                      {node.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* RIGHT STAGE (6 cols): Crisp Compact Architectural Spec */}
+          <div className="md:col-span-6 border-t md:border-t-0 md:border-l border-white/[0.08] p-5 sm:p-6 flex flex-col justify-between bg-[#060910]/65">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={current.id}
+                initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: -8 }}
+                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                className="flex flex-col h-full justify-between text-left"
+              >
+                <div>
+                  {/* Index & Eyebrow */}
+                  <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-white/[0.08]">
+                    <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#A7ADB5]">
+                      <span
+                        className="tabular-nums font-semibold"
+                        style={{ color: current.themeColor }}
+                      >
+                        0{index + 1}
+                      </span>
+                      <span aria-hidden="true" className="text-white/20">
+                        ·
+                      </span>
+                      <span className="truncate">{current.subtext}</span>
+                    </div>
+                    <span className="shrink-0">{current.icon}</span>
+                  </div>
+
+                  {/* Compact Display Title */}
+                  <h2 className="font-editorial text-2xl sm:text-3xl font-bold tracking-tight text-[#F2F3F5] uppercase leading-none mb-2">
+                    {current.word}
+                  </h2>
+
+                  <div
+                    className="w-8 h-[2px] mb-2.5 transition-colors duration-500"
+                    style={{ backgroundColor: current.themeColor }}
+                  />
+
+                  <p className="font-sans text-xs text-[#A7ADB5] leading-relaxed font-light mb-3.5">
+                    {current.summary}
+                  </p>
+                </div>
+
+                {/* Tight Hairline Subsystem Spec Rows */}
+                <div className="border-t border-white/[0.08]">
+                  {current.highlights.map((item, idx) => (
+                    <div
+                      key={item}
+                      className="flex items-center justify-between py-1.5 border-b border-white/[0.06] last:border-b-0"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-mono text-[9px] text-[#626A73] tabular-nums">
+                          0{idx + 1}
+                        </span>
+                        <span className="font-sans text-[11px] sm:text-xs text-[#E2E6EC]">
+                          {item}
+                        </span>
+                      </div>
+                      <ArrowRight
+                        className="w-3 h-3 opacity-60 shrink-0"
+                        style={{ color: current.themeColor }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Slim Bottom Interactive Discipline Selector Rail */}
+        <div
+          role="tablist"
+          aria-label="Select engineering discipline"
+          className="border-t border-white/[0.08] bg-[#05070C]/92 px-3 sm:px-4 py-2 flex items-center justify-between gap-1.5 overflow-x-auto"
+        >
+          {RUNTIME_STATES.map((state, i) => {
+            const isSelected = i === index;
             return (
-              <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
-                <circle
-                  r={highlighted ? 4.5 : 3}
-                  fill={highlighted ? current.themeColor : '#1e293b'}
-                  stroke={highlighted ? '#ffffff' : 'rgba(255,255,255,0.22)'}
-                  strokeWidth="1"
-                />
-                <text
-                  y={node.y > 200 ? 18 : -12}
-                  textAnchor="middle"
-                  fill={highlighted ? '#cbd5e1' : '#64748b'}
-                  fontSize="9"
-                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-                  letterSpacing="2"
+              <button
+                key={state.id}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => setIndex(i)}
+                data-cursor="button"
+                className={`relative px-2.5 py-1 rounded-md font-mono text-[9px] sm:text-[10px] uppercase tracking-[0.16em] transition-all cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-white/[0.09] text-white font-semibold border border-white/15'
+                    : 'text-[#626A73] border border-transparent hover:text-[#D5D9DF] hover:bg-white/[0.03]'
+                }`}
+              >
+                <span
+                  className="tabular-nums text-[9px]"
+                  style={{ color: isSelected ? state.themeColor : undefined }}
                 >
-                  {node.label}
-                </text>
-              </g>
+                  0{i + 1}
+                </span>
+                <span>{state.tabLabel}</span>
+              </button>
             );
           })}
-        </svg>
+        </div>
       </div>
-
-      {/* Center Frosted Architectural Focal Card */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={current.id}
-          initial={
-            prefersReducedMotion
-              ? { opacity: 0 }
-              : { opacity: 0, scale: 0.94, y: 10 }
-          }
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={
-            prefersReducedMotion
-              ? { opacity: 0 }
-              : { opacity: 0, scale: 1.03, y: -10 }
-          }
-          transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
-          className="relative z-10 flex flex-col items-center text-center p-6 sm:p-8 rounded-[28px] bg-[#070A10]/92 border border-white/[0.11] shadow-[0_28px_80px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.08)] max-w-md w-full mx-4"
-        >
-          {/* Top Index & Clean Metadata Row */}
-          <div className="w-full flex items-center justify-between pb-4 mb-5 border-b border-white/[0.07]">
-            <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-[#A7ADB5]">
-              <span
-                className="tabular-nums font-semibold"
-                style={{ color: current.themeColor }}
-              >
-                0{index + 1}
-              </span>
-              <span aria-hidden="true" className="text-white/20">
-                ·
-              </span>
-              <span>{current.subtext}</span>
-            </div>
-            <span className="shrink-0">{current.icon}</span>
-          </div>
-
-          {/* Interactive Dot-Matrix Portrait */}
-          <div className="mb-4">
-            <ArchitectAvatar size={72} interactive={true} />
-          </div>
-
-          {/* Primary Sculpted Title */}
-          <h2 className="font-editorial text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-[#F2F3F5] uppercase leading-none">
-            {current.word}
-          </h2>
-
-          {/* Unboxed Architectural Capabilities Row */}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 font-mono text-[11px] text-[#A7ADB5]">
-            {current.highlights.map((item, idx) => (
-              <React.Fragment key={item}>
-                {idx > 0 && (
-                  <span aria-hidden="true" className="text-white/20">
-                    ·
-                  </span>
-                )}
-                <span className="whitespace-nowrap">{item}</span>
-              </React.Fragment>
-            ))}
-          </div>
-
-          {/* Interactive State Selector Bar */}
-          <div
-            role="tablist"
-            aria-label="Select engineering discipline"
-            className="mt-6 pt-4 border-t border-white/[0.07] w-full flex items-center justify-between gap-1 overflow-x-auto"
-          >
-            {IDENTITY_STATES.map((state, i) => {
-              const isSelected = i === index;
-              return (
-                <button
-                  key={state.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={isSelected}
-                  onClick={() => setIndex(i)}
-                  data-cursor="button"
-                  className={`px-2.5 py-1 rounded-lg font-mono text-[10px] uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                    isSelected
-                      ? 'bg-white text-black font-semibold'
-                      : 'text-[#626A73] hover:text-[#F2F3F5] hover:bg-white/[0.05]'
-                  }`}
-                >
-                  {state.word.split(' ')[0]}
-                </button>
-              );
-            })}
-          </div>
-        </motion.div>
-      </AnimatePresence>
     </div>
   );
 };

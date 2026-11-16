@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
   Cpu,
@@ -12,6 +12,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { GlitchHeading } from './ui/GlitchHeading';
+import { DigitalDnaThreeCanvas } from './ui/DigitalDnaThreeCanvas';
 
 interface DnaNode {
   id: string;
@@ -199,6 +200,7 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
   id = 'digital-dna',
 }) => {
   const [activeNodeId, setActiveNodeId] = useState<string>('synthesis-hub');
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
 
   const activeNode =
@@ -234,44 +236,22 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
     return list;
   }, []);
 
-  // Precomputed background horizontal DNA double-helix geometry
-  const helixGeometry = useMemo(() => {
-    const ptsA: string[] = [];
-    const ptsB: string[] = [];
-    const rungs: Array<{ x: number; y1: number; y2: number }> = [];
-    const steps = 48;
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const x = t * 1000;
-      const phase = t * Math.PI * 3.4;
-      const yA = 250 + Math.sin(phase) * 92;
-      const yB = 250 - Math.sin(phase) * 92;
-      ptsA.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${yA.toFixed(1)}`);
-      ptsB.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${yB.toFixed(1)}`);
-      if (i % 3 === 0 && i > 0 && i < steps) {
-        rungs.push({ x, y1: yA, y2: yB });
-      }
-    }
-    return {
-      strandA: ptsA.join(' '),
-      strandB: ptsB.join(' '),
-      rungs,
-    };
-  }, []);
-
   const content = (
     <div className="max-w-7xl mx-auto">
       {/* Section Header */}
       <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-16">
         <div className="flex items-center gap-3">
           <span className="font-mono text-[#7EA7FF] font-semibold text-xs">
-            03 //
+            03
+          </span>
+          <span aria-hidden="true" className="text-white/25 font-mono text-xs">
+            ·
           </span>
           <span className="font-mono text-xs uppercase tracking-widest text-[#A7ADB5]">
             SYSTEMIC TOPOLOGY &amp; ARCHITECTURE
           </span>
         </div>
-        <span className="font-mono text-xs text-[#626A73]">INTERACTIVE GRAPH</span>
+        <span className="font-mono text-xs text-[#626A73]">3D BIOLOGICAL HELIX</span>
       </div>
 
       {/* Section Headline */}
@@ -280,14 +260,24 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
           DIGITAL DNA
         </GlitchHeading>
         <p className="font-sans text-[#A7ADB5] text-sm sm:text-base leading-relaxed font-light [text-wrap:balance]">
-          An architectural topology mapping how intelligence, cloud runtimes, quantitative modeling, and product craft interlock around a unified systems foundation.
+          An interactive 3D biological helix &amp; architectural topology mapping how intelligence, cloud runtimes, quantitative modeling, and product craft interlock.
         </p>
       </div>
 
       {/* Interactive Orbital DNA Graph & Precision Inspector */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-stretch">
         {/* Left/Main Orbital Topology Canvas (8 cols) */}
-        <div className="lg:col-span-8 relative min-h-[420px] sm:min-h-[500px] md:min-h-[560px] rounded-3xl bg-[#070A10]/88 border border-white/[0.09] p-4 sm:p-6 overflow-hidden shadow-[0_24px_70px_rgba(0,0,0,0.82)]">
+        <div
+          ref={canvasContainerRef}
+          className="lg:col-span-8 relative min-h-[420px] sm:min-h-[500px] md:min-h-[560px] rounded-3xl bg-[#070A10]/88 border border-white/[0.09] p-4 sm:p-6 overflow-hidden shadow-[0_24px_70px_rgba(0,0,0,0.82)]"
+        >
+          {/* Three.js 3D Biological Double-Helix Particle Field Reactive to Mouse Proximity */}
+          <DigitalDnaThreeCanvas
+            containerRef={canvasContainerRef}
+            activeAccent={activeNode.accent}
+            reducedMotion={Boolean(prefersReducedMotion)}
+          />
+
           {/* Subtle Ambient Radial Focal Glow synced to active node */}
           <div
             aria-hidden="true"
@@ -300,55 +290,13 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
           {/* Subtle Precision Coordinate Grid Dots */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 opacity-20"
+            className="pointer-events-none absolute inset-0 opacity-15"
             style={{
               backgroundImage:
                 'radial-gradient(rgba(148, 163, 184, 0.35) 1px, transparent 1px)',
               backgroundSize: '28px 28px',
             }}
           />
-
-          {/* Decorative Translucent Horizontal Double-Helix Matrix Strand */}
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 1000 500"
-            preserveAspectRatio="none"
-            className="pointer-events-none absolute inset-0 w-full h-full opacity-25"
-          >
-            <defs>
-              <linearGradient id="helixGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="rgba(56,189,248,0)" />
-                <stop offset="22%" stopColor="rgba(56,189,248,0.45)" />
-                <stop offset="50%" stopColor="rgba(126,167,255,0.65)" />
-                <stop offset="78%" stopColor="rgba(56,189,248,0.45)" />
-                <stop offset="100%" stopColor="rgba(56,189,248,0)" />
-              </linearGradient>
-            </defs>
-            {helixGeometry.rungs.map((r, i) => (
-              <line
-                key={i}
-                x1={r.x}
-                y1={r.y1}
-                x2={r.x}
-                y2={r.y2}
-                stroke="rgba(126, 167, 255, 0.22)"
-                strokeWidth="1"
-              />
-            ))}
-            <path
-              d={helixGeometry.strandA}
-              fill="none"
-              stroke="url(#helixGrad)"
-              strokeWidth="1.4"
-            />
-            <path
-              d={helixGeometry.strandB}
-              fill="none"
-              stroke="url(#helixGrad)"
-              strokeWidth="1.4"
-              strokeDasharray="4 4"
-            />
-          </svg>
 
           {/* Concentric Orbital Rings & Radial Crosshairs */}
           <div
@@ -458,12 +406,12 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
                   </div>
                 ) : (
                   <div
-                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 backdrop-blur-md ${
+                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
                       isActive
                         ? 'bg-cyan-400 text-[#050608] border border-cyan-200 shadow-[0_0_28px_rgba(56,189,248,0.55)]'
                         : isConnected
                         ? 'bg-[#0D131F]/95 text-[#F2F3F5] border border-cyan-400/40 shadow-[0_8px_24px_rgba(0,0,0,0.65)]'
-                        : 'bg-[#0B0E14]/90 text-[#A7ADB5] border border-white/15 group-hover:border-white/35 group-hover:text-white'
+                        : 'bg-[#0B0E14]/92 text-[#A7ADB5] border border-white/15 group-hover:border-white/35 group-hover:text-white'
                     }`}
                   >
                     {getNodeIcon(
@@ -503,7 +451,7 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
 
           {/* Clean Unboxed Footer Legend */}
           <div className="absolute bottom-3.5 left-5 right-5 flex items-center justify-between text-[10px] font-mono text-[#626A73] pointer-events-none">
-            <span>CLICK OR HOVER ANY DISCIPLINE NODE</span>
+            <span>MOVE CURSOR OVER HELIX · CLICK ANY DISCIPLINE NODE</span>
             <span className="hidden sm:inline text-[#A7ADB5]">
               {activeNode.connectedTo.length} ACTIVE SYNAPSES
             </span>

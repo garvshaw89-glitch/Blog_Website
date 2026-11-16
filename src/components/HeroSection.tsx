@@ -165,13 +165,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.15 }}
         transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full min-h-[90vh] flex flex-col justify-center py-16 sm:py-24 px-4 sm:px-6 md:px-12"
+        className="w-full min-h-[82vh] flex flex-col justify-center py-10 sm:py-16 px-4 sm:px-6 md:px-12"
       >
-        <div className="w-full max-w-7xl mx-auto my-auto flex flex-col items-center">
+        <div className="w-full max-w-6xl mx-auto my-auto flex flex-col items-center">
           {/* Dynamic Rotating Display Headline Box with Fixed Height Budget to prevent layout jumps */}
-          <div className="text-center w-full mb-8 max-w-5xl mx-auto">
+          <div className="text-center w-full mb-5 max-w-5xl mx-auto">
             {/* Subtle Editorial Sequence Counter */}
-            <div className="flex items-center justify-center gap-4 mb-5 font-mono text-[10px] tracking-widest text-[#626A73]">
+            <div className="flex items-center justify-center gap-4 mb-3.5 font-mono text-[10px] tracking-widest text-[#626A73]">
               {HEADLINE_ROTATIONS.map((item, i) => (
                 <button
                   key={item.id}
@@ -191,7 +191,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </div>
 
             {/* Calibrated Container with Minimum Height so the layout never jumps between short & multiline titles */}
-            <div className="min-h-[170px] sm:min-h-[200px] md:min-h-[230px] flex items-center justify-center">
+            <div className="min-h-[135px] sm:min-h-[165px] md:min-h-[185px] flex items-center justify-center">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentRotation.id}
@@ -202,7 +202,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   className="flex flex-col items-center justify-center w-full px-2"
                 >
                   {/* Micro Category Eyebrow with Editorial Hairlines */}
-                  <div className="flex items-center gap-2.5 sm:gap-3 mb-2.5 sm:mb-3">
+                  <div className="flex items-center gap-2.5 sm:gap-3 mb-2">
                     <span className="w-6 sm:w-10 h-[1px] bg-white/20" />
                     <span className="font-mono text-[10px] sm:text-xs font-medium uppercase tracking-[0.25em] text-[#A7ADB5]">
                       {currentRotation.prefix}
@@ -245,7 +245,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   </GlitchHeading>
 
                   {/* Subtitle datum */}
-                  <p className="font-mono text-[10px] sm:text-xs uppercase tracking-widest text-[#626A73] mt-3 sm:mt-4 max-w-xl mx-auto">
+                  <p className="font-mono text-[10px] sm:text-xs uppercase tracking-widest text-[#626A73] mt-2.5 max-w-xl mx-auto">
                     {currentRotation.subline}
                   </p>
                 </motion.div>
@@ -258,7 +258,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
               transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-4 text-[#A7ADB5] font-sans text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed font-light px-2 [text-wrap:balance]"
+              className="mt-3 text-[#A7ADB5] font-sans text-xs sm:text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-light px-2 [text-wrap:balance]"
             >
               Architecting intelligent systems and digital products at the intersection of{' '}
               <strong className="text-[#F2F3F5] font-normal">Artificial Intelligence</strong>,{' '}
@@ -267,13 +267,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </motion.p>
           </div>
 
-          {/* The Center Interactive Identity Core */}
+          {/* The Center Interactive Distributed Runtimes Core */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.9, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full my-2"
+            className="w-full"
           >
             <IdentityCore />
           </motion.div>
