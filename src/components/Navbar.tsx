@@ -2,9 +2,12 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Command, Menu, X, Sparkles } from 'lucide-react';
 import { interactionEngine } from '../context/SingularityInteractionEngine';
+import { SheetSectionId } from '../types/sheets';
 
 interface NavbarProps {
   entered?: boolean;
+  activeSheet?: SheetSectionId | null;
+  onOpenSectionSheet?: (sectionId: SheetSectionId) => void;
   onContactClick?: () => void;
   onOpenCommandPalette?: () => void;
   onReplayIntro?: () => void;
@@ -26,6 +29,8 @@ interface GlideGeometry {
 
 export const Navbar: React.FC<NavbarProps> = ({
   entered = true,
+  activeSheet = null,
+  onOpenSectionSheet,
   onContactClick,
   onOpenCommandPalette,
   onReplayIntro,
@@ -118,8 +123,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsBrandSettled(false);
   }, [entered, prefersReducedMotion]);
 
-  const scrollToSection = (sectionId: string) => {
+  const openSection = (sectionId: SheetSectionId) => {
     setMobileMenuOpen(false);
+    if (onOpenSectionSheet) {
+      onOpenSectionSheet(sectionId);
+      return;
+    }
     if (sectionId === 'contact' && onContactClick) {
       onContactClick();
       return;
@@ -129,6 +138,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       el.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  const currentSection = activeSheet || activeSection;
 
   const showFloatingHeroBrand =
     entered && !isBrandSettled && glide !== null && !prefersReducedMotion;
@@ -172,14 +183,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <button
               type="button"
-              onClick={() => scrollToSection('about')}
+              onClick={() => openSection('about')}
               data-cursor="link"
               data-cursor-label="ABOUT"
               className={`transition-colors hover:text-[#F2F3F5] cursor-pointer flex items-center gap-1.5 ${
-                activeSection === 'about' ? 'text-[#F2F3F5]' : ''
+                currentSection === 'about' ? 'text-[#F2F3F5]' : ''
               }`}
             >
-              {activeSection === 'about' && (
+              {currentSection === 'about' && (
                 <span className="w-1 h-1 rounded-full bg-[#7EA7FF]" />
               )}
               <span>ABOUT</span>
@@ -189,14 +200,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               type="button"
-              onClick={() => scrollToSection('projects')}
+              onClick={() => openSection('projects')}
               data-cursor="link"
               data-cursor-label="VIEW"
               className={`transition-colors hover:text-[#F2F3F5] cursor-pointer flex items-center gap-1.5 ${
-                activeSection === 'projects' ? 'text-[#F2F3F5]' : ''
+                currentSection === 'projects' ? 'text-[#F2F3F5]' : ''
               }`}
             >
-              {activeSection === 'projects' && (
+              {currentSection === 'projects' && (
                 <span className="w-1 h-1 rounded-full bg-[#7EA7FF]" />
               )}
               <span>PROJECTS</span>
@@ -206,14 +217,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               type="button"
-              onClick={() => scrollToSection('writing')}
+              onClick={() => openSection('writing')}
               data-cursor="link"
               data-cursor-label="READ"
               className={`transition-colors hover:text-[#F2F3F5] cursor-pointer flex items-center gap-1.5 ${
-                activeSection === 'writing' ? 'text-[#F2F3F5]' : ''
+                currentSection === 'writing' ? 'text-[#F2F3F5]' : ''
               }`}
             >
-              {activeSection === 'writing' && (
+              {currentSection === 'writing' && (
                 <span className="w-1 h-1 rounded-full bg-[#7EA7FF]" />
               )}
               <span>WRITING</span>
@@ -223,14 +234,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               type="button"
-              onClick={() => scrollToSection('contact')}
+              onClick={() => openSection('contact')}
               data-cursor="link"
               data-cursor-label="TALK"
               className={`transition-colors hover:text-[#F2F3F5] cursor-pointer flex items-center gap-1.5 ${
-                activeSection === 'contact' ? 'text-[#F2F3F5]' : ''
+                currentSection === 'contact' ? 'text-[#F2F3F5]' : ''
               }`}
             >
-              {activeSection === 'contact' && (
+              {currentSection === 'contact' && (
                 <span className="w-1 h-1 rounded-full bg-[#7EA7FF]" />
               )}
               <span>CONTACT</span>
@@ -290,28 +301,28 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="md:hidden bg-[#0B0E12] border-b border-white/10 px-6 py-6 flex flex-col gap-4 text-xs font-mono tracking-widest uppercase">
             <button
               type="button"
-              onClick={() => scrollToSection('about')}
+              onClick={() => openSection('about')}
               className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
             >
               01 // ABOUT
             </button>
             <button
               type="button"
-              onClick={() => scrollToSection('projects')}
+              onClick={() => openSection('projects')}
               className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
             >
               02 // PROJECTS
             </button>
             <button
               type="button"
-              onClick={() => scrollToSection('writing')}
+              onClick={() => openSection('writing')}
               className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
             >
               03 // WRITING
             </button>
             <button
               type="button"
-              onClick={() => scrollToSection('contact')}
+              onClick={() => openSection('contact')}
               className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
             >
               04 // CONTACT

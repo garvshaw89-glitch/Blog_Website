@@ -17,6 +17,7 @@ import {
   Rocket,
 } from 'lucide-react';
 import { interactionEngine } from '../../context/SingularityInteractionEngine';
+import { SheetSectionId } from '../../types/sheets';
 
 interface CommandItem {
   id: string;
@@ -31,19 +32,26 @@ interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenProjectModal?: (projectId: string) => void;
+  onOpenSectionSheet?: (sectionId: SheetSectionId) => void;
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
   isOpen,
   onClose,
-  onOpenProjectModal,
+  onOpenSectionSheet,
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const scrollTo = (id: string) => {
+  const scrollTo = (id: SheetSectionId) => {
     onClose();
+    if (onOpenSectionSheet) {
+      setTimeout(() => {
+        onOpenSectionSheet(id);
+      }, 120);
+      return;
+    }
     setTimeout(() => {
       const el = document.getElementById(id);
       if (el) {

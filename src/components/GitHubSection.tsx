@@ -22,10 +22,14 @@ interface GitHubUser {
 }
 
 interface GitHubSectionProps {
+  inSheet?: boolean;
   id?: string;
 }
 
-export const GitHubSection: React.FC<GitHubSectionProps> = ({ id = 'github-telemetry' }) => {
+export const GitHubSection: React.FC<GitHubSectionProps> = ({
+  inSheet = false,
+  id = 'github-telemetry',
+}) => {
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [user, setUser] = useState<GitHubUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,12 +109,8 @@ export const GitHubSection: React.FC<GitHubSectionProps> = ({ id = 'github-telem
     },
   ];
 
-  return (
-    <section
-      id={id}
-      className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
-    >
-      <div className="max-w-7xl mx-auto">
+  const content = (
+    <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-16">
           <div className="flex items-center gap-3">
@@ -241,6 +241,18 @@ export const GitHubSection: React.FC<GitHubSectionProps> = ({ id = 'github-telem
           ))}
         </div>
       </div>
+  );
+
+  if (inSheet) {
+    return <div className="select-none">{content}</div>;
+  }
+
+  return (
+    <section
+      id={id}
+      className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
+    >
+      {content}
     </section>
   );
 };

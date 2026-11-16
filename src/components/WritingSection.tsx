@@ -180,10 +180,14 @@ const ARTICLES: ArticleData[] = [
 ];
 
 interface WritingSectionProps {
+  inSheet?: boolean;
   id?: string;
 }
 
-export const WritingSection: React.FC<WritingSectionProps> = ({ id = 'writing' }) => {
+export const WritingSection: React.FC<WritingSectionProps> = ({
+  inSheet = false,
+  id = 'writing',
+}) => {
   const [selectedArticle, setSelectedArticle] = useState<ArticleData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTopic, setActiveTopic] = useState<string | null>(null);
@@ -222,12 +226,8 @@ export const WritingSection: React.FC<WritingSectionProps> = ({ id = 'writing' }
     setActiveTopic(null);
   };
 
-  return (
-    <section
-      id={id}
-      className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
-    >
-      <div className="max-w-7xl mx-auto">
+  const content = (
+    <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-16">
           <div className="flex items-center gap-3">
@@ -440,12 +440,26 @@ export const WritingSection: React.FC<WritingSectionProps> = ({ id = 'writing' }
           </div>
         )}
       </div>
+  );
 
-      {/* Reader Modal */}
+  return (
+    <>
+      {inSheet ? (
+        <div className="select-none">{content}</div>
+      ) : (
+        <section
+          id={id}
+          className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
+        >
+          {content}
+        </section>
+      )}
+
+      {/* Reader Modal (portaled above Slide Over window) */}
       <ArticleModal
         article={selectedArticle}
         onClose={() => setSelectedArticle(null)}
       />
-    </section>
+    </>
   );
 };

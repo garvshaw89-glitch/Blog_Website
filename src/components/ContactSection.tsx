@@ -4,10 +4,14 @@ import { Send, CheckCircle2, Copy, Check, Mail, MessageSquare, Terminal, ArrowUp
 import { GlitchHeading } from './ui/GlitchHeading';
 
 interface ContactSectionProps {
+  inSheet?: boolean;
   id?: string;
 }
 
-export const ContactSection: React.FC<ContactSectionProps> = ({ id = 'contact' }) => {
+export const ContactSection: React.FC<ContactSectionProps> = ({
+  inSheet = false,
+  id = 'contact',
+}) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [projectType, setProjectType] = useState('AI & Machine Intelligence');
@@ -44,12 +48,8 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ id = 'contact' }
     'Other Technical Venture',
   ];
 
-  return (
-    <section
-      id={id}
-      className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
-    >
-      <div className="max-w-7xl mx-auto">
+  const content = (
+    <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-16">
           <div className="flex items-center gap-3">
@@ -196,6 +196,18 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ id = 'contact' }
           </div>
         </div>
       </div>
+  );
+
+  if (inSheet) {
+    return <div className="select-none">{content}</div>;
+  }
+
+  return (
+    <section
+      id={id}
+      className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
+    >
+      {content}
     </section>
   );
 };

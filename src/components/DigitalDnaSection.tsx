@@ -98,21 +98,19 @@ const DNA_NODES: DnaNode[] = [
 ];
 
 interface DigitalDnaSectionProps {
+  inSheet?: boolean;
   id?: string;
 }
 
 export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
+  inSheet = false,
   id = 'digital-dna',
 }) => {
   const [activeNodeId, setActiveNodeId] = useState<string>('garv-core');
   const activeNode = DNA_NODES.find((n) => n.id === activeNodeId) || DNA_NODES[0];
 
-  return (
-    <section
-      id={id}
-      className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
-    >
-      <div className="max-w-7xl mx-auto">
+  const content = (
+    <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-16">
           <div className="flex items-center gap-3">
@@ -250,6 +248,18 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
           </div>
         </div>
       </div>
+  );
+
+  if (inSheet) {
+    return <div className="select-none">{content}</div>;
+  }
+
+  return (
+    <section
+      id={id}
+      className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
+    >
+      {content}
     </section>
   );
 };

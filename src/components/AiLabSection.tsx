@@ -17,10 +17,14 @@ import { GlitchHeading } from './ui/GlitchHeading';
 import { AI_EXPERIMENTS } from '../data/portfolioData';
 
 interface AiLabSectionProps {
+  inSheet?: boolean;
   id?: string;
 }
 
-export const AiLabSection: React.FC<AiLabSectionProps> = ({ id = 'ai-lab' }) => {
+export const AiLabSection: React.FC<AiLabSectionProps> = ({
+  inSheet = false,
+  id = 'ai-lab',
+}) => {
   const [activeTab, setActiveTab] = useState<'assistant' | 'rag' | 'agent'>('assistant');
 
   // AI Assistant State
@@ -126,12 +130,8 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({ id = 'ai-lab' }) => 
     }, 2100);
   };
 
-  return (
-    <section
-      id={id}
-      className="relative w-full py-24 px-4 sm:px-6 md:px-10 bg-transparent overflow-hidden"
-    >
-      <div className="max-w-7xl mx-auto">
+  const content = (
+    <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="text-center mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono uppercase tracking-widest mb-3">
@@ -457,6 +457,18 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({ id = 'ai-lab' }) => 
           </div>
         )}
       </div>
+  );
+
+  if (inSheet) {
+    return <div className="select-none">{content}</div>;
+  }
+
+  return (
+    <section
+      id={id}
+      className="relative w-full py-24 px-4 sm:px-6 md:px-10 bg-transparent overflow-hidden"
+    >
+      {content}
     </section>
   );
 };

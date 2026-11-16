@@ -6,10 +6,12 @@ import { Compass, ArrowUpRight, Cpu, Database, Cloud, Terminal, Sparkles } from 
 import { GlitchHeading } from './ui/GlitchHeading';
 
 interface TechnologyConstellationProps {
+  inSheet?: boolean;
   id?: string;
 }
 
 export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = ({
+  inSheet = false,
   id = 'constellation',
 }) => {
   const [selectedNode, setSelectedNode] = useState<ConstellationNode>(CONSTELLATION_NODES[0]);
@@ -41,12 +43,8 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
     return node ? { x: node.x, y: node.y } : { x: 50, y: 50 };
   };
 
-  return (
-    <section
-      id={id}
-      className="relative w-full py-20 px-4 sm:px-6 md:px-10 bg-transparent overflow-hidden"
-    >
-      <div className="max-w-7xl mx-auto">
+  const content = (
+    <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-16">
           <div className="flex items-center gap-3">
@@ -212,6 +210,18 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
           </div>
         </div>
       </div>
+  );
+
+  if (inSheet) {
+    return <div className="select-none">{content}</div>;
+  }
+
+  return (
+    <section
+      id={id}
+      className="relative w-full py-20 px-4 sm:px-6 md:px-10 bg-transparent overflow-hidden"
+    >
+      {content}
     </section>
   );
 };

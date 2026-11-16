@@ -7,16 +7,21 @@ import {
   useReducedMotion,
   useMotionValueEvent,
 } from 'motion/react';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, PanelRightOpen } from 'lucide-react';
 import { ArchitectAvatar } from './ui/ArchitectAvatar';
 import { GlitchHeading } from './ui/GlitchHeading';
+import { SheetSectionId } from '../types/sheets';
 
 interface AboutSectionProps {
   onContactClick?: () => void;
+  onOpenSlideOver?: (id: SheetSectionId) => void;
+  inSheet?: boolean;
   id?: string;
 }
 
 export const AboutSection: React.FC<AboutSectionProps> = ({
+  onOpenSlideOver,
+  inSheet = false,
   id = 'about',
 }) => {
   const sectionRef = useRef<HTMLElement>(null);
@@ -39,6 +44,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
   // Start physically UNDER the rotating Milky Way (z-[1] < MilkyWayGalaxy z-[2]),
   // then cross cleanly through the galaxy core into the foreground (z-10) mid-emergence!
   useMotionValueEvent(smoothProgress, 'change', (latest) => {
+    if (inSheet) return;
     if (prefersReducedMotion) {
       if (!isAboveGalaxy) setIsAboveGalaxy(true);
       return;
@@ -111,11 +117,150 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
     },
   ];
 
+  const innerContent = (
+    <>
+      {/* Section Header Eyebrow */}
+      <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-12 sm:mb-16">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[#7EA7FF] font-semibold text-xs">01 //</span>
+          <span className="font-mono text-xs uppercase tracking-widest text-[#A7ADB5]">
+            IDENTITY &amp; ARCHITECTURAL PHILOSOPHY
+          </span>
+        </div>
+        <span className="font-mono text-xs text-[#626A73]">GARV SHAW</span>
+      </div>
+
+      {/* Large Editorial Headline & Verified Profile Showcase */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-16 sm:mb-20">
+        <motion.div
+          className="lg:col-span-7"
+          style={inSheet || prefersReducedMotion ? undefined : { x: leftColX }}
+        >
+          <GlitchHeading className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-[#F2F3F5] leading-[0.95]">
+            THE PERSON
+            <br />
+            <span className="text-[#A7ADB5]">
+              BEHIND THE
+            </span>
+            <br />
+            SYSTEM.
+          </GlitchHeading>
+          <p className="font-sans text-[#A7ADB5] text-base sm:text-lg leading-relaxed font-light mt-6 max-w-xl">
+            I am <strong className="text-[#F2F3F5] font-normal">Garv Shaw</strong>, a digital architect and software engineer designing intelligent platforms at the intersection of Artificial Intelligence, distributed cloud infrastructure, and financial systems.
+          </p>
+          <div className="mt-8 pt-6 border-t border-white/[0.08] flex flex-wrap items-center gap-4 font-mono text-xs text-[#626A73]">
+            <span className="text-[#7EA7FF] font-medium">AI &amp; REASONING</span>
+            <span className="text-white/20">/</span>
+            <span className="text-[#A7ADB5]">CLOUD &amp; EDGE</span>
+            <span className="text-white/20">/</span>
+            <span className="text-[#A7ADB5]">FINTECH &amp; SYSTEMS</span>
+          </div>
+        </motion.div>
+
+        {/* High-Resolution Profile Card */}
+        <motion.div
+          className="lg:col-span-5 flex justify-center lg:justify-end"
+          style={
+            inSheet || prefersReducedMotion
+              ? undefined
+              : { x: rightCardX, rotateY: rightCardRotateY }
+          }
+        >
+          <div className="relative group max-w-sm w-full p-6 sm:p-7 rounded-2xl bg-[#0B0E12]/95 border border-white/[0.08] shadow-2xl hover:border-white/[0.18] transition-all duration-500">
+            <div className="flex items-center gap-5 mb-5">
+              {/* Avatar with authentic dot-matrix particle effect */}
+              <div className="relative shrink-0">
+                <ArchitectAvatar size={88} interactive={true} />
+                <span
+                  className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#10b981] border-2 border-[#0B0E12] z-10"
+                  title="Status: Online"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center gap-1.5 text-[#7EA7FF] font-mono text-[10px] tracking-widest uppercase mb-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#7EA7FF]" />
+                  <span>SYSTEM ARCHITECT</span>
+                </div>
+                <h3 className="font-editorial text-2xl font-bold text-[#F2F3F5] uppercase tracking-tight">
+                  GARV SHAW
+                </h3>
+                <p className="font-mono text-xs text-[#626A73] mt-0.5">
+                  @garvshaw89-glitch
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 py-4 border-y border-white/[0.06] font-mono text-xs text-[#A7ADB5]">
+              <div className="flex justify-between">
+                <span className="text-[#626A73]">ROLE:</span>
+                <span className="text-[#F2F3F5]">Digital Architect</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#626A73]">FOCUS:</span>
+                <span className="text-[#7EA7FF]">AI × Cloud × Software</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#626A73]">LOCATION:</span>
+                <span className="text-[#A7ADB5]">New Delhi, India</span>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-between text-xs font-mono">
+              <a
+                href="https://github.com/garvshaw89-glitch"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-[#7EA7FF] hover:text-white transition-colors"
+              >
+                <span>VIEW GITHUB</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </a>
+              <span className="text-[#A7ADB5]">AVAILABLE FOR ROLES</span>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* 3 Architectural Pillars */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+        {pillars.map((pillar, i) => (
+          <motion.div
+            key={pillar.title}
+            style={inSheet || prefersReducedMotion ? undefined : pillarStyles[i]}
+            className="p-7 sm:p-8 rounded-2xl bg-[#0B0E12]/80 border border-white/[0.08] hover:border-white/[0.18] transition-all flex flex-col justify-between h-full"
+          >
+            <div>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-[#7EA7FF] block mb-3">
+                PILLAR 0{i + 1} / {pillar.tag}
+              </span>
+              <h3 className="font-editorial text-xl sm:text-2xl font-bold text-[#F2F3F5] uppercase tracking-tight mb-4">
+                {pillar.title}
+              </h3>
+              <p className="font-sans text-sm text-[#A7ADB5] leading-relaxed font-light">
+                {pillar.desc}
+              </p>
+            </div>
+
+            <div className="mt-8 pt-4 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-[#626A73]">
+              <span>STATUS</span>
+              <span className="text-[#A7ADB5]">PRODUCTION GRADE</span>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </>
+  );
+
+  if (inSheet) {
+    return <div className="select-none">{innerContent}</div>;
+  }
+
   return (
     <section
       ref={sectionRef}
       id={id}
-      className={`relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-x-clip ${
+      className={`relative w-full py-16 sm:py-24 px-3 sm:px-6 md:px-10 bg-transparent select-none overflow-x-clip ${
         isAboveGalaxy || prefersReducedMotion ? 'z-10' : 'z-[1]'
       }`}
       style={{ perspective: '1400px' }}
@@ -137,8 +282,9 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
         </motion.div>
       )}
 
+      {/* Emerging Window Sheet Container rising from underneath the Milky Way */}
       <motion.div
-        className="relative z-10 max-w-7xl mx-auto"
+        className="relative z-10 max-w-7xl mx-auto rounded-[24px] sm:rounded-[32px] border border-white/[0.11] bg-[#07090E]/82 shadow-[0_32px_90px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.08)]"
         style={
           prefersReducedMotion
             ? undefined
@@ -155,136 +301,47 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
               }
         }
       >
-        {/* Section Header Eyebrow */}
-        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-16">
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-[#7EA7FF] font-semibold text-xs">01 //</span>
-            <span className="font-mono text-xs uppercase tracking-widest text-[#A7ADB5]">
-              IDENTITY & ARCHITECTURAL PHILOSOPHY
+        {/* Subtle stacked background edge peeking behind the sheet */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none hidden md:block absolute -inset-y-2 -left-2.5 right-4 -z-10 rounded-[32px] border border-white/[0.05] bg-[#06080D]/45"
+        />
+
+        {/* macOS / iPadOS Window Sheet Header Bar */}
+        <div className="flex items-center justify-between gap-4 px-5 sm:px-8 py-3.5 border-b border-white/[0.08] bg-white/[0.02] rounded-t-[24px] sm:rounded-t-[32px]">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="flex items-center gap-1.5 shrink-0" aria-hidden="true">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]/80" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]/80" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#28C840]/80" />
+            </div>
+            <span className="font-sans text-xs font-medium tracking-wide text-[#D7DDE6] truncate">
+              About — Garv Shaw
             </span>
           </div>
-          <span className="font-mono text-xs text-[#626A73]">GARV SHAW</span>
+
+          <div className="hidden sm:flex items-center justify-center shrink-0" aria-hidden="true">
+            <span className="w-10 h-1 rounded-full bg-white/20" />
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {onOpenSlideOver && (
+              <button
+                type="button"
+                onClick={() => onOpenSlideOver('about')}
+                data-cursor="button"
+                data-cursor-label="SHEET"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-cyan-400/15 border border-white/[0.1] hover:border-cyan-400/40 text-[11px] font-mono text-[#A7ADB5] hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                title="Open About in Slide Over sheet"
+              >
+                <PanelRightOpen className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span>Slide Over</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Large Editorial Headline & Verified Profile Showcase */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center mb-20">
-          <motion.div
-            className="lg:col-span-7"
-            style={prefersReducedMotion ? undefined : { x: leftColX }}
-          >
-            <GlitchHeading className="font-editorial text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-tight text-[#F2F3F5] leading-[0.95]">
-              THE PERSON
-              <br />
-              <span className="text-[#A7ADB5]">
-                BEHIND THE
-              </span>
-              <br />
-              SYSTEM.
-            </GlitchHeading>
-            <p className="font-sans text-[#A7ADB5] text-base sm:text-lg leading-relaxed font-light mt-6 max-w-xl">
-              I am <strong className="text-[#F2F3F5] font-normal">Garv Shaw</strong>, a digital architect and software engineer designing intelligent platforms at the intersection of Artificial Intelligence, distributed cloud infrastructure, and financial systems.
-            </p>
-            <div className="mt-8 pt-6 border-t border-white/[0.08] flex flex-wrap items-center gap-4 font-mono text-xs text-[#626A73]">
-              <span className="text-[#7EA7FF] font-medium">AI & REASONING</span>
-              <span className="text-white/20">/</span>
-              <span className="text-[#A7ADB5]">CLOUD & EDGE</span>
-              <span className="text-white/20">/</span>
-              <span className="text-[#A7ADB5]">FINTECH & SYSTEMS</span>
-            </div>
-          </motion.div>
-
-          {/* High-Resolution Profile Card */}
-          <motion.div
-            className="lg:col-span-5 flex justify-center lg:justify-end"
-            style={
-              prefersReducedMotion
-                ? undefined
-                : { x: rightCardX, rotateY: rightCardRotateY }
-            }
-          >
-            <div className="relative group max-w-sm w-full p-6 sm:p-7 rounded-2xl bg-[#0B0E12]/95 border border-white/[0.08] shadow-2xl hover:border-white/[0.18] transition-all duration-500">
-              <div className="flex items-center gap-5 mb-5">
-                {/* Avatar with authentic dot-matrix particle effect */}
-                <div className="relative shrink-0">
-                  <ArchitectAvatar size={88} interactive={true} />
-                  <span
-                    className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#10b981] border-2 border-[#0B0E12] z-10"
-                    title="Status: Online"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-1.5 text-[#7EA7FF] font-mono text-[10px] tracking-widest uppercase mb-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#7EA7FF]" />
-                    <span>SYSTEM ARCHITECT</span>
-                  </div>
-                  <h3 className="font-editorial text-2xl font-bold text-[#F2F3F5] uppercase tracking-tight">
-                    GARV SHAW
-                  </h3>
-                  <p className="font-mono text-xs text-[#626A73] mt-0.5">
-                    @garvshaw89-glitch
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2 py-4 border-y border-white/[0.06] font-mono text-xs text-[#A7ADB5]">
-                <div className="flex justify-between">
-                  <span className="text-[#626A73]">ROLE:</span>
-                  <span className="text-[#F2F3F5]">Digital Architect</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#626A73]">FOCUS:</span>
-                  <span className="text-[#7EA7FF]">AI × Cloud × Software</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[#626A73]">LOCATION:</span>
-                  <span className="text-[#A7ADB5]">New Delhi, India</span>
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-center justify-between text-xs font-mono">
-                <a
-                  href="https://github.com/garvshaw89-glitch"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-[#7EA7FF] hover:text-white transition-colors"
-                >
-                  <span>VIEW GITHUB</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </a>
-                <span className="text-[#A7ADB5]">AVAILABLE FOR ROLES</span>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* 3 Architectural Pillars emerging right behind the primary Milky Way warp */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-          {pillars.map((pillar, i) => (
-            <motion.div
-              key={pillar.title}
-              style={prefersReducedMotion ? undefined : pillarStyles[i]}
-              className="p-8 rounded-2xl bg-[#0B0E12]/80 border border-white/[0.08] hover:border-white/[0.18] transition-all flex flex-col justify-between h-full"
-            >
-              <div>
-                <span className="font-mono text-[10px] uppercase tracking-widest text-[#7EA7FF] block mb-3">
-                  PILLAR 0{i + 1} / {pillar.tag}
-                </span>
-                <h3 className="font-editorial text-xl sm:text-2xl font-bold text-[#F2F3F5] uppercase tracking-tight mb-4">
-                  {pillar.title}
-                </h3>
-                <p className="font-sans text-sm text-[#A7ADB5] leading-relaxed font-light">
-                  {pillar.desc}
-                </p>
-              </div>
-
-              <div className="mt-8 pt-4 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-[#626A73]">
-                <span>STATUS</span>
-                <span className="text-[#A7ADB5]">PRODUCTION GRADE</span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        <div className="px-5 sm:px-8 md:px-12 py-12 sm:py-16">{innerContent}</div>
       </motion.div>
     </section>
   );

@@ -52,16 +52,16 @@ const MILESTONES: JourneyMilestone[] = [
 ];
 
 interface JourneySectionProps {
+  inSheet?: boolean;
   id?: string;
 }
 
-export const JourneySection: React.FC<JourneySectionProps> = ({ id = 'journey' }) => {
-  return (
-    <section
-      id={id}
-      className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
-    >
-      <div className="max-w-7xl mx-auto">
+export const JourneySection: React.FC<JourneySectionProps> = ({
+  inSheet = false,
+  id = 'journey',
+}) => {
+  const content = (
+    <div className="max-w-7xl mx-auto">
         {/* Section Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-16">
           <div className="flex items-center gap-3">
@@ -141,6 +141,18 @@ export const JourneySection: React.FC<JourneySectionProps> = ({ id = 'journey' }
           ))}
         </div>
       </div>
+  );
+
+  if (inSheet) {
+    return <div className="select-none">{content}</div>;
+  }
+
+  return (
+    <section
+      id={id}
+      className="relative w-full py-28 sm:py-36 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-hidden"
+    >
+      {content}
     </section>
   );
 };
