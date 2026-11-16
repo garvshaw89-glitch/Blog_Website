@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { interactionEngine } from '../../context/SingularityInteractionEngine';
-import { SheetSectionId } from '../../types/sheets';
 
-const SECTIONS: Array<{ id: 'hero-section' | SheetSectionId; label: string }> = [
+const SECTIONS = [
   { id: 'hero-section', label: '00 // HERO' },
   { id: 'about', label: '01 // ABOUT' },
   { id: 'capabilities', label: '02 // CAPABILITIES' },
@@ -16,13 +15,7 @@ const SECTIONS: Array<{ id: 'hero-section' | SheetSectionId; label: string }> = 
   { id: 'contact', label: '10 // CONTACT' },
 ];
 
-interface SectionProgressHUDProps {
-  onOpenSectionSheet?: (id: SheetSectionId) => void;
-}
-
-export const SectionProgressHUD: React.FC<SectionProgressHUDProps> = ({
-  onOpenSectionSheet,
-}) => {
+export const SectionProgressHUD: React.FC = () => {
   const [activeSection, setActiveSection] = useState('hero-section');
 
   useEffect(() => {
@@ -35,11 +28,7 @@ export const SectionProgressHUD: React.FC<SectionProgressHUDProps> = ({
     return () => unsubscribe();
   }, []);
 
-  const handleSelectSection = (id: 'hero-section' | SheetSectionId) => {
-    if (id !== 'hero-section' && onOpenSectionSheet) {
-      onOpenSectionSheet(id);
-      return;
-    }
+  const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
@@ -54,7 +43,7 @@ export const SectionProgressHUD: React.FC<SectionProgressHUDProps> = ({
         return (
           <button
             key={sec.id}
-            onClick={() => handleSelectSection(sec.id)}
+            onClick={() => scrollToSection(sec.id)}
             data-cursor="button"
             className="group flex items-center gap-2 cursor-pointer py-1"
             title={`Jump to ${sec.label}`}

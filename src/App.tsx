@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
@@ -23,17 +23,14 @@ import { AiLabSection } from './components/AiLabSection';
 import { ContactSection } from './components/ContactSection';
 import { FooterSection } from './components/FooterSection';
 import { ProjectModal } from './components/ProjectModal';
-import { SlideOverSectionShell } from './components/ui/SlideOverSectionShell';
-import { SlideOverSheetDeck } from './components/ui/SlideOverSheetDeck';
+import { ScrollSlideSection } from './components/ui/ScrollSlideSection';
 import { PROJECTS } from './data/portfolioData';
 import { ProjectItem } from './types';
-import { SheetSectionId } from './types/sheets';
 import { interactionEngine } from './context/SingularityInteractionEngine';
 
 export default function App() {
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [activeSheet, setActiveSheet] = useState<SheetSectionId | null>(null);
   // Fresh initialization on every page load / refresh — kept in React memory only
   const [showIntro, setShowIntro] = useState<boolean>(true);
   // Keep normal default cursor through THINK. CREATE. DISCOVER. until entry asteroid lands & morphs into cursor
@@ -58,24 +55,6 @@ export default function App() {
     };
   }, []);
 
-  const handleOpenSectionSheet = useCallback((sectionId: SheetSectionId) => {
-    setActiveSheet(sectionId);
-  }, []);
-
-  const handleCloseSectionSheet = useCallback(() => {
-    setActiveSheet(null);
-  }, []);
-
-  const handleJumpToPageSection = useCallback((sectionId: SheetSectionId) => {
-    setActiveSheet(null);
-    setTimeout(() => {
-      const el = document.getElementById(sectionId);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 180);
-  }, []);
-
   const handleIntroComplete = () => {
     setIsRocketCursorActive(true);
     setShowIntro(false);
@@ -93,17 +72,22 @@ export default function App() {
   };
 
   const handleReplayIntro = () => {
-    setActiveSheet(null);
     setIsRocketCursorActive(false);
     setShowIntro(true);
   };
 
   const handleScrollToContact = () => {
-    handleOpenSectionSheet('contact');
+    const contactSection = document.getElementById('contact');
+    if (contactSection) {
+      contactSection.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const handleScrollToProjects = () => {
-    handleOpenSectionSheet('projects');
+    const projectsSection = document.getElementById('projects');
+    if (projectsSection) {
+      projectsSection.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const handleSelectProject = (project: ProjectItem) => {
@@ -117,33 +101,6 @@ export default function App() {
   const handleOpenProjectById = (projectId: string) => {
     const proj = PROJECTS.find((p) => p.id === projectId);
     if (proj) setSelectedProject(proj);
-  };
-
-  const renderSheetSection = (sectionId: SheetSectionId) => {
-    switch (sectionId) {
-      case 'about':
-        return <AboutSection inSheet onContactClick={handleScrollToContact} />;
-      case 'capabilities':
-        return <CapabilitiesSection inSheet />;
-      case 'digital-dna':
-        return <DigitalDnaSection inSheet />;
-      case 'projects':
-        return <ProjectsSection inSheet onSelectProject={handleSelectProject} />;
-      case 'github-telemetry':
-        return <GitHubSection inSheet />;
-      case 'journey':
-        return <JourneySection inSheet />;
-      case 'constellation':
-        return <TechnologyConstellation inSheet />;
-      case 'writing':
-        return <WritingSection inSheet />;
-      case 'ai-lab':
-        return <AiLabSection inSheet />;
-      case 'contact':
-        return <ContactSection inSheet />;
-      default:
-        return null;
-    }
   };
 
   return (
@@ -173,11 +130,10 @@ export default function App() {
           isOpen={isCommandPaletteOpen}
           onClose={() => setIsCommandPaletteOpen(false)}
           onOpenProjectModal={handleOpenProjectById}
-          onOpenSectionSheet={handleOpenSectionSheet}
         />
 
         {/* 4. Section Navigation Timeline HUD */}
-        <SectionProgressHUD onOpenSectionSheet={handleOpenSectionSheet} />
+        <SectionProgressHUD />
 
         {/* 5. Easter Egg Toast */}
         <EasterEggToast />
@@ -185,8 +141,6 @@ export default function App() {
         {/* 6. Transforming Floating Navbar */}
         <Navbar
           entered={!showIntro}
-          activeSheet={activeSheet}
-          onOpenSectionSheet={handleOpenSectionSheet}
           onContactClick={handleScrollToContact}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onReplayIntro={handleReplayIntro}
@@ -228,111 +182,54 @@ export default function App() {
           <MarqueeSection />
         </div>
 
-        {/* 2. ABOUT / IDENTITY (emerges from under MilkyWayGalaxy z-[2] into foreground z-10 as a window sheet) */}
-        <AboutSection
-          onContactClick={handleScrollToContact}
-          onOpenSlideOver={handleOpenSectionSheet}
-        />
+        {/* 2. ABOUT / IDENTITY (emerges from under MilkyWayGalaxy z-[2] into foreground z-10) */}
+        <AboutSection onContactClick={handleScrollToContact} />
 
         <div className="relative z-10 flex flex-col">
-          {/* 3. CAPABILITIES (macOS / iPadOS Slide Over Window Sheet) */}
-          <SlideOverSectionShell
-            sectionId="capabilities"
-            windowTitle="Capabilities"
-            onOpenSlideOver={handleOpenSectionSheet}
-          >
-            <div className="px-5 sm:px-8 md:px-12 py-12 sm:py-16">
-              <CapabilitiesSection inSheet />
-            </div>
-          </SlideOverSectionShell>
+          {/* 3. CAPABILITIES */}
+          <ScrollSlideSection>
+            <CapabilitiesSection id="capabilities" />
+          </ScrollSlideSection>
 
-          {/* 4. DIGITAL DNA (macOS / iPadOS Slide Over Window Sheet) */}
-          <SlideOverSectionShell
-            sectionId="digital-dna"
-            windowTitle="Digital DNA"
-            onOpenSlideOver={handleOpenSectionSheet}
-          >
-            <div className="px-5 sm:px-8 md:px-12 py-12 sm:py-16">
-              <DigitalDnaSection inSheet />
-            </div>
-          </SlideOverSectionShell>
+          {/* 4. DIGITAL DNA */}
+          <ScrollSlideSection>
+            <DigitalDnaSection id="digital-dna" />
+          </ScrollSlideSection>
 
-          {/* 5. FEATURED PROJECTS (macOS / iPadOS Slide Over Window Sheet) */}
-          <SlideOverSectionShell
-            sectionId="projects"
-            windowTitle="Projects"
-            onOpenSlideOver={handleOpenSectionSheet}
-          >
-            <div className="px-5 sm:px-8 md:px-12 py-12 sm:py-16">
-              <ProjectsSection inSheet onSelectProject={handleSelectProject} />
-            </div>
-          </SlideOverSectionShell>
+          {/* 5. FEATURED PROJECTS */}
+          <ScrollSlideSection>
+            <ProjectsSection id="projects" onSelectProject={handleSelectProject} />
+          </ScrollSlideSection>
 
           {/* 6. ENGINEERING / GITHUB TELEMETRY */}
-          <SlideOverSectionShell
-            sectionId="github-telemetry"
-            windowTitle="GitHub Telemetry"
-            onOpenSlideOver={handleOpenSectionSheet}
-          >
-            <div className="px-5 sm:px-8 md:px-12 py-12 sm:py-16">
-              <GitHubSection inSheet />
-            </div>
-          </SlideOverSectionShell>
+          <ScrollSlideSection>
+            <GitHubSection id="github-telemetry" />
+          </ScrollSlideSection>
 
           {/* 7. EXPERIENCE / JOURNEY */}
-          <SlideOverSectionShell
-            sectionId="journey"
-            windowTitle="Engineering Journey"
-            onOpenSlideOver={handleOpenSectionSheet}
-          >
-            <div className="px-5 sm:px-8 md:px-12 py-12 sm:py-16">
-              <JourneySection inSheet />
-            </div>
-          </SlideOverSectionShell>
+          <ScrollSlideSection>
+            <JourneySection id="journey" />
+          </ScrollSlideSection>
 
           {/* 8. TECHNOLOGY CONSTELLATION GRAPH */}
-          <SlideOverSectionShell
-            sectionId="constellation"
-            windowTitle="Technology Constellation"
-            onOpenSlideOver={handleOpenSectionSheet}
-          >
-            <div className="px-5 sm:px-8 md:px-12 py-12 sm:py-16">
-              <TechnologyConstellation inSheet />
-            </div>
-          </SlideOverSectionShell>
+          <ScrollSlideSection>
+            <TechnologyConstellation id="constellation" />
+          </ScrollSlideSection>
 
-          {/* 9. WRITING / THOUGHTS (macOS / iPadOS Slide Over Window Sheet) */}
-          <SlideOverSectionShell
-            sectionId="writing"
-            windowTitle="Writing"
-            onOpenSlideOver={handleOpenSectionSheet}
-          >
-            <div className="px-5 sm:px-8 md:px-12 py-12 sm:py-16">
-              <WritingSection inSheet />
-            </div>
-          </SlideOverSectionShell>
+          {/* 9. WRITING / THOUGHTS */}
+          <ScrollSlideSection>
+            <WritingSection id="writing" />
+          </ScrollSlideSection>
 
           {/* 10. LAB / RESEARCH EXPERIMENTS */}
-          <SlideOverSectionShell
-            sectionId="ai-lab"
-            windowTitle="AI Engineering Lab"
-            onOpenSlideOver={handleOpenSectionSheet}
-          >
-            <div className="px-5 sm:px-8 md:px-12 py-12 sm:py-16">
-              <AiLabSection inSheet />
-            </div>
-          </SlideOverSectionShell>
+          <ScrollSlideSection>
+            <AiLabSection id="ai-lab" />
+          </ScrollSlideSection>
 
-          {/* 11. CONTACT / DIRECT TRANSMISSION (macOS / iPadOS Slide Over Window Sheet) */}
-          <SlideOverSectionShell
-            sectionId="contact"
-            windowTitle="Contact"
-            onOpenSlideOver={handleOpenSectionSheet}
-          >
-            <div className="px-5 sm:px-8 md:px-12 py-12 sm:py-16">
-              <ContactSection inSheet />
-            </div>
-          </SlideOverSectionShell>
+          {/* 11. CONTACT / DIRECT TRANSMISSION */}
+          <ScrollSlideSection>
+            <ContactSection id="contact" />
+          </ScrollSlideSection>
 
           {/* 12. FOOTER */}
           <FooterSection
@@ -342,17 +239,7 @@ export default function App() {
           />
         </div>
 
-        {/* Interactive iPadOS / macOS Floating Slide Over Window Sheet Deck */}
-        <SlideOverSheetDeck
-          activeSheet={activeSheet}
-          onSelectSheet={handleOpenSectionSheet}
-          onClose={handleCloseSectionSheet}
-          onJumpToPageSection={handleJumpToPageSection}
-          pauseEscape={Boolean(selectedProject)}
-          renderSection={renderSheetSection}
-        />
-
-        {/* Full-Screen Project Case Study Modal (portaled above Slide Over window) */}
+        {/* Full-Screen Project Case Study Modal */}
         <ProjectModal project={selectedProject} onClose={handleCloseProject} />
       </main>
     </CursorProvider>
