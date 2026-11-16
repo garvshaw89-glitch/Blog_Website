@@ -67,6 +67,7 @@ export const ScrollSlideSection: React.FC<ScrollSlideSectionProps> = ({
   return (
     <div
       ref={sectionRef}
+      data-scroll-anchor="true"
       className={`relative w-full bg-transparent overflow-x-clip ${
         isAboveGalaxy || prefersReducedMotion ? 'z-10' : 'z-[1]'
       }`}

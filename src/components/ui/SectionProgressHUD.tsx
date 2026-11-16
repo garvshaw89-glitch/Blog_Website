@@ -29,8 +29,15 @@ export const SectionProgressHUD: React.FC = () => {
   }, []);
 
   const scrollToSection = (id: string) => {
+    if (id === 'hero-section') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    if (!el) return;
+    const anchor = (el.closest('[data-scroll-anchor="true"]') as HTMLElement) || el;
+    const targetTop = Math.max(0, anchor.getBoundingClientRect().top + window.scrollY - 12);
+    window.scrollTo({ top: targetTop, behavior: 'smooth' });
   };
 
   return (
@@ -43,6 +50,7 @@ export const SectionProgressHUD: React.FC = () => {
         return (
           <button
             key={sec.id}
+            type="button"
             onClick={() => scrollToSection(sec.id)}
             data-cursor="button"
             className="group flex items-center gap-2 cursor-pointer py-1"

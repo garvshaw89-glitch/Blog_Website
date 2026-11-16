@@ -430,8 +430,8 @@ class InteractionEngine {
 
   private updateSectionAtmosphere(scrollY: number) {
     const now = performance.now();
-    // Cache section bounds and recalculate at most once every 600ms or on resize
-    if (this.cachedSectionBounds.length === 0 || now - this.lastBoundsCacheTime > 600) {
+    // Cache true document-space bounds using unscaled [data-scroll-anchor] wrappers when present
+    if (this.cachedSectionBounds.length === 0 || now - this.lastBoundsCacheTime > 500) {
       this.lastBoundsCacheTime = now;
       const sections = [
         { id: 'hero-section', name: 'hero', primary: 0x06b6d4, secondary: 0x3b82f6, ambient: 0x081528 },
@@ -451,26 +451,43 @@ class InteractionEngine {
         .map((sec) => {
           const el = document.getElementById(sec.id);
           if (!el) return null;
-          const top = el.offsetTop;
-          const bottom = top + el.offsetHeight;
+          const anchor = (el.closest('[data-scroll-anchor="true"]') as HTMLElement) || el;
+          const rect = anchor.getBoundingClientRect();
+          const top = rect.top + scrollY;
+          const bottom = top + Math.max(rect.height, anchor.offsetHeight);
           return { ...sec, top, bottom };
         })
         .filter(Boolean) as typeof this.cachedSectionBounds;
     }
 
-    const viewportMid = scrollY + window.innerHeight * 0.45;
-    for (const sec of this.cachedSectionBounds) {
-      if (viewportMid >= sec.top && viewportMid <= sec.bottom) {
-        this.state.activeSectionId = sec.id;
-        if (this.state.sectionTheme.name !== sec.name) {
-          this.state.sectionTheme = {
-            name: sec.name,
-            primary: sec.primary,
-            secondary: sec.secondary,
-            ambient: sec.ambient,
-          };
+    if (this.cachedSectionBounds.length === 0) return;
+
+    const maxScroll = Math.max(
+      document.documentElement.scrollHeight - window.innerHeight,
+      1
+    );
+    const viewportMid = scrollY + window.innerHeight * 0.42;
+
+    let matched = this.cachedSectionBounds[0];
+    if (scrollY >= maxScroll - 32) {
+      matched = this.cachedSectionBounds[this.cachedSectionBounds.length - 1];
+    } else {
+      for (const sec of this.cachedSectionBounds) {
+        if (viewportMid >= sec.top - 48) {
+          matched = sec;
         }
-        break;
+      }
+    }
+
+    if (matched) {
+      this.state.activeSectionId = matched.id;
+      if (this.state.sectionTheme.name !== matched.name) {
+        this.state.sectionTheme = {
+          name: matched.name,
+          primary: matched.primary,
+          secondary: matched.secondary,
+          ambient: matched.ambient,
+        };
       }
     }
   }
