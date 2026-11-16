@@ -185,52 +185,52 @@ export default function App() {
         {/* 2. ABOUT / IDENTITY (emerges from under MilkyWayGalaxy z-[2] into foreground z-10) */}
         <AboutSection onContactClick={handleScrollToContact} />
 
+        {/* 3. CAPABILITIES */}
+        <ScrollSlideSection>
+          <CapabilitiesSection id="capabilities" />
+        </ScrollSlideSection>
+
+        {/* 4. DIGITAL DNA */}
+        <ScrollSlideSection>
+          <DigitalDnaSection id="digital-dna" />
+        </ScrollSlideSection>
+
+        {/* 5. FEATURED PROJECTS */}
+        <ScrollSlideSection>
+          <ProjectsSection id="projects" onSelectProject={handleSelectProject} />
+        </ScrollSlideSection>
+
+        {/* 6. ENGINEERING / GITHUB TELEMETRY */}
+        <ScrollSlideSection>
+          <GitHubSection id="github-telemetry" />
+        </ScrollSlideSection>
+
+        {/* 7. EXPERIENCE / JOURNEY */}
+        <ScrollSlideSection>
+          <JourneySection id="journey" />
+        </ScrollSlideSection>
+
+        {/* 8. TECHNOLOGY CONSTELLATION GRAPH */}
+        <ScrollSlideSection>
+          <TechnologyConstellation id="constellation" />
+        </ScrollSlideSection>
+
+        {/* 9. WRITING / THOUGHTS */}
+        <ScrollSlideSection>
+          <WritingSection id="writing" />
+        </ScrollSlideSection>
+
+        {/* 10. LAB / RESEARCH EXPERIMENTS */}
+        <ScrollSlideSection>
+          <AiLabSection id="ai-lab" />
+        </ScrollSlideSection>
+
+        {/* 11. CONTACT / DIRECT TRANSMISSION */}
+        <ScrollSlideSection>
+          <ContactSection id="contact" />
+        </ScrollSlideSection>
+
         <div className="relative z-10 flex flex-col">
-          {/* 3. CAPABILITIES */}
-          <ScrollSlideSection>
-            <CapabilitiesSection id="capabilities" />
-          </ScrollSlideSection>
-
-          {/* 4. DIGITAL DNA */}
-          <ScrollSlideSection>
-            <DigitalDnaSection id="digital-dna" />
-          </ScrollSlideSection>
-
-          {/* 5. FEATURED PROJECTS */}
-          <ScrollSlideSection>
-            <ProjectsSection id="projects" onSelectProject={handleSelectProject} />
-          </ScrollSlideSection>
-
-          {/* 6. ENGINEERING / GITHUB TELEMETRY */}
-          <ScrollSlideSection>
-            <GitHubSection id="github-telemetry" />
-          </ScrollSlideSection>
-
-          {/* 7. EXPERIENCE / JOURNEY */}
-          <ScrollSlideSection>
-            <JourneySection id="journey" />
-          </ScrollSlideSection>
-
-          {/* 8. TECHNOLOGY CONSTELLATION GRAPH */}
-          <ScrollSlideSection>
-            <TechnologyConstellation id="constellation" />
-          </ScrollSlideSection>
-
-          {/* 9. WRITING / THOUGHTS */}
-          <ScrollSlideSection>
-            <WritingSection id="writing" />
-          </ScrollSlideSection>
-
-          {/* 10. LAB / RESEARCH EXPERIMENTS */}
-          <ScrollSlideSection>
-            <AiLabSection id="ai-lab" />
-          </ScrollSlideSection>
-
-          {/* 11. CONTACT / DIRECT TRANSMISSION */}
-          <ScrollSlideSection>
-            <ContactSection id="contact" />
-          </ScrollSlideSection>
-
           {/* 12. FOOTER */}
           <FooterSection
             id="footer"
