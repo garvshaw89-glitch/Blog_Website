@@ -167,8 +167,8 @@ export default function App() {
           />
         </div>
 
-        {/* Interactive 3D Luminous Milky Way Galaxy Particle Field (paused while studio identity entry is active) */}
-        <MilkyWayGalaxy paused={showIntro} />
+        {/* Interactive 3D Luminous Milky Way Galaxy Particle Field (shines live through PORTFOLIO BY GARV SHAW cutout) */}
+        <MilkyWayGalaxy />
 
         <div className="relative z-10 flex flex-col">
           {/* 1. HERO / LANDING PAGE with Identity Core */}

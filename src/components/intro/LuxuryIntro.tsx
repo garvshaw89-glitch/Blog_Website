@@ -1,14 +1,27 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { Github, ArrowUpRight } from 'lucide-react';
-import { HangingIdCardScene } from './identity/HangingIdCardScene';
-import { ReducedMotionIdCard } from './identity/ReducedMotionIdCard';
-import { IDENTITY_DATA } from './identity/cardTextureFactory';
+import { ParticleScene } from './ParticleScene';
+import { EntryComposition } from './EntryComposition';
+import { AsteroidFlightAnimation } from './asteroid/AsteroidFlightAnimation';
+import { EntryAsteroidLanding } from './EntryAsteroidLanding';
+import { ScrollToViewPrompt } from './ScrollToViewPrompt';
+import { IntroOverlay } from './IntroOverlay';
+import { IntroScene } from './IntroScene';
+import { WebGlFallback } from './WebGlFallback';
+import { introAudio } from './introAudio';
 
 interface LuxuryIntroProps {
   onComplete: () => void;
   onRocketCursorReady?: () => void;
 }
+
+type IntroPhase = 'sand' | 'asteroid' | 'prompt' | 'portal' | 'zooming';
+
+const SAND_HOLD_END_SEC = 8.75;
+const SAND_EXIT_DURATION_SEC = 0.85;
+const PORTAL_REVEAL_DURATION_SEC = 0.82;
+const ZOOM_DURATION_SEC = 1.32;
+const PORTAL_ZOOM_THRESHOLD = 0.78;
 
 export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
   onComplete,
@@ -20,15 +33,29 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
       : false
   );
 
-  const [webGlFailed, setWebGlFailed] = useState(false);
-  const [isCardHovered, setIsCardHovered] = useState(false);
-  const [isGitHubHovered, setIsGitHubHovered] = useState(false);
-  const [isEntering, setIsEntering] = useState(false);
-  const [isReadyForCta, setIsReadyForCta] = useState(false);
+  const [phase, setPhase] = useState<IntroPhase>('sand');
+  const [isAudioOn, setIsAudioOn] = useState<boolean>(introAudio.enabled);
+  const [webGlFailed, setWebGlFailed] = useState<boolean>(false);
+  const [asteroidWebGlFailed, setAsteroidWebGlFailed] = useState<boolean>(false);
+  const [isExitingSand, setIsExitingSand] = useState<boolean>(false);
+  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
 
-  const veilRef = useRef<HTMLDivElement>(null);
-  const githubAnchorRef = useRef<HTMLAnchorElement>(null);
-  const completedRef = useRef(false);
+  // Refs shared at 60-120fps with Three.js & SVG knockout layers (zero React re-renders per frame)
+  const timelineSecRef = useRef<number>(0);
+  const isExitingRef = useRef<boolean>(false);
+  const exitProgressRef = useRef<number>(0);
+  const isHoveringEnterRef = useRef<boolean>(false);
+
+  const portalElapsedRef = useRef<number>(0);
+  const portalRevealRef = useRef<number>(0);
+  const targetScrollRef = useRef<number>(0);
+  const scrollProgressRef = useRef<number>(0);
+  const zoomProgressRef = useRef<number>(0);
+  const isTransitioningRef = useRef<boolean>(false);
+
+  const phaseRef = useRef<IntroPhase>('sand');
+  const webGlFailedRef = useRef<boolean>(false);
+  const completedRef = useRef<boolean>(false);
   const onCompleteRef = useRef(onComplete);
   const onRocketCursorReadyRef = useRef(onRocketCursorReady);
 
@@ -40,7 +67,12 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
     onRocketCursorReadyRef.current = onRocketCursorReady;
   }, [onRocketCursorReady]);
 
-  // Lock background scroll while the identity entry installation is open
+  const setPhaseSafe = useCallback((next: IntroPhase) => {
+    phaseRef.current = next;
+    setPhase(next);
+  }, []);
+
+  // Lock body scrolling during the full entry experience
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -49,230 +81,299 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
     };
   }, []);
 
-  // Reveal subtle studio HUD controls once the lanyard & card finish descending
-  useEffect(() => {
-    const timer = window.setTimeout(
-      () => setIsReadyForCta(true),
-      prefersReducedMotion ? 120 : 1250
-    );
-    return () => window.clearTimeout(timer);
-  }, [prefersReducedMotion]);
+  const handleToggleAudio = useCallback(() => {
+    const next = introAudio.toggle();
+    setIsAudioOn(next);
+  }, []);
 
-  const finishEntry = useCallback(() => {
+  const handleWebGLError = useCallback(() => {
+    webGlFailedRef.current = true;
+    setWebGlFailed(true);
+  }, []);
+
+  const handleAsteroidWebGLError = useCallback(() => {
+    setAsteroidWebGlFailed(true);
+  }, []);
+
+  const finishIntro = useCallback(() => {
     if (completedRef.current) return;
     completedRef.current = true;
     onRocketCursorReadyRef.current?.();
     onCompleteRef.current();
   }, []);
 
-  const handleTriggerEnter = useCallback(() => {
-    if (isEntering || completedRef.current) return;
-    setIsEntering(true);
+  const triggerPortalZoom = useCallback(() => {
+    if (phaseRef.current === 'zooming' || completedRef.current) return;
+    phaseRef.current = 'zooming';
+    isTransitioningRef.current = true;
+    setIsTransitioning(true);
+    setPhase('zooming');
+    introAudio.triggerWarp();
+  }, []);
 
-    if (prefersReducedMotion || webGlFailed) {
-      window.setTimeout(finishEntry, 440);
-    }
-  }, [isEntering, prefersReducedMotion, webGlFailed, finishEntry]);
-
-  // Keyboard support: pressing Enter launches the portfolio transition
+  // Master 60fps animation driver for Act 1 (THINK. CREATE. DISCOVER.), Portal Reveal, Scroll Damping & T-Zoom
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && !isEntering && isReadyForCta) {
-        const activeTag = (document.activeElement as HTMLElement | null)?.tagName?.toLowerCase();
-        if (activeTag === 'a') return;
-        e.preventDefault();
-        handleTriggerEnter();
+    let rafId = 0;
+    let lastTime = performance.now();
+    let sandExitElapsed = 0;
+    let portalRevealElapsed = 0;
+    let zoomElapsed = 0;
+
+    // Reduced-motion quick progression through Act 1
+    if (prefersReducedMotion) {
+      timelineSecRef.current = 8.5;
+    }
+
+    const tick = (now: number) => {
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+      const curPhase = phaseRef.current;
+
+      if (curPhase === 'sand') {
+        const holdEnd = prefersReducedMotion ? 1.45 : SAND_HOLD_END_SEC;
+        timelineSecRef.current += dt;
+
+        if (timelineSecRef.current >= holdEnd && !isExitingRef.current) {
+          isExitingRef.current = true;
+          setIsExitingSand(true);
+        }
+
+        if (isExitingRef.current) {
+          sandExitElapsed += dt;
+          const exitDur = prefersReducedMotion ? 0.35 : SAND_EXIT_DURATION_SEC;
+          exitProgressRef.current = Math.min(1, sandExitElapsed / exitDur);
+
+          if (exitProgressRef.current >= 1) {
+            if (webGlFailedRef.current) {
+              onRocketCursorReadyRef.current?.();
+              setPhaseSafe('portal');
+            } else {
+              setPhaseSafe('asteroid');
+            }
+          }
+        }
+      } else if (curPhase === 'portal') {
+        portalElapsedRef.current += dt;
+        portalRevealElapsed += dt;
+        portalRevealRef.current = Math.min(
+          1,
+          portalRevealElapsed / (prefersReducedMotion ? 0.25 : PORTAL_REVEAL_DURATION_SEC)
+        );
+
+        // Smooth C2-like exponential scroll damping for buttery 60-120fps tracking
+        const damp = 1 - Math.exp(-6.5 * dt);
+        scrollProgressRef.current +=
+          (targetScrollRef.current - scrollProgressRef.current) * damp;
+
+        if (scrollProgressRef.current >= PORTAL_ZOOM_THRESHOLD) {
+          triggerPortalZoom();
+        }
+      } else if (curPhase === 'zooming') {
+        portalElapsedRef.current += dt;
+        portalRevealRef.current = 1;
+        zoomElapsed += dt;
+        const zDur = prefersReducedMotion ? 0.45 : ZOOM_DURATION_SEC;
+        zoomProgressRef.current = Math.min(1, zoomElapsed / zDur);
+
+        if (zoomProgressRef.current >= 1) {
+          finishIntro();
+          return;
+        }
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [prefersReducedMotion, setPhaseSafe, triggerPortalZoom, finishIntro]);
+
+  // Wheel, touch swipe, and keyboard handlers for smooth scrolling through PORTFOLIO BY GARV SHAW
+  useEffect(() => {
+    let touchStartY = 0;
+
+    const advancePortalScroll = (delta: number) => {
+      if (phaseRef.current === 'prompt') {
+        if (delta > 0) {
+          setPhaseSafe('portal');
+          targetScrollRef.current = Math.min(1, Math.max(0, delta * 0.6));
+        }
+        return;
+      }
+      if (phaseRef.current !== 'portal') return;
+      targetScrollRef.current = Math.min(
+        1,
+        Math.max(0, targetScrollRef.current + delta)
+      );
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (phaseRef.current !== 'portal' && phaseRef.current !== 'prompt') return;
+      e.preventDefault();
+      // Normalize pixel/line/page deltas smoothly
+      const modeMult = e.deltaMode === 1 ? 32 : e.deltaMode === 2 ? window.innerHeight : 1;
+      const rawDelta = (e.deltaY * modeMult) / Math.max(2600, window.innerHeight * 3.1);
+      const clampedStep = Math.max(-0.14, Math.min(0.14, rawDelta));
+      advancePortalScroll(clampedStep);
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        touchStartY = e.touches[0].clientY;
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isEntering, isReadyForCta, handleTriggerEnter]);
 
-  // Trigger real anchor click so GitHub opens cleanly without window.open
-  const handleGitHubCardClick = useCallback(() => {
-    githubAnchorRef.current?.click();
+    const handleTouchMove = (e: TouchEvent) => {
+      if (phaseRef.current !== 'portal' && phaseRef.current !== 'prompt') return;
+      if (e.touches.length === 0) return;
+      const currentY = e.touches[0].clientY;
+      const dy = touchStartY - currentY;
+      touchStartY = currentY;
+      const step = dy / Math.max(1350, window.innerHeight * 2.1);
+      advancePortalScroll(Math.max(-0.14, Math.min(0.14, step)));
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (phaseRef.current !== 'portal' && phaseRef.current !== 'prompt') return;
+      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        advancePortalScroll(0.14);
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        advancePortalScroll(-0.12);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (phaseRef.current === 'prompt') {
+          setPhaseSafe('portal');
+        }
+        targetScrollRef.current = 0.85;
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [setPhaseSafe]);
+
+  const handleAsteroidCenterImpact = useCallback(() => {
+    introAudio.triggerChime(432);
   }, []);
 
-  // Drive seamless dark-obsidian + warm champagne studio cross-dissolve during camera zoom
-  const handleEnterProgress = useCallback((progress: number) => {
-    if (!veilRef.current) return;
-    const fadeStart = 0.56;
-    const t = Math.max(0, Math.min(1, (progress - fadeStart) / (1 - fadeStart)));
-    const eased = t * t * (3 - 2 * t);
-    veilRef.current.style.opacity = eased.toFixed(3);
+  const handleAsteroidBecomeCursor = useCallback(() => {
+    onRocketCursorReadyRef.current?.();
   }, []);
 
-  const handleWebGLError = useCallback(() => {
-    setWebGlFailed(true);
-  }, []);
+  const handleAsteroidFinished = useCallback(() => {
+    onRocketCursorReadyRef.current?.();
+    setPhaseSafe('prompt');
+  }, [setPhaseSafe]);
 
-  if (prefersReducedMotion || webGlFailed) {
+  const handlePromptComplete = useCallback(() => {
+    if (phaseRef.current === 'prompt') {
+      setPhaseSafe('portal');
+    }
+  }, [setPhaseSafe]);
+
+  if (webGlFailed) {
     return (
-      <ReducedMotionIdCard
-        onEnter={handleTriggerEnter}
-        isEntering={isEntering}
+      <WebGlFallback
+        scrollProgressRef={scrollProgressRef}
+        zoomProgressRef={zoomProgressRef}
+        portalRevealRef={portalRevealRef}
+        isAudioOn={isAudioOn}
+        onToggleAudio={handleToggleAudio}
+        isTransitioning={isTransitioning}
+        prefersReducedMotion={prefersReducedMotion}
       />
     );
   }
 
   return (
     <motion.div
-      key="garv-shaw-identity-entry"
+      key="luxury-entry-experience"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className={`fixed inset-0 h-[100dvh] w-full z-50 bg-[#050608] overflow-hidden select-none ${
-        isGitHubHovered
-          ? 'cursor-pointer'
-          : isCardHovered
-            ? 'cursor-grab'
-            : 'cursor-default'
-      }`}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="fixed inset-0 h-[100dvh] w-full z-50 bg-transparent overflow-hidden select-none"
       role="dialog"
       aria-modal="true"
-      aria-label="Garv Shaw — Cinematic Developer Identity Entry"
+      aria-label="Portfolio by Garv Shaw — Entry Experience"
     >
-      <h1 className="sr-only">
-        Garv Shaw — Developer / Creative Designer Identity Entry
-      </h1>
+      <h1 className="sr-only">Think. Create. Discover. Portfolio by Garv Shaw.</h1>
 
-      {/* Native external anchor used by 3D raycast GitHub clicks (iframe-safe) */}
-      <a
-        ref={githubAnchorRef}
-        href={IDENTITY_DATA.githubUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="sr-only"
-        tabIndex={-1}
-      >
-        Open Garv Shaw GitHub Profile
-      </a>
-
-      {/* 1. Photorealistic Three.js Studio Scene: Descending Lanyard, Metallic Clasp & Swinging ID Card */}
-      <HangingIdCardScene
-        isEntering={isEntering}
-        onCardHoverChange={setIsCardHovered}
-        onGitHubHoverChange={setIsGitHubHovered}
-        onGitHubClick={handleGitHubCardClick}
-        onEnterProgress={handleEnterProgress}
-        onEnterComplete={finishEntry}
-        onWebGLError={handleWebGLError}
+      {/* Permanent Knockout Portal Layer: opaque dark void during Act 1 & Asteroid, transparent PORTFOLIO BY GARV SHAW window in Act 3 */}
+      <IntroOverlay
+        scrollProgressRef={scrollProgressRef}
+        zoomProgressRef={zoomProgressRef}
+        portalRevealRef={portalRevealRef}
+        isAudioOn={isAudioOn}
+        onToggleAudio={handleToggleAudio}
+        isTransitioning={phase === 'sand' || isTransitioning}
       />
 
-      {/* Subtle architectural vignette framing the studio stage */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0"
-        style={{
-          background:
-            'radial-gradient(ellipse 75% 75% at 50% 48%, transparent 45%, rgba(3, 5, 10, 0.74) 100%)',
-        }}
-      />
+      {/* Act 1: THINK. -> CREATE. -> DISCOVER. Three.js Sand Particle Choreography */}
+      {phase === 'sand' && (
+        <>
+          <ParticleScene
+            timelineSecRef={timelineSecRef}
+            isExitingRef={isExitingRef}
+            exitProgressRef={exitProgressRef}
+            isHoveringEnterRef={isHoveringEnterRef}
+            prefersReducedMotion={prefersReducedMotion}
+            onWebGLError={handleWebGLError}
+          />
+          <EntryComposition
+            isExiting={isExitingSand}
+            isAudioOn={isAudioOn}
+            onToggleAudio={handleToggleAudio}
+          />
+        </>
+      )}
 
-      {/* 2. Restrained Editorial Studio Framing (Top Corners) */}
-      <header
-        className={`pointer-events-none fixed top-0 inset-x-0 z-10 flex items-start justify-between px-6 sm:px-10 pt-[max(1.5rem,env(safe-area-inset-top))] transition-all duration-700 ${
-          isReadyForCta && !isEntering
-            ? 'opacity-100 translate-y-0'
-            : 'opacity-0 -translate-y-2'
-        }`}
-      >
-        <div className="flex flex-col gap-0.5">
-          <span className="font-serif text-sm sm:text-base tracking-[0.22em] text-slate-100/90 uppercase">
-            {IDENTITY_DATA.name}
-          </span>
-          <span className="font-mono text-[10px] tracking-[0.26em] text-cyan-300/70 uppercase">
-            IDENTITY INSTALLATION
-          </span>
-        </div>
+      {/* Act 2: Passing Asteroid Belt -> Center Impact -> Shrink into Asteroid Cursor */}
+      {phase === 'asteroid' &&
+        (asteroidWebGlFailed ? (
+          <EntryAsteroidLanding
+            onCenterImpact={handleAsteroidCenterImpact}
+            onBecomeCursor={handleAsteroidBecomeCursor}
+            onFinished={handleAsteroidFinished}
+            prefersReducedMotion={prefersReducedMotion}
+          />
+        ) : (
+          <AsteroidFlightAnimation
+            onCenterImpact={handleAsteroidCenterImpact}
+            onBecomeCursor={handleAsteroidBecomeCursor}
+            onFinished={handleAsteroidFinished}
+            onWebGLError={handleAsteroidWebGLError}
+            prefersReducedMotion={prefersReducedMotion}
+          />
+        ))}
 
-        <div className="hidden sm:flex flex-col items-end gap-0.5 font-mono text-[10px] tracking-[0.22em]">
-          <span className="text-slate-200/70">{IDENTITY_DATA.serialNumber}</span>
-          <span className="text-sky-400/70">{IDENTITY_DATA.verificationLabel}</span>
-        </div>
-      </header>
+      {/* Act 2.5: Subtle Dust-Forming "Scroll To View" Prompt */}
+      {phase === 'prompt' && (
+        <ScrollToViewPrompt
+          onComplete={handlePromptComplete}
+          prefersReducedMotion={prefersReducedMotion}
+        />
+      )}
 
-      {/* 3. Bottom Editorial Interaction Bar: Hover Prompt + GitHub Quick Link + ENTER CTA */}
-      <footer
-        className={`pointer-events-none fixed bottom-0 inset-x-0 z-10 flex flex-col items-center gap-3.5 px-6 pb-[max(2rem,env(safe-area-inset-bottom))] transition-all duration-700 ${
-          isReadyForCta && !isEntering
-            ? 'opacity-100 translate-y-0'
-            : 'opacity-0 translate-y-3'
-        }`}
-      >
-        {/* Contextual Hover Instruction: EXPLORE MY IDENTITY / GitHub Active Hint */}
-        <div className="h-6 flex items-center justify-center">
-          <div
-            className={`transition-all duration-300 flex items-center gap-2 font-mono text-[11px] tracking-[0.34em] uppercase ${
-              isGitHubHovered
-                ? 'text-cyan-200 opacity-100 translate-y-0'
-                : isCardHovered
-                  ? 'text-sky-300 opacity-100 translate-y-0'
-                  : 'text-sky-300/60 opacity-80 translate-y-0.5'
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                isCardHovered || isGitHubHovered
-                  ? 'bg-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.95)] scale-110'
-                  : 'bg-sky-400/55 scale-90'
-              }`}
-            />
-            <span>
-              {isGitHubHovered
-                ? 'OPEN GITHUB · @GARVSHAW89-GLITCH'
-                : 'EXPLORE MY IDENTITY'}
-            </span>
-          </div>
-        </div>
-
-        {/* Primary Sculpted Luxury ENTER Button + Accessible GitHub Companion Link */}
-        <div className="pointer-events-auto flex items-center gap-3 sm:gap-4">
-          <button
-            type="button"
-            onClick={handleTriggerEnter}
-            disabled={isEntering}
-            className="group relative overflow-hidden px-11 sm:px-14 py-3.5 rounded-full border border-sky-400/50 hover:border-cyan-300 bg-[#080C15]/88 hover:bg-[#0D1524] text-[#F2F3F5] font-mono text-xs tracking-[0.38em] uppercase transition-all duration-300 shadow-[0_14px_40px_rgba(0,0,0,0.78)] hover:shadow-[0_0_30px_rgba(56,189,248,0.28)] cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300"
-          >
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-cyan-300/20 to-transparent"
-            />
-            <span className="relative flex items-center gap-2.5">
-              <span>ENTER</span>
-              <span className="inline-block w-3.5 h-[1px] bg-cyan-300/85 group-hover:w-5 transition-all duration-300" />
-            </span>
-          </button>
-
-          <a
-            href={IDENTITY_DATA.githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Visit Garv Shaw on GitHub (@garvshaw89-glitch)"
-            className={`group inline-flex items-center gap-2 px-4 py-3.5 rounded-full border bg-[#080C15]/80 hover:bg-[#0D1524] font-mono text-[11px] tracking-[0.14em] transition-all duration-300 cursor-pointer ${
-              isGitHubHovered
-                ? 'border-cyan-300 text-slate-50 shadow-[0_0_22px_rgba(56,189,248,0.25)]'
-                : 'border-white/[0.12] hover:border-sky-400/60 text-slate-300/80 hover:text-slate-50'
-            }`}
-          >
-            <Github className="w-3.5 h-3.5 text-sky-400" />
-            <span className="hidden sm:inline">{IDENTITY_DATA.githubHandle}</span>
-            <ArrowUpRight className="w-3.5 h-3.5 text-cyan-300/85 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </a>
-        </div>
-      </footer>
-
-      {/* 4. Seamless Studio Cross-Dissolve Veil synced to Camera Zoom-In */}
-      <div
-        ref={veilRef}
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-20"
-        style={{
-          opacity: 0,
-          background:
-            'radial-gradient(circle at 50% 48%, rgba(10, 18, 32, 0.94) 0%, rgba(5, 6, 8, 1) 68%)',
-        }}
-      />
+      {/* Act 3: Ambient 3D Depth Particles Behind PORTFOLIO BY GARV SHAW Portal */}
+      {(phase === 'portal' || phase === 'zooming') && (
+        <IntroScene
+          elapsedTimeRef={portalElapsedRef}
+          scrollProgressRef={scrollProgressRef}
+          isTransitioningRef={isTransitioningRef}
+          onWebGLError={handleWebGLError}
+        />
+      )}
     </motion.div>
   );
 };

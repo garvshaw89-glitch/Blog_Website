@@ -8,12 +8,20 @@ import {
 } from './cardTextureFactory';
 
 export interface HangingIdCardSceneProps {
-  isEntering: boolean;
-  onCardHoverChange: (hovering: boolean) => void;
-  onGitHubHoverChange: (hovering: boolean) => void;
-  onGitHubClick: () => void;
-  onEnterProgress: (progress: number) => void;
-  onEnterComplete: () => void;
+  isEntering?: boolean;
+  transparent?: boolean;
+  isDocked?: boolean;
+  externalImpulseRef?: React.MutableRefObject<{
+    velZ: number;
+    velY: number;
+    velX: number;
+  }>;
+  onCardHoverChange?: (hovering: boolean) => void;
+  onGitHubHoverChange?: (hovering: boolean) => void;
+  onGitHubClick?: () => void;
+  onCardBodyClick?: () => void;
+  onEnterProgress?: (progress: number) => void;
+  onEnterComplete?: () => void;
   onWebGLError: () => void;
 }
 
@@ -210,20 +218,26 @@ const HOLO_FRAGMENT_SHADER = /* glsl */ `
 `;
 
 export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
-  isEntering,
+  isEntering = false,
+  transparent = false,
+  isDocked = false,
+  externalImpulseRef,
   onCardHoverChange,
   onGitHubHoverChange,
   onGitHubClick,
+  onCardBodyClick,
   onEnterProgress,
   onEnterComplete,
   onWebGLError,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const isEnteringRef = useRef<boolean>(isEntering);
+  const isDockedRef = useRef<boolean>(isDocked);
   const callbacksRef = useRef({
     onCardHoverChange,
     onGitHubHoverChange,
     onGitHubClick,
+    onCardBodyClick,
     onEnterProgress,
     onEnterComplete,
     onWebGLError,
@@ -234,10 +248,15 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
   }, [isEntering]);
 
   useEffect(() => {
+    isDockedRef.current = isDocked;
+  }, [isDocked]);
+
+  useEffect(() => {
     callbacksRef.current = {
       onCardHoverChange,
       onGitHubHoverChange,
       onGitHubClick,
+      onCardBodyClick,
       onEnterProgress,
       onEnterComplete,
       onWebGLError,
@@ -246,6 +265,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     onCardHoverChange,
     onGitHubHoverChange,
     onGitHubClick,
+    onCardBodyClick,
     onEnterProgress,
     onEnterComplete,
     onWebGLError,
@@ -260,7 +280,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     try {
       renderer = new THREE.WebGLRenderer({
         antialias: !isSoftwareGl,
-        alpha: false,
+        alpha: transparent,
         powerPreference: 'high-performance',
       });
     } catch {
@@ -276,10 +296,10 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     renderer.setSize(width, height);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
-    renderer.shadowMap.enabled = !isSoftwareGl;
+    renderer.toneMappingExposure = 1.15;
+    renderer.shadowMap.enabled = !isSoftwareGl && !transparent;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.setClearColor(0x050608, 1);
+    renderer.setClearColor(0x050608, transparent ? 0 : 1);
 
     const canvas = renderer.domElement;
     canvas.style.width = '100%';
@@ -288,8 +308,10 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     container.appendChild(canvas);
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050608);
-    scene.fog = new THREE.FogExp2(0x050608, 0.045);
+    if (!transparent) {
+      scene.background = new THREE.Color(0x050608);
+      scene.fog = new THREE.FogExp2(0x050608, 0.045);
+    }
 
     const envRT = buildStudioEnvironment(renderer);
     scene.environment = envRT.texture;
@@ -297,6 +319,10 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 45);
     const computeBaseCamZ = (w: number, h: number) => {
       const aspect = w / Math.max(h, 1);
+      if (transparent) {
+        // Dedicated portrait floating card stage: ensure generous horizontal swing room & long top strap
+        return Math.max(7.9, 5.2 / Math.max(aspect, 0.42));
+      }
       if (aspect < 0.62) return 10.6;
       if (aspect < 0.85) return 9.2;
       if (aspect < 1.15) return 8.3;
@@ -309,13 +335,13 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     // ------------------------------------------------------------------------
     // CINEMATIC STUDIO LIGHTING & SOFT SHADOW RECEIVER BACKDROP (Main Page Palette)
     // ------------------------------------------------------------------------
-    const ambientLight = new THREE.AmbientLight(0x162033, 0.62);
+    const ambientLight = new THREE.AmbientLight(0x1b273e, transparent ? 0.85 : 0.62);
     scene.add(ambientLight);
 
-    const keySpot = new THREE.SpotLight(0xeef8ff, 44, 24, Math.PI / 4.2, 0.72, 1.5);
+    const keySpot = new THREE.SpotLight(0xeef8ff, 46, 24, Math.PI / 4.2, 0.72, 1.5);
     keySpot.position.set(2.4, 5.4, 6.2);
     keySpot.target.position.set(0, -0.2, 0);
-    if (!isSoftwareGl) {
+    if (!isSoftwareGl && !transparent) {
       keySpot.castShadow = true;
       keySpot.shadow.mapSize.width = 1024;
       keySpot.shadow.mapSize.height = 1024;
@@ -327,12 +353,12 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     scene.add(keySpot.target);
 
     // Celestial cyan-sapphire rim light tracing the metallic bevel edges
-    const rimCyanLight = new THREE.DirectionalLight(0x56c8ff, 2.0);
+    const rimCyanLight = new THREE.DirectionalLight(0x56c8ff, 2.2);
     rimCyanLight.position.set(4.5, 2.2, -2.5);
     scene.add(rimCyanLight);
 
     // Subtle cosmic indigo fill light on opposite side for editorial depth
-    const fillIndigoLight = new THREE.DirectionalLight(0x818cf8, 1.05);
+    const fillIndigoLight = new THREE.DirectionalLight(0x818cf8, 1.15);
     fillIndigoLight.position.set(-5.0, 1.4, 3.6);
     scene.add(fillIndigoLight);
 
@@ -341,17 +367,19 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     cursorLight.position.set(0, 0.2, 2.2);
     scene.add(cursorLight);
 
-    // Subtle matte obsidian-midnight studio backdrop to catch soft card & lanyard shadow
-    const backdropGeo = new THREE.PlaneGeometry(24, 18);
-    const backdropMat = new THREE.MeshStandardMaterial({
-      color: 0x06080d,
-      roughness: 0.94,
-      metalness: 0.06,
-    });
-    const backdropMesh = new THREE.Mesh(backdropGeo, backdropMat);
-    backdropMesh.position.set(0, 0, -2.35);
-    backdropMesh.receiveShadow = !isSoftwareGl;
-    scene.add(backdropMesh);
+    // Subtle matte obsidian-midnight studio backdrop (only in full-screen opaque studio mode)
+    if (!transparent) {
+      const backdropGeo = new THREE.PlaneGeometry(24, 18);
+      const backdropMat = new THREE.MeshStandardMaterial({
+        color: 0x06080d,
+        roughness: 0.94,
+        metalness: 0.06,
+      });
+      const backdropMesh = new THREE.Mesh(backdropGeo, backdropMat);
+      backdropMesh.position.set(0, 0, -2.35);
+      backdropMesh.receiveShadow = !isSoftwareGl;
+      scene.add(backdropMesh);
+    }
 
     // ------------------------------------------------------------------------
     // PBR TEXTURES & MATERIALS
@@ -703,11 +731,11 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       if (!isPointerInside || isEnteringRef.current) {
         if (isHoveringCard) {
           isHoveringCard = false;
-          callbacksRef.current.onCardHoverChange(false);
+          callbacksRef.current.onCardHoverChange?.(false);
         }
         if (isHoveringGitHub) {
           isHoveringGitHub = false;
-          callbacksRef.current.onGitHubHoverChange(false);
+          callbacksRef.current.onGitHubHoverChange?.(false);
         }
         return;
       }
@@ -718,7 +746,14 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       if (hits.length > 0 && hits[0].uv) {
         if (!isHoveringCard) {
           isHoveringCard = true;
-          callbacksRef.current.onCardHoverChange(true);
+          callbacksRef.current.onCardHoverChange?.(true);
+        }
+        if (isDockedRef.current) {
+          if (isHoveringGitHub) {
+            isHoveringGitHub = false;
+            callbacksRef.current.onGitHubHoverChange?.(false);
+          }
+          return;
         }
         const uv = hits[0].uv;
         const canvasX = uv.x;
@@ -731,16 +766,16 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
 
         if (overGh !== isHoveringGitHub) {
           isHoveringGitHub = overGh;
-          callbacksRef.current.onGitHubHoverChange(overGh);
+          callbacksRef.current.onGitHubHoverChange?.(overGh);
         }
       } else {
         if (isHoveringCard) {
           isHoveringCard = false;
-          callbacksRef.current.onCardHoverChange(false);
+          callbacksRef.current.onCardHoverChange?.(false);
         }
         if (isHoveringGitHub) {
           isHoveringGitHub = false;
-          callbacksRef.current.onGitHubHoverChange(false);
+          callbacksRef.current.onGitHubHoverChange?.(false);
         }
       }
     };
@@ -759,7 +794,8 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
 
       // Impart subtle tactile pendulum impulse when gliding over/near the card
       if (!isEnteringRef.current && dropStarted && Math.abs(dropY) < 0.8) {
-        const proximity = isHoveringCard ? 1.0 : 0.28;
+        const dockedDamp = isDockedRef.current ? 0.55 : 1.0;
+        const proximity = (isHoveringCard ? 1.0 : 0.28) * dockedDamp;
         velZ += THREE.MathUtils.clamp(dx * 0.42 * proximity, -0.09, 0.09);
         velY += THREE.MathUtils.clamp(dx * 0.65 * proximity, -0.14, 0.14);
         velX += THREE.MathUtils.clamp(-dy * 0.35 * proximity, -0.08, 0.08);
@@ -782,6 +818,12 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       raycaster.setFromCamera(pointerNdc, camera);
       const hits = raycaster.intersectObject(frontFaceMesh, false);
       if (hits.length > 0 && hits[0].uv) {
+        if (isDockedRef.current && callbacksRef.current.onCardBodyClick) {
+          velZ -= 0.42;
+          velY += 0.65;
+          callbacksRef.current.onCardBodyClick();
+          return;
+        }
         const uv = hits[0].uv;
         const cx = uv.x;
         const cy = 1.0 - uv.y;
@@ -790,7 +832,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
           cx <= GITHUB_REGION_UV.x + GITHUB_REGION_UV.w &&
           cy >= GITHUB_REGION_UV.y &&
           cy <= GITHUB_REGION_UV.y + GITHUB_REGION_UV.h;
-        if (overGh) {
+        if (overGh && callbacksRef.current.onGitHubClick) {
           // Subtle tactile recoil on click
           velX -= 0.48;
           callbacksRef.current.onGitHubClick();
@@ -800,6 +842,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
           velY += hitOffsetX * 1.15;
           velZ -= hitOffsetX * 0.32;
           velX -= 0.36;
+          callbacksRef.current.onCardBodyClick?.();
         }
       }
     };
@@ -885,11 +928,24 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
 
       if (enterTriggered && !enterCompleted) {
         enterProgress = Math.min(1, enterProgress + dt / 1.25);
-        callbacksRef.current.onEnterProgress(enterProgress);
+        callbacksRef.current.onEnterProgress?.(enterProgress);
         if (enterProgress >= 1) {
           enterCompleted = true;
-          callbacksRef.current.onEnterComplete();
+          callbacksRef.current.onEnterComplete?.();
           return;
+        }
+      }
+
+      // Consume any external slide/docking inertia impulses for realistic horizontal pendulum swing
+      if (externalImpulseRef?.current) {
+        const imp = externalImpulseRef.current;
+        if (imp.velZ !== 0 || imp.velY !== 0 || imp.velX !== 0) {
+          velZ += imp.velZ;
+          velY += imp.velY;
+          velX += imp.velX;
+          imp.velZ = 0;
+          imp.velY = 0;
+          imp.velX = 0;
         }
       }
 
@@ -902,11 +958,19 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
 
       // 5. Coupled 3-Axis Pendulum + Torsion Spring Solver
       // Gentle living air-current micro-sway so the suspended pass never feels frozen
-      const ambientRoll = Math.sin(elapsed * 0.82) * 0.014;
-      const ambientYaw = Math.sin(elapsed * 0.54 + 0.7) * 0.032;
+      const ambientRoll = Math.sin(elapsed * 0.82) * 0.016;
+      const ambientYaw = Math.sin(elapsed * 0.54 + 0.7) * 0.038;
       const ambientPitch = Math.cos(elapsed * 0.68) * 0.008;
 
-      const interactScale = enterTriggered ? 0 : isHoveringCard ? 1.0 : 0.42;
+      const interactScale = enterTriggered
+        ? 0
+        : isDockedRef.current
+          ? isHoveringCard
+            ? 0.6
+            : 0
+          : isHoveringCard
+            ? 1.0
+            : 0.42;
       const targetZ = ambientRoll - smoothPtrX * 0.045 * interactScale;
       const targetX = ambientPitch + smoothPtrY * 0.055 * interactScale;
       const targetY =
@@ -961,8 +1025,13 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
         x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
       const zEase = easeInOutCubic(enterProgress);
 
-      const camBreathX = Math.sin(elapsed * 0.36) * 0.09 + smoothPtrX * 0.18 * (1 - zEase);
-      const camBreathY = Math.cos(elapsed * 0.28) * 0.06 + smoothPtrY * 0.12 * (1 - zEase);
+      const breathMult = isDockedRef.current ? 0.18 : 1.0;
+      const camBreathX =
+        Math.sin(elapsed * 0.36) * 0.08 * breathMult +
+        smoothPtrX * 0.16 * (1 - zEase) * (isDockedRef.current ? 0.15 : 1);
+      const camBreathY =
+        Math.cos(elapsed * 0.28) * 0.05 * breathMult +
+        smoothPtrY * 0.11 * (1 - zEase) * (isDockedRef.current ? 0.15 : 1);
       const currentCamZ = THREE.MathUtils.lerp(baseCamZ, 1.45, zEase);
       const currentCamY = THREE.MathUtils.lerp(-0.08, -0.46, zEase) + camBreathY * (1 - zEase * 0.85);
       const currentCamX = camBreathX * (1 - zEase * 0.9);
@@ -970,10 +1039,12 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       camera.position.set(currentCamX, currentCamY, currentCamZ);
       camera.lookAt(0, THREE.MathUtils.lerp(-0.28, -0.48, zEase), 0);
 
-      // Subtle studio light fade-in from near-black on open + soft exposure lift on zoom
-      const openLight = THREE.MathUtils.smoothstep(elapsed, 0.0, 1.15);
+      // Subtle studio light fade-in on open + soft exposure lift on zoom
+      const openLight = transparent
+        ? THREE.MathUtils.smoothstep(elapsed, 0.0, 0.45)
+        : THREE.MathUtils.smoothstep(elapsed, 0.0, 1.15);
       renderer.toneMappingExposure =
-        THREE.MathUtils.lerp(0.28, 1.14, openLight) + zEase * 0.35;
+        THREE.MathUtils.lerp(transparent ? 0.72 : 0.28, 1.16, openLight) + zEase * 0.35;
 
       renderer.render(scene, camera);
       rafId = requestAnimationFrame(tick);
@@ -1008,12 +1079,12 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
         container.removeChild(canvas);
       }
     };
-  }, []);
+  }, [transparent, externalImpulseRef]);
 
   return (
     <div
       ref={mountRef}
-      className="fixed inset-0 w-full h-full"
+      className={transparent ? 'relative w-full h-full' : 'fixed inset-0 w-full h-full'}
       aria-hidden="true"
     />
   );
