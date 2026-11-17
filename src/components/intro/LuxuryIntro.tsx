@@ -1,24 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
-import { ParticleScene } from './ParticleScene';
-import { IntroScene } from './IntroScene';
-import { IntroOverlay } from './IntroOverlay';
-import { WebGlFallback } from './WebGlFallback';
-import { EntryAsteroidLanding } from './EntryAsteroidLanding';
-import { ScrollToViewPrompt } from './ScrollToViewPrompt';
-import { AsteroidFlightAnimation } from './asteroid/AsteroidFlightAnimation';
-import { introAudio } from './introAudio';
-import { entrySequenceManager } from './entrySequenceManager';
+import { Github, ArrowUpRight } from 'lucide-react';
+import { HangingIdCardScene } from './identity/HangingIdCardScene';
+import { ReducedMotionIdCard } from './identity/ReducedMotionIdCard';
+import { IDENTITY_DATA } from './identity/cardTextureFactory';
 
 interface LuxuryIntroProps {
   onComplete: () => void;
   onRocketCursorReady?: () => void;
 }
-
-const SAND_HOLD_END_SEC = 8.4;
-const SAND_DISSOLVE_SEC = 0.95;
-const ROCKET_LAUNCH_START_SEC = 8.15;
-const PORTAL_ZOOM_DURATION_SEC = 2.1;
 
 export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
   onComplete,
@@ -30,38 +20,15 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
       : false
   );
 
-  const [sandFinished, setSandFinished] = useState(false);
-  const [rocketLaunchStarted, setRocketLaunchStarted] = useState(false);
-  const [rocketFinished, setRocketFinished] = useState(false);
-  const [showScrollPrompt, setShowScrollPrompt] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [webGlFailed, setWebGlFailed] = useState(false);
-  const [rocketWebGlFailed, setRocketWebGlFailed] = useState(false);
-  const [isAudioOn, setIsAudioOn] = useState(false);
+  const [isCardHovered, setIsCardHovered] = useState(false);
+  const [isGitHubHovered, setIsGitHubHovered] = useState(false);
+  const [isEntering, setIsEntering] = useState(false);
+  const [isReadyForCta, setIsReadyForCta] = useState(false);
 
-  // Unified timeline refs for white-sand THINK. -> CREATE. -> DISCOVER. + PORTFOLIO BY GARV SHAW portal
-  const timelineSecRef = useRef(prefersReducedMotion ? 8.2 : 0);
-  const isSandExitingRef = useRef(false);
-  const sandExitProgressRef = useRef(0);
-  const isHoveringEnterRef = useRef(false);
-  const rocketLaunchedRef = useRef(false);
-  const rocketCursorReadyRef = useRef(false);
-  const scrollPromptStartedRef = useRef(false);
-  const scrollPromptDoneRef = useRef(false);
-
-  const portalRevealRef = useRef(0);
-  const portalReadyForScrollRef = useRef(false);
-  const elapsedTimeRef = useRef(0);
-  const scrollTargetRef = useRef(0);
-  const scrollProgressRef = useRef(0);
-  const zoomProgressRef = useRef(0);
-  const isTransitioningRef = useRef(false);
-  const hasCompletedRef = useRef(false);
-  const heldDirectionRef = useRef<-1 | 0 | 1>(0);
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const impactShakeWrapRef = useRef<HTMLDivElement | null>(null);
-  const whiteoutFlashRef = useRef<HTMLDivElement | null>(null);
-  const impactStartPerfRef = useRef<number | null>(null);
+  const veilRef = useRef<HTMLDivElement>(null);
+  const githubAnchorRef = useRef<HTMLAnchorElement>(null);
+  const completedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
   const onRocketCursorReadyRef = useRef(onRocketCursorReady);
 
@@ -73,7 +40,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
     onRocketCursorReadyRef.current = onRocketCursorReady;
   }, [onRocketCursorReady]);
 
-  // Lock background page scroll while compulsory entry portal is active
+  // Lock background scroll while the identity entry installation is open
   useEffect(() => {
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -82,469 +49,228 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
     };
   }, []);
 
-  const triggerEntryTransition = useCallback(() => {
-    if (isTransitioningRef.current) return;
-    isTransitioningRef.current = true;
-    scrollTargetRef.current = 1.0;
-    setIsTransitioning(true);
-    introAudio.triggerWarp();
-    entrySequenceManager.completeImmediately();
-  }, []);
-
-  // Unified master animation loop on the single PORTFOLIO BY GARV SHAW entry page:
-  // 1) White sand forms THINK. -> CREATE. -> DISCOVER.
-  // 2) DISCOVER. exhales gently into white sand breeze as PORTFOLIO BY GARV SHAW reveals
-  // 3) 3D PBR Rocket emerges from deep universe, lands with impact shake, and morphs into cursor
-  // 4) Visitor scrolls right-to-left -> centers PORTFOLIO -> zooms through transparent 'T' into site
+  // Reveal subtle studio HUD controls once the lanyard & card finish descending
   useEffect(() => {
-    let animId = 0;
-    const startTime = performance.now();
-    let prevTime = startTime;
-    let chime2Played = false;
-    let chime3Played = false;
-    let chime4Played = false;
-    let sandMarkedDone = false;
+    const timer = window.setTimeout(
+      () => setIsReadyForCta(true),
+      prefersReducedMotion ? 120 : 1250
+    );
+    return () => window.clearTimeout(timer);
+  }, [prefersReducedMotion]);
 
-    const loop = (now: number) => {
-      if (hasCompletedRef.current) return;
-
-      const dt = Math.min((now - prevTime) / 1000, 0.05);
-      prevTime = now;
-
-      const t = (now - startTime) / 1000;
-      elapsedTimeRef.current = t;
-
-      if (!prefersReducedMotion) {
-        timelineSecRef.current = t;
-      }
-      entrySequenceManager.tick(t);
-
-      // Optional subtle chimes synced with white sand formations
-      if (!prefersReducedMotion) {
-        if (!chime2Played && t >= 2.05) {
-          chime2Played = true;
-          introAudio.triggerChime(392.0);
-        }
-        if (!chime3Played && t >= 4.45) {
-          chime3Played = true;
-          introAudio.triggerChime(440.0);
-        }
-        if (!chime4Played && t >= 6.8) {
-          chime4Played = true;
-          introAudio.triggerChime(523.25);
-        }
-      }
-
-      // Launch 3D rocket from the universe during DISCOVER. -> PORTFOLIO BY GARV SHAW transition
-      const rocketStartSec = prefersReducedMotion ? 1.05 : ROCKET_LAUNCH_START_SEC;
-      if (!rocketLaunchedRef.current && t >= rocketStartSec) {
-        rocketLaunchedRef.current = true;
-        setRocketLaunchStarted(true);
-      }
-
-      // Safety fallback in case the tab was throttled so the portal never stalls waiting for the 6.65s landing + morph
-      const safetyUnlockSec = prefersReducedMotion ? 1.6 : 16.2;
-      if (!rocketCursorReadyRef.current && t >= safetyUnlockSec) {
-        rocketCursorReadyRef.current = true;
-        onRocketCursorReadyRef.current?.();
-        if (!scrollPromptStartedRef.current) {
-          scrollPromptStartedRef.current = true;
-          setShowScrollPrompt(true);
-        }
-      }
-
-      // Trigger smooth white-sand dissolution after DISCOVER. settles
-      const holdEnd = prefersReducedMotion ? 1.2 : SAND_HOLD_END_SEC;
-      if (!isSandExitingRef.current && t >= holdEnd) {
-        isSandExitingRef.current = true;
-      }
-
-      if (isSandExitingRef.current && sandExitProgressRef.current < 1) {
-        const nextExit = Math.min(
-          sandExitProgressRef.current + dt / SAND_DISSOLVE_SEC,
-          1
-        );
-        sandExitProgressRef.current = nextExit;
-
-        if (nextExit >= 1 && !sandMarkedDone) {
-          sandMarkedDone = true;
-          setSandFinished(true);
-        }
-      }
-
-      // Slide & reveal PORTFOLIO BY GARV SHAW smoothly ONLY after "Scroll To View" particle popup dissolves
-      if (scrollPromptDoneRef.current && portalRevealRef.current < 1) {
-        portalRevealRef.current = Math.min(
-          1,
-          portalRevealRef.current + dt / (prefersReducedMotion ? 0.35 : 0.95)
-        );
-      }
-
-      // Slow, steady glide while holding Arrow / Page / Space keys (once portal is unlocked)
-      if (
-        portalReadyForScrollRef.current &&
-        !isTransitioningRef.current &&
-        heldDirectionRef.current !== 0
-      ) {
-        scrollTargetRef.current = Math.min(
-          1,
-          Math.max(0, scrollTargetRef.current + heldDirectionRef.current * 0.115 * dt)
-        );
-      }
-
-      // Weighty, cinematic scroll inertia for PORTFOLIO BY GARV SHAW slide
-      const factor = 1 - Math.exp(-4.2 * dt);
-      scrollProgressRef.current +=
-        (scrollTargetRef.current - scrollProgressRef.current) * factor;
-
-      // Once "PORTFOLIO" settles in the middle, trigger zoom through transparent 'T'
-      if (!isTransitioningRef.current && scrollProgressRef.current >= 0.78) {
-        triggerEntryTransition();
-      }
-
-      // Advance zoom-through-T smoothly into the main website
-      if (isTransitioningRef.current && !hasCompletedRef.current) {
-        const nextZ = Math.min(
-          zoomProgressRef.current + dt / PORTAL_ZOOM_DURATION_SEC,
-          1
-        );
-        zoomProgressRef.current = nextZ;
-
-        if (nextZ >= 1) {
-          hasCompletedRef.current = true;
-          introAudio.stop();
-          onCompleteRef.current();
-          return;
-        }
-      }
-
-      // Subtle radial screen shake & soft whiteout flash on center rocket impact
-      if (impactStartPerfRef.current !== null) {
-        const dtImpact = (now - impactStartPerfRef.current) / 1000;
-        const SHAKE_DUR = 0.52;
-        const FLASH_DUR = 0.68;
-
-        if (impactShakeWrapRef.current) {
-          if (!prefersReducedMotion && dtImpact >= 0 && dtImpact < SHAKE_DUR) {
-            const decay = Math.exp(-7.8 * dtImpact);
-            const isSmall = window.innerWidth < 640;
-            const maxAmp = isSmall ? 4.2 : 6.8;
-            const theta = dtImpact * 54;
-            const radialOffset = Math.sin(dtImpact * 36) * maxAmp * decay;
-            const sx = Math.cos(theta) * radialOffset + Math.sin(dtImpact * 79) * (maxAmp * 0.35 * decay);
-            const sy = Math.sin(theta) * radialOffset + Math.cos(dtImpact * 73) * (maxAmp * 0.35 * decay);
-            const pulseScale = 1 + 0.011 * decay * Math.sin(Math.min(1, dtImpact / 0.14) * Math.PI);
-            impactShakeWrapRef.current.style.transform = `translate3d(${sx.toFixed(2)}px, ${sy.toFixed(2)}px, 0) scale(${pulseScale.toFixed(4)})`;
-          } else if (impactShakeWrapRef.current.style.transform !== '') {
-            impactShakeWrapRef.current.style.transform = '';
-          }
-        }
-
-        if (whiteoutFlashRef.current) {
-          if (dtImpact >= 0 && dtImpact < FLASH_DUR) {
-            const rise = Math.min(dtImpact / 0.055, 1);
-            const fallP = Math.max(0, (dtImpact - 0.055) / (FLASH_DUR - 0.055));
-            const envelope = dtImpact < 0.055 ? rise : Math.pow(1 - fallP, 2.35);
-            const peakOpacity = prefersReducedMotion ? 0.25 : 0.48;
-            const flashOpacity = envelope * peakOpacity;
-            const bloomScale = 0.88 + (dtImpact / FLASH_DUR) * 0.3;
-            whiteoutFlashRef.current.style.opacity = flashOpacity.toFixed(3);
-            whiteoutFlashRef.current.style.transform = `scale(${bloomScale.toFixed(3)})`;
-          } else {
-            whiteoutFlashRef.current.style.opacity = '0';
-            whiteoutFlashRef.current.style.transform = '';
-            impactStartPerfRef.current = null;
-          }
-        }
-      }
-
-      animId = requestAnimationFrame(loop);
-    };
-
-    animId = requestAnimationFrame(loop);
-    return () => {
-      cancelAnimationFrame(animId);
-    };
-  }, [triggerEntryTransition, prefersReducedMotion]);
-
-  const handleRocketCenterImpact = useCallback(() => {
-    impactStartPerfRef.current = performance.now();
+  const finishEntry = useCallback(() => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    onRocketCursorReadyRef.current?.();
+    onCompleteRef.current();
   }, []);
 
-  const handleRocketBecomeCursor = useCallback(() => {
-    if (!rocketCursorReadyRef.current) {
-      rocketCursorReadyRef.current = true;
-      onRocketCursorReadyRef.current?.();
-      if (!scrollPromptStartedRef.current) {
-        scrollPromptStartedRef.current = true;
-        setShowScrollPrompt(true);
-      }
+  const handleTriggerEnter = useCallback(() => {
+    if (isEntering || completedRef.current) return;
+    setIsEntering(true);
+
+    if (prefersReducedMotion || webGlFailed) {
+      window.setTimeout(finishEntry, 440);
     }
+  }, [isEntering, prefersReducedMotion, webGlFailed, finishEntry]);
+
+  // Keyboard support: pressing Enter launches the portfolio transition
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !isEntering && isReadyForCta) {
+        const activeTag = (document.activeElement as HTMLElement | null)?.tagName?.toLowerCase();
+        if (activeTag === 'a') return;
+        e.preventDefault();
+        handleTriggerEnter();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isEntering, isReadyForCta, handleTriggerEnter]);
+
+  // Trigger real anchor click so GitHub opens cleanly without window.open
+  const handleGitHubCardClick = useCallback(() => {
+    githubAnchorRef.current?.click();
   }, []);
 
-  const handleScrollPromptComplete = useCallback(() => {
-    scrollPromptDoneRef.current = true;
-    portalReadyForScrollRef.current = true;
-    setShowScrollPrompt(false);
-  }, []);
-
-  const handleRocketFinished = useCallback(() => {
-    setRocketFinished(true);
-  }, []);
-
-  const handleToggleAudio = useCallback(() => {
-    const newState = introAudio.toggle();
-    setIsAudioOn(newState);
+  // Drive seamless dark-obsidian + warm champagne studio cross-dissolve during camera zoom
+  const handleEnterProgress = useCallback((progress: number) => {
+    if (!veilRef.current) return;
+    const fadeStart = 0.56;
+    const t = Math.max(0, Math.min(1, (progress - fadeStart) / (1 - fadeStart)));
+    const eased = t * t * (3 - 2 * t);
+    veilRef.current.style.opacity = eased.toFixed(3);
   }, []);
 
   const handleWebGLError = useCallback(() => {
     setWebGlFailed(true);
   }, []);
 
-  // Compulsory scroll / swipe / keyboard listeners for PORTFOLIO BY GARV SHAW entry
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isTransitioningRef.current || !portalReadyForScrollRef.current) return;
-
-      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
-        e.preventDefault();
-        if (!e.repeat) {
-          const step = e.key === 'ArrowDown' ? 0.035 : 0.065;
-          scrollTargetRef.current = Math.min(1, scrollTargetRef.current + step);
-        }
-        heldDirectionRef.current = 1;
-      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
-        e.preventDefault();
-        if (!e.repeat) {
-          const step = e.key === 'ArrowUp' ? 0.035 : 0.065;
-          scrollTargetRef.current = Math.max(0, scrollTargetRef.current - step);
-        }
-        heldDirectionRef.current = -1;
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
-        e.preventDefault();
-      }
-      if (
-        e.key === 'ArrowDown' ||
-        e.key === 'PageDown' ||
-        e.key === ' ' ||
-        e.key === 'ArrowUp' ||
-        e.key === 'PageUp'
-      ) {
-        heldDirectionRef.current = 0;
-      }
-    };
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      if (isTransitioningRef.current || !portalReadyForScrollRef.current) return;
-      const clampedDelta = Math.max(-100, Math.min(100, e.deltaY));
-      scrollTargetRef.current = Math.min(
-        1,
-        Math.max(0, scrollTargetRef.current + clampedDelta * 0.00022)
-      );
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length > 0) {
-        touchStartRef.current = {
-          x: e.touches[0].clientX,
-          y: e.touches[0].clientY,
-        };
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 0) return;
-      e.preventDefault();
-      if (
-        isTransitioningRef.current ||
-        !portalReadyForScrollRef.current ||
-        touchStartRef.current === null
-      ) {
-        return;
-      }
-      const curX = e.touches[0].clientX;
-      const curY = e.touches[0].clientY;
-      const dx = touchStartRef.current.x - curX;
-      const dy = touchStartRef.current.y - curY;
-      touchStartRef.current = { x: curX, y: curY };
-
-      const dominantDelta = Math.abs(dx) > Math.abs(dy) ? dx : dy;
-      const sensitivity = window.innerWidth < 768 ? 0.0011 : 0.00085;
-      scrollTargetRef.current = Math.min(
-        1,
-        Math.max(0, scrollTargetRef.current + dominantDelta * sensitivity)
-      );
-    };
-
-    const handleTouchEnd = () => {
-      touchStartRef.current = null;
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleTouchEnd, { passive: true });
-    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('wheel', handleWheel);
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-      window.removeEventListener('touchcancel', handleTouchEnd);
-    };
-  }, []);
-
-  if (webGlFailed) {
+  if (prefersReducedMotion || webGlFailed) {
     return (
-      <div
-        className="fixed inset-0 h-[100dvh] z-50 overflow-hidden select-none"
-        style={{ touchAction: 'none', overscrollBehavior: 'none' }}
-      >
-        <div
-          ref={impactShakeWrapRef}
-          className="fixed inset-0 w-full h-full"
-          style={{ willChange: 'transform', transformOrigin: '50% 50%' }}
-        >
-          <WebGlFallback
-            scrollProgressRef={scrollProgressRef}
-            zoomProgressRef={zoomProgressRef}
-            portalRevealRef={portalRevealRef}
-            isAudioOn={isAudioOn}
-            onToggleAudio={handleToggleAudio}
-            isTransitioning={isTransitioning}
-            prefersReducedMotion={prefersReducedMotion}
-          />
-          {rocketLaunchStarted && !rocketFinished && (
-            <EntryAsteroidLanding
-              onCenterImpact={handleRocketCenterImpact}
-              onBecomeCursor={handleRocketBecomeCursor}
-              onFinished={handleRocketFinished}
-              prefersReducedMotion={prefersReducedMotion}
-            />
-          )}
-          {showScrollPrompt && (
-            <ScrollToViewPrompt
-              onComplete={handleScrollPromptComplete}
-              prefersReducedMotion={prefersReducedMotion}
-            />
-          )}
-        </div>
-        <div
-          ref={whiteoutFlashRef}
-          aria-hidden="true"
-          className="fixed inset-0 pointer-events-none z-[8]"
-          style={{
-            opacity: 0,
-            willChange: 'opacity, transform',
-            transformOrigin: '50% 50%',
-            background:
-              'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.72) 28%, rgba(224, 242, 254, 0.34) 62%, rgba(255, 255, 255, 0.14) 100%)',
-          }}
-        />
-      </div>
+      <ReducedMotionIdCard
+        onEnter={handleTriggerEnter}
+        isEntering={isEntering}
+      />
     );
   }
 
   return (
     <motion.div
-      key="luxury-portal-entrance"
+      key="garv-shaw-identity-entry"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.2, ease: 'easeOut' }}
-      style={{ touchAction: 'none', overscrollBehavior: 'none' }}
-      className="fixed inset-0 h-[100dvh] z-50 bg-transparent overflow-hidden select-none"
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      className={`fixed inset-0 h-[100dvh] w-full z-50 bg-[#050608] overflow-hidden select-none ${
+        isGitHubHovered
+          ? 'cursor-pointer'
+          : isCardHovered
+            ? 'cursor-grab'
+            : 'cursor-default'
+      }`}
       role="dialog"
       aria-modal="true"
-      aria-label="Entry portal: Think, Create, Discover — Portfolio by Garv Shaw"
+      aria-label="Garv Shaw — Cinematic Developer Identity Entry"
     >
-      <h1 className="sr-only">Think. Create. Discover. Portfolio by Garv Shaw</h1>
+      <h1 className="sr-only">
+        Garv Shaw — Developer / Creative Designer Identity Entry
+      </h1>
 
-      {/* Impact radial shake container spanning entry universe, typography & landing rocket */}
-      <div
-        ref={impactShakeWrapRef}
-        className="fixed inset-0 w-full h-full"
-        style={{ willChange: 'transform', transformOrigin: '50% 50%' }}
+      {/* Native external anchor used by 3D raycast GitHub clicks (iframe-safe) */}
+      <a
+        ref={githubAnchorRef}
+        href={IDENTITY_DATA.githubUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="sr-only"
+        tabIndex={-1}
       >
-        {/* 1. Ambient 3D floating particle field */}
-        <IntroScene
-          elapsedTimeRef={elapsedTimeRef}
-          scrollProgressRef={scrollProgressRef}
-          isTransitioningRef={isTransitioningRef}
-          onWebGLError={handleWebGLError}
-        />
+        Open Garv Shaw GitHub Profile
+      </a>
 
-        {/* 2. White sand THINK. -> CREATE. -> DISCOVER. on the same entry page */}
-        {!sandFinished && (
-          <ParticleScene
-            timelineSecRef={timelineSecRef}
-            isExitingRef={isSandExitingRef}
-            exitProgressRef={sandExitProgressRef}
-            isHoveringEnterRef={isHoveringEnterRef}
-            prefersReducedMotion={prefersReducedMotion}
-            onWebGLError={handleWebGLError}
-          />
-        )}
+      {/* 1. Photorealistic Three.js Studio Scene: Descending Lanyard, Metallic Clasp & Swinging ID Card */}
+      <HangingIdCardScene
+        isEntering={isEntering}
+        onCardHoverChange={setIsCardHovered}
+        onGitHubHoverChange={setIsGitHubHovered}
+        onGitHubClick={handleGitHubCardClick}
+        onEnterProgress={handleEnterProgress}
+        onEnterComplete={finishEntry}
+        onWebGLError={handleWebGLError}
+      />
 
-        {/* 3. SVG Knockout Slide ("PORTFOLIO  BY  GARV SHAW") -> Center PORTFOLIO -> Zoom through transparent 'T' */}
-        <IntroOverlay
-          scrollProgressRef={scrollProgressRef}
-          zoomProgressRef={zoomProgressRef}
-          portalRevealRef={portalRevealRef}
-          isAudioOn={isAudioOn}
-          onToggleAudio={handleToggleAudio}
-          isTransitioning={isTransitioning}
-        />
-
-        {/* 4. 3D WebGL Milky Way Asteroid Swarm, Screen Crash Impact & Shrink-to-Cursor Conversion (with 2D fallback) */}
-        {rocketLaunchStarted &&
-          !rocketFinished &&
-          (rocketWebGlFailed ? (
-            <EntryAsteroidLanding
-              onCenterImpact={handleRocketCenterImpact}
-              onBecomeCursor={handleRocketBecomeCursor}
-              onFinished={handleRocketFinished}
-              prefersReducedMotion={prefersReducedMotion}
-            />
-          ) : (
-            <AsteroidFlightAnimation
-              onCenterImpact={handleRocketCenterImpact}
-              onBecomeCursor={handleRocketBecomeCursor}
-              onFinished={handleRocketFinished}
-              onWebGLError={() => setRocketWebGlFailed(true)}
-              prefersReducedMotion={prefersReducedMotion}
-            />
-          ))}
-
-        {/* 5. Particle-assembled 15px "Scroll To View" popup before PORTFOLIO BY GARV SHAW slides in */}
-        {showScrollPrompt && (
-          <ScrollToViewPrompt
-            onComplete={handleScrollPromptComplete}
-            prefersReducedMotion={prefersReducedMotion}
-          />
-        )}
-      </div>
-
-      {/* 6. Soft radial whiteout flash overlay on center rocket touchdown */}
+      {/* Subtle architectural vignette framing the studio stage */}
       <div
-        ref={whiteoutFlashRef}
         aria-hidden="true"
-        className="fixed inset-0 pointer-events-none z-[8]"
+        className="pointer-events-none fixed inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 75% 75% at 50% 48%, transparent 45%, rgba(3, 5, 10, 0.74) 100%)',
+        }}
+      />
+
+      {/* 2. Restrained Editorial Studio Framing (Top Corners) */}
+      <header
+        className={`pointer-events-none fixed top-0 inset-x-0 z-10 flex items-start justify-between px-6 sm:px-10 pt-[max(1.5rem,env(safe-area-inset-top))] transition-all duration-700 ${
+          isReadyForCta && !isEntering
+            ? 'opacity-100 translate-y-0'
+            : 'opacity-0 -translate-y-2'
+        }`}
+      >
+        <div className="flex flex-col gap-0.5">
+          <span className="font-serif text-sm sm:text-base tracking-[0.22em] text-slate-100/90 uppercase">
+            {IDENTITY_DATA.name}
+          </span>
+          <span className="font-mono text-[10px] tracking-[0.26em] text-cyan-300/70 uppercase">
+            IDENTITY INSTALLATION
+          </span>
+        </div>
+
+        <div className="hidden sm:flex flex-col items-end gap-0.5 font-mono text-[10px] tracking-[0.22em]">
+          <span className="text-slate-200/70">{IDENTITY_DATA.serialNumber}</span>
+          <span className="text-sky-400/70">{IDENTITY_DATA.verificationLabel}</span>
+        </div>
+      </header>
+
+      {/* 3. Bottom Editorial Interaction Bar: Hover Prompt + GitHub Quick Link + ENTER CTA */}
+      <footer
+        className={`pointer-events-none fixed bottom-0 inset-x-0 z-10 flex flex-col items-center gap-3.5 px-6 pb-[max(2rem,env(safe-area-inset-bottom))] transition-all duration-700 ${
+          isReadyForCta && !isEntering
+            ? 'opacity-100 translate-y-0'
+            : 'opacity-0 translate-y-3'
+        }`}
+      >
+        {/* Contextual Hover Instruction: EXPLORE MY IDENTITY / GitHub Active Hint */}
+        <div className="h-6 flex items-center justify-center">
+          <div
+            className={`transition-all duration-300 flex items-center gap-2 font-mono text-[11px] tracking-[0.34em] uppercase ${
+              isGitHubHovered
+                ? 'text-cyan-200 opacity-100 translate-y-0'
+                : isCardHovered
+                  ? 'text-sky-300 opacity-100 translate-y-0'
+                  : 'text-sky-300/60 opacity-80 translate-y-0.5'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                isCardHovered || isGitHubHovered
+                  ? 'bg-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.95)] scale-110'
+                  : 'bg-sky-400/55 scale-90'
+              }`}
+            />
+            <span>
+              {isGitHubHovered
+                ? 'OPEN GITHUB · @GARVSHAW89-GLITCH'
+                : 'EXPLORE MY IDENTITY'}
+            </span>
+          </div>
+        </div>
+
+        {/* Primary Sculpted Luxury ENTER Button + Accessible GitHub Companion Link */}
+        <div className="pointer-events-auto flex items-center gap-3 sm:gap-4">
+          <button
+            type="button"
+            onClick={handleTriggerEnter}
+            disabled={isEntering}
+            className="group relative overflow-hidden px-11 sm:px-14 py-3.5 rounded-full border border-sky-400/50 hover:border-cyan-300 bg-[#080C15]/88 hover:bg-[#0D1524] text-[#F2F3F5] font-mono text-xs tracking-[0.38em] uppercase transition-all duration-300 shadow-[0_14px_40px_rgba(0,0,0,0.78)] hover:shadow-[0_0_30px_rgba(56,189,248,0.28)] cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300"
+          >
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out bg-gradient-to-r from-transparent via-cyan-300/20 to-transparent"
+            />
+            <span className="relative flex items-center gap-2.5">
+              <span>ENTER</span>
+              <span className="inline-block w-3.5 h-[1px] bg-cyan-300/85 group-hover:w-5 transition-all duration-300" />
+            </span>
+          </button>
+
+          <a
+            href={IDENTITY_DATA.githubUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Visit Garv Shaw on GitHub (@garvshaw89-glitch)"
+            className={`group inline-flex items-center gap-2 px-4 py-3.5 rounded-full border bg-[#080C15]/80 hover:bg-[#0D1524] font-mono text-[11px] tracking-[0.14em] transition-all duration-300 cursor-pointer ${
+              isGitHubHovered
+                ? 'border-cyan-300 text-slate-50 shadow-[0_0_22px_rgba(56,189,248,0.25)]'
+                : 'border-white/[0.12] hover:border-sky-400/60 text-slate-300/80 hover:text-slate-50'
+            }`}
+          >
+            <Github className="w-3.5 h-3.5 text-sky-400" />
+            <span className="hidden sm:inline">{IDENTITY_DATA.githubHandle}</span>
+            <ArrowUpRight className="w-3.5 h-3.5 text-cyan-300/85 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          </a>
+        </div>
+      </footer>
+
+      {/* 4. Seamless Studio Cross-Dissolve Veil synced to Camera Zoom-In */}
+      <div
+        ref={veilRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-20"
         style={{
           opacity: 0,
-          willChange: 'opacity, transform',
-          transformOrigin: '50% 50%',
           background:
-            'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.72) 28%, rgba(224, 242, 254, 0.34) 62%, rgba(255, 255, 255, 0.14) 100%)',
+            'radial-gradient(circle at 50% 48%, rgba(10, 18, 32, 0.94) 0%, rgba(5, 6, 8, 1) 68%)',
         }}
       />
     </motion.div>
