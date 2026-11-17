@@ -26,6 +26,7 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
   );
 
   const [stage, setStage] = useState<CardStage>('hidden');
+  const [hasSettledInCorner, setHasSettledInCorner] = useState(false);
   const [webGlFailed, setWebGlFailed] = useState(false);
   const [isCardHovered, setIsCardHovered] = useState(false);
   const [isGitHubHovered, setIsGitHubHovered] = useState(false);
@@ -82,6 +83,7 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
 
     if (!entered) {
       setStage('hidden');
+      setHasSettledInCorner(false);
       setIsCardHovered(false);
       setIsGitHubHovered(false);
       setIsDockedHovered(false);
@@ -92,10 +94,12 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
 
     if (prefersReducedMotion) {
       setStage('docked');
+      setHasSettledInCorner(true);
       return;
     }
 
     setStage('center');
+    setHasSettledInCorner(false);
 
     // Hang & swing naturally in center over the Milky Way, then slide to the top-left upside corner
     const slideTimer = window.setTimeout(() => {
@@ -108,7 +112,11 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
       injectImpulse(-0.72, 0.78, -0.06);
     }, 3220);
 
-    timersRef.current.push(slideTimer, settleTimer);
+    const settledFlagTimer = window.setTimeout(() => {
+      setHasSettledInCorner(true);
+    }, 3700);
+
+    timersRef.current.push(slideTimer, settleTimer, settledFlagTimer);
 
     return () => clearTimers();
   }, [entered, prefersReducedMotion, clearTimers, injectImpulse, measureLayout]);
@@ -133,17 +141,22 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
   const handleDockToCorner = useCallback(() => {
     if (stage === 'docked') return;
     clearTimers();
+    setHasSettledInCorner(false);
     injectImpulse(0.88, -0.95, 0.08);
     setStage('docked');
     const settleId = window.setTimeout(() => {
       injectImpulse(-0.62, 0.68, -0.05);
     }, 820);
-    timersRef.current.push(settleId);
+    const settledFlagId = window.setTimeout(() => {
+      setHasSettledInCorner(true);
+    }, 1350);
+    timersRef.current.push(settleId, settledFlagId);
   }, [stage, clearTimers, injectImpulse]);
 
   const handleExpandInspect = useCallback(() => {
     if (stage !== 'docked') return;
     clearTimers();
+    setHasSettledInCorner(false);
     injectImpulse(-0.82, 0.9, 0.1);
     setStage('inspect');
   }, [stage, clearTimers, injectImpulse]);
@@ -295,7 +308,7 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
           opacity: 1,
         }}
         transition={{
-          duration: isDocked ? 1.32 : 0.92,
+          duration: isDocked ? (hasSettledInCorner ? 0.32 : 1.28) : 0.88,
           ease: SLIDE_EASE,
         }}
         onMouseEnter={() => {

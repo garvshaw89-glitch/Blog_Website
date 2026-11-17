@@ -857,6 +857,12 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       renderer.setSize(w, h);
     };
 
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => handleResize())
+        : null;
+    resizeObserver?.observe(container);
+
     canvas.addEventListener('pointermove', handlePointerMove, { passive: true });
     canvas.addEventListener('pointerleave', handlePointerLeave, { passive: true });
     canvas.addEventListener('click', handleClick);
@@ -1055,6 +1061,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     return () => {
       disposed = true;
       cancelAnimationFrame(rafId);
+      resizeObserver?.disconnect();
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.removeEventListener('pointerleave', handlePointerLeave);
       canvas.removeEventListener('click', handleClick);
