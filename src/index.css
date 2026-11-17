@@ -45,30 +45,13 @@
     min-height: 100dvh;
   }
 
-  /* Precision Custom Cursor for fine-pointer desktop environments */
-  @media (hover: hover) and (pointer: fine) {
-    html.custom-cursor-enabled,
-    html.custom-cursor-enabled body,
-    html.custom-cursor-enabled a,
-    html.custom-cursor-enabled button,
-    html.custom-cursor-enabled [role="button"],
-    html.custom-cursor-enabled [data-magnetic] {
-      cursor: none !important;
-    }
-    html.custom-cursor-enabled input:not([type="button"]):not([type="submit"]):not([type="reset"]),
-    html.custom-cursor-enabled textarea,
-    html.custom-cursor-enabled [contenteditable="true"],
-    html.custom-cursor-enabled [data-cursor="text"] {
-      cursor: text !important;
-    }
-    html.custom-cursor-enabled select {
-      cursor: pointer !important;
-    }
-  }
-
-  /* Touch / coarse pointer fallback */
+  /* Touch / coarse pointer fallback when custom cursor is inactive */
   @media (pointer: coarse) {
-    body, a, button, input, textarea {
+    html:not(.custom-cursor-enabled) body,
+    html:not(.custom-cursor-enabled) a,
+    html:not(.custom-cursor-enabled) button,
+    html:not(.custom-cursor-enabled) input,
+    html:not(.custom-cursor-enabled) textarea {
       cursor: auto !important;
     }
   }
@@ -96,6 +79,20 @@
   code, kbd, samp, pre, .font-mono {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
   }
+}
+
+/* Unlayered Custom Cursor Override: beats Tailwind @layer utilities (.cursor-pointer, etc.) on all descendants */
+html.custom-cursor-enabled,
+html.custom-cursor-enabled *,
+html.custom-cursor-enabled *::before,
+html.custom-cursor-enabled *::after {
+  cursor: none !important;
+}
+
+html.custom-cursor-enabled input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.custom-cursor-enabled textarea,
+html.custom-cursor-enabled [contenteditable="true"] {
+  cursor: text !important;
 }
 
 /* Gradient typography utilities */

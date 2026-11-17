@@ -137,46 +137,16 @@ export const CursorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }));
   }, []);
 
-  // Sync with SingularityInteractionEngine to maintain active gravitational coordinate system
+  // Keep CursorProvider free of per-frame React state churn during scroll/pointermove;
+  // high-frequency pointer & WebGL consumers read interactionEngine directly without React rerenders.
   useEffect(() => {
-    let lastTime = 0;
-    const unsub = interactionEngine.subscribe((engineState) => {
-      const now = performance.now();
-      // Throttle React state updates to ~30-40fps for UI consumers while engine runs at 60-120fps
-      if (now - lastTime < 24) return;
-      lastTime = now;
-
-      setState((prev) => ({
-        ...prev,
-        isPointerDown: engineState.clickCount > 0 && now - engineState.lastClickTime < 300,
-        isVisible: true,
-        gravitationalCoords: {
-          x: engineState.clientX,
-          y: engineState.clientY,
-          ndcX: engineState.ndcX,
-          ndcY: engineState.ndcY,
-          radius: gravityRadiusRef.current,
-          velocity: {
-            x: engineState.vx,
-            y: engineState.vy,
-            speed: engineState.speed,
-          },
-          energy: engineState.normalizedEnergy,
-          edgePull: {
-            x: engineState.edgePullX,
-            y: engineState.edgePullY,
-            distance: engineState.edgeDistance,
-          },
-          worldPos: {
-            x: engineState.worldPos.x,
-            y: engineState.worldPos.y,
-            z: engineState.worldPos.z,
-          },
-        },
-      }));
-    });
-
-    return () => unsub();
+    const isCoarse =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(pointer: coarse)').matches &&
+      !window.matchMedia('(any-pointer: fine)').matches;
+    if (isCoarse) {
+      setState((prev) => (prev.isTouchDevice ? prev : { ...prev, isTouchDevice: true }));
+    }
   }, []);
 
   const value = useMemo<CursorContextValue>(

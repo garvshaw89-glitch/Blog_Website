@@ -79,9 +79,121 @@ function fbm2D(x: number, y: number): number {
 }
 
 // ============================================================================
-// SCULPTED SPIRAL-HUGGING GALACTIC CORE & ARM GLOW SHADER (Small, Crisp Aura)
-// Hugs the blazing galactic bar & spiral arm spines tightly without wide muddy shadow
+// PRE-BAKED PROCEDURAL SPIRAL NEBULA TEXTURE (Baked once at init -> 1 texture lookup/px)
+// Eliminates 16 octaves of per-pixel FBM on 7M pixels/frame so scrolling stays locked at 60fps
 // ============================================================================
+function createProceduralNebulaTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  const img = ctx.createImageData(size, size);
+  const data = img.data;
+  const half = size * 0.5;
+  const smoothstep = (e0: number, e1: number, x: number) => {
+    const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0)));
+    return t * t * (3 - 2 * t);
+  };
+  const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+
+  for (let py = 0; py < size; py++) {
+    const gy = ((py + 0.5) / half - 1.0) * 1.05;
+    for (let px = 0; px < size; px++) {
+      const gx = ((px + 0.5) / half - 1.0) * 1.05;
+      const r = Math.hypot(gx, gy);
+      const idx = (py * size + px) * 4;
+
+      if (r > 1.04) {
+        data[idx] = 0;
+        data[idx + 1] = 0;
+        data[idx + 2] = 0;
+        data[idx + 3] = 0;
+        continue;
+      }
+
+      const angle = Math.atan2(gy, gx);
+      const twist = Math.log(1.0 + r * 5.2) * 3.25;
+      const majorArms = Math.pow(Math.max(Math.cos(2.0 * (angle - twist)), 0.0), 3.2);
+      const minorArms =
+        Math.pow(Math.max(Math.cos(2.0 * (angle - twist + 1.5708)), 0.0), 3.8) * 0.55;
+      const armSpine = Math.min(1.0, majorArms + minorArms);
+
+      const warpX = fbm2D(gx * 3.6 + 2.1, gy * 3.6 + 1.3);
+      const warpY = fbm2D(gx * 3.6 - 1.7, gy * 3.6 + 4.3);
+      const cloudTex = fbm2D(gx * 5.4 + warpX * 1.05, gy * 5.4 + warpY * 1.05);
+      const fineRift = fbm2D(gx * 9.2 + warpX * 1.4, gy * 9.2 + warpY * 1.4);
+
+      const riftCarve =
+        smoothstep(0.52, 0.76, fineRift) *
+        smoothstep(0.08, 0.55, r) *
+        (1.0 - smoothstep(0.68, 0.98, r));
+
+      const barX = gx * 0.78 + gy * 0.34;
+      const barY = -gx * 0.34 + gy * 1.45;
+      const bulgeDist = Math.hypot(barX, barY);
+      const bulge = Math.exp(-bulgeDist * bulgeDist * 24.0);
+      const coreAura = Math.exp(-r * r * 12.0);
+
+      const outerFade = 1.0 - smoothstep(0.65, 1.04, r);
+      const armGlow = armSpine * Math.exp(-r * 1.65) * outerFade * (0.45 + 0.65 * cloudTex);
+      const litArms = Math.max(armGlow * (1.0 - riftCarve * 0.62), 0.0);
+
+      const h2Pocket =
+        smoothstep(0.62, 0.86, cloudTex) * smoothstep(0.16, 0.65, r) * armSpine;
+
+      const armBlend = smoothstep(0.15, 0.85, armSpine * cloudTex + 0.18);
+      let cr = mix(0.32, 0.30, armBlend);
+      let cg = mix(0.30, 0.74, armBlend);
+      let cb = mix(0.72, 1.0, armBlend);
+
+      // H2 Rose pockets
+      const h2Mix = h2Pocket * 0.48;
+      cr = mix(cr, 0.88, h2Mix);
+      cg = mix(cg, 0.42, h2Mix);
+      cb = mix(cb, 0.66, h2Mix);
+
+      // Warm amber inner bar
+      const amberMix = smoothstep(0.36, 0.06, bulgeDist) * 0.82;
+      cr = mix(cr, 0.95, amberMix);
+      cg = mix(cg, 0.68, amberMix);
+      cb = mix(cb, 0.36, amberMix);
+
+      // Blazing core white-gold
+      const coreMix = Math.min(1.0, bulge * 1.2);
+      cr = mix(cr, 1.0, coreMix);
+      cg = mix(cg, 0.95, coreMix);
+      cb = mix(cb, 0.82, coreMix);
+
+      // Subtle dusty ember near rifts
+      const riftMix = riftCarve * 0.24 * coreAura;
+      cr = mix(cr, 0.72, riftMix);
+      cg = mix(cg, 0.38, riftMix);
+      cb = mix(cb, 0.22, riftMix);
+
+      const alpha = Math.min(0.42, bulge * 0.32 + coreAura * 0.13 + litArms * 0.30);
+
+      data[idx] = Math.round(Math.min(1, cr) * 255);
+      data[idx + 1] = Math.round(Math.min(1, cg) * 255);
+      data[idx + 2] = Math.round(Math.min(1, cb) * 255);
+      data[idx + 3] = Math.round(Math.min(1, alpha) * 255);
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 const NEBULA_VERTEX_SHADER = /* glsl */ `
   uniform float uTime;
   uniform float uScrollProgress;
@@ -98,7 +210,7 @@ const NEBULA_VERTEX_SHADER = /* glsl */ `
     vec3 galPos = vec3(position.x, 0.0, position.y);
 
     // Grand 3/4 oblique opening view (~50 deg) -> opens smoothly toward dramatic face-on spiral on scroll
-    float pitchX = 0.88 - sin(s * 3.14159) * 0.44 + s * 0.10;
+    float pitchX = 0.88 - sin(s * 3.14159) * 0.40 + s * 0.10;
     float bankZ  = -0.32 + s * 0.58 + sin(t * 0.08) * 0.025;
 
     float cx = cos(pitchX), sx = sin(pitchX);
@@ -109,7 +221,7 @@ const NEBULA_VERTEX_SHADER = /* glsl */ `
 
     worldPos.x += 0.15 - sin(s * 3.4) * 1.45;
     worldPos.y += 0.05 + cos(s * 2.8) * 0.72 - s * 0.35;
-    worldPos.z -= 1.0 + sin(s * 2.4) * 1.1;
+    worldPos.z -= 1.0 + sin(s * 2.4) * 0.9;
 
     // Normalize UVs to exact big spiral world radius
     float galSpan = mix(15.2, 20.5, clamp(uAspect - 0.7, 0.0, 1.0));
@@ -119,6 +231,7 @@ const NEBULA_VERTEX_SHADER = /* glsl */ `
 `;
 
 const NEBULA_FRAGMENT_SHADER = /* glsl */ `
+  uniform sampler2D uNebulaMap;
   uniform float uTime;
   uniform float uOpacity;
   uniform float uScrollProgress;
@@ -126,35 +239,6 @@ const NEBULA_FRAGMENT_SHADER = /* glsl */ `
   uniform vec2 uPointer;
 
   varying vec2 vGalUv;
-
-  float hash21(vec2 p) {
-    p = fract(p * vec2(123.34, 456.21));
-    p += dot(p, p + 45.32);
-    return fract(p.x * p.y);
-  }
-
-  float noise2D(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    float a = hash21(i);
-    float b = hash21(i + vec2(1.0, 0.0));
-    float c = hash21(i + vec2(0.0, 1.0));
-    float d = hash21(i + vec2(1.0, 1.0));
-    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-  }
-
-  float fbm(vec2 p) {
-    float v = 0.0;
-    float amp = 0.5;
-    mat2 m = mat2(0.8, 0.6, -0.6, 0.8);
-    for (int i = 0; i < 4; i++) {
-      v += amp * noise2D(p);
-      p = m * p * 2.05 + vec2(17.1, 31.7);
-      amp *= 0.5;
-    }
-    return v;
-  }
 
   void main() {
     float motion = mix(1.0, 0.14, uReducedMotion);
@@ -166,50 +250,17 @@ const NEBULA_FRAGMENT_SHADER = /* glsl */ `
     g += uPointer * 0.015;
 
     float r = length(g);
-    if (r > 1.05) discard;
+    if (r > 1.04) discard;
 
-    // Tightly follow the 4 spiral arms (matches particle tightness = 3.25)
-    float angle = atan(g.y, g.x);
-    float twist = log(1.0 + r * 5.2) * 3.25;
-    float majorArms = pow(max(cos(2.0 * (angle - twist)), 0.0), 3.2);
-    float minorArms = pow(max(cos(2.0 * (angle - twist + 1.5708)), 0.0), 3.8) * 0.55;
-    float armSpine = clamp(majorArms + minorArms, 0.0, 1.0);
-
-    vec2 warp = vec2(fbm(g * 3.6 + t), fbm(g * 3.6 - t + 4.3));
-    float cloudTex = fbm(g * 5.4 + warp * 1.05);
-    float fineRift = fbm(g * 9.2 + warp * 1.4 - vec2(t * 0.4, 0.0));
-
-    // Narrow dark dust filaments tucked strictly along inner arm boundaries
-    float riftCarve = smoothstep(0.52, 0.76, fineRift) * smoothstep(0.08, 0.55, r) * (1.0 - smoothstep(0.68, 0.98, r));
-
-    // Compact barred golden core + tight spiral-hugging emission
-    vec2 barCoord = vec2(g.x * 0.78 + g.y * 0.34, -g.x * 0.34 + g.y * 1.45);
-    float bulgeDist = length(barCoord);
-    float bulge = exp(-bulgeDist * bulgeDist * 24.0);
-    float coreAura = exp(-r * r * 12.0);
-
-    float outerFade = 1.0 - smoothstep(0.65, 1.04, r);
-    float armGlow = armSpine * exp(-r * 1.65) * outerFade * (0.45 + 0.65 * cloudTex);
-    float litArms = max(armGlow * (1.0 - riftCarve * 0.62), 0.0);
-
-    vec3 coreWhiteGold = vec3(1.0, 0.95, 0.82);
-    vec3 warmAmber = vec3(0.95, 0.68, 0.36);
-    vec3 armSapphire = vec3(0.30, 0.74, 1.0);
-    vec3 h2Rose = vec3(0.88, 0.42, 0.66);
-    vec3 cosmicIndigo = vec3(0.32, 0.30, 0.72);
-
-    float h2Pocket = smoothstep(0.62, 0.86, cloudTex) * smoothstep(0.16, 0.65, r) * armSpine;
-    vec3 col = mix(cosmicIndigo, armSapphire, smoothstep(0.15, 0.85, armSpine * cloudTex + 0.18));
-    col = mix(col, h2Rose, h2Pocket * 0.48);
-    col = mix(col, warmAmber, smoothstep(0.36, 0.06, bulgeDist) * 0.82);
-    col = mix(col, coreWhiteGold, clamp(bulge * 1.2, 0.0, 1.0));
-    col = mix(col, vec3(0.72, 0.38, 0.22), riftCarve * 0.24 * coreAura);
+    vec2 texUv = (g / 1.05) * 0.5 + 0.5;
+    vec4 neb = texture2D(uNebulaMap, texUv);
 
     float scrollAtten = mix(1.0, 0.72, smoothstep(0.08, 0.45, uScrollProgress));
-    float alpha = (bulge * 0.30 + coreAura * 0.12 + litArms * 0.28) * scrollAtten * uOpacity;
+    float breath = 0.96 + 0.04 * sin(uTime * 0.65 * motion + r * 4.0);
+    float alpha = neb.a * scrollAtten * uOpacity * breath;
 
     if (alpha < 0.004) discard;
-    gl_FragColor = vec4(col, clamp(alpha, 0.0, 0.36));
+    gl_FragColor = vec4(neb.rgb, clamp(alpha, 0.0, 0.36));
   }
 `;
 
@@ -277,7 +328,7 @@ const GALAXY_VERTEX_SHADER = /* glsl */ `
       vec3 galPos = vec3(xPlane, yPlane, zPlane);
 
       // Synced 1:1 with NEBULA_VERTEX_SHADER
-      float pitchX = 0.88 - sin(s * 3.14159) * 0.44 + s * 0.10;
+      float pitchX = 0.88 - sin(s * 3.14159) * 0.40 + s * 0.10;
       float bankZ  = -0.32 + s * 0.58 + sin(t * 0.08) * 0.025;
 
       float cx = cos(pitchX), sx = sin(pitchX);
@@ -288,7 +339,7 @@ const GALAXY_VERTEX_SHADER = /* glsl */ `
 
       p.x += 0.15 - sin(s * 3.4) * 1.45;
       p.y += 0.05 + cos(s * 2.8) * 0.72 - s * 0.35;
-      p.z -= 1.0 + sin(s * 2.4) * 1.1;
+      p.z -= 1.0 + sin(s * 2.4) * 0.9;
     } else {
       // Deep space surrounding stars across entire viewport
       p = position;
@@ -327,8 +378,8 @@ const GALAXY_VERTEX_SHADER = /* glsl */ `
     float interactiveScale = 1.0 + wake * 0.5 + ripple * 0.75 + rocketGlow * 0.85 + abs(velKick) * 0.22;
     float ptSize = aSize * perspectiveScale * uPixelRatio * interactiveScale;
 
-    float minPt = aKind > 1.5 && aKind < 2.5 ? 3.2 * uPixelRatio : 1.05 * uPixelRatio;
-    float maxPt = aKind > 1.5 && aKind < 2.5 ? 20.0 * uPixelRatio : 13.0 * uPixelRatio;
+    float minPt = aKind > 1.5 && aKind < 2.5 ? 2.8 * uPixelRatio : 1.05 * uPixelRatio;
+    float maxPt = aKind > 1.5 && aKind < 2.5 ? 14.0 * uPixelRatio : 9.5 * uPixelRatio;
     gl_PointSize = clamp(ptSize, minPt, maxPt);
 
     boost = wake * 0.68 + ripple * 0.95 + rocketGlow;
@@ -446,7 +497,7 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
 
     const pixelRatio = isSoftwareGl
       ? 1
-      : Math.min(window.devicePixelRatio || 1, 1.85);
+      : Math.min(window.devicePixelRatio || 1, 1.5);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height);
@@ -459,6 +510,9 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
     canvas.style.pointerEvents = 'none';
     container.appendChild(canvas);
 
+    // Pre-baked procedural nebula texture (1 texture lookup per pixel vs 16-octave live FBM)
+    const nebulaTexture = createProceduralNebulaTexture();
+
     // Spiral-hugging small shadow & glowing core plane scaled to match the Big Milky Way
     const nebulaGeo = new THREE.PlaneGeometry(42, 42);
     const nebulaMat = new THREE.ShaderMaterial({
@@ -470,6 +524,7 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
       uniforms: {
+        uNebulaMap: { value: nebulaTexture },
         uTime: { value: 0 },
         uOpacity: { value: opacityRef.current },
         uScrollProgress: { value: 0 },
@@ -493,7 +548,7 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
     };
 
-    const particleCount = isMobile ? 22000 : 48000;
+    const particleCount = isMobile ? 16000 : 26000;
     const positions = new Float32Array(particleCount * 3);
     const aColor = new Float32Array(particleCount * 3);
     const aRadius = new Float32Array(particleCount);
@@ -839,15 +894,15 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       nebulaMat.uniforms.uReducedMotion.value = s.prefersReduced ? 1 : 0;
       nebulaMat.uniforms.uPointer.value.set(smoothedPointerX, smoothedPointerY);
 
-      // Sweeping 3D orbital fly-through across the massive Milky Way
+      // Sweeping 3D orbital fly-through across the massive Milky Way (calibrated depth for zero fill-rate spikes)
       const sp = smoothedScrollProgress;
-      const camX = smoothedPointerX * 0.65 - Math.sin(sp * Math.PI * 1.4) * 2.4;
-      const camY = smoothedPointerY * 0.38 + Math.sin(sp * Math.PI * 2.0) * 1.35 - sp * 0.35;
-      const camZ = 11.4 - Math.sin(sp * Math.PI) * 3.1;
+      const camX = smoothedPointerX * 0.65 - Math.sin(sp * Math.PI * 1.4) * 2.2;
+      const camY = smoothedPointerY * 0.38 + Math.sin(sp * Math.PI * 2.0) * 1.25 - sp * 0.35;
+      const camZ = 11.4 - Math.sin(sp * Math.PI) * 1.65;
       camera.position.set(camX, camY, camZ);
 
-      const lookX = -Math.sin(sp * 3.0) * 0.7;
-      const lookY = -sp * 0.4;
+      const lookX = -Math.sin(sp * 3.0) * 0.65;
+      const lookY = -sp * 0.38;
       camera.lookAt(lookX, lookY, -1.0);
 
       renderer.render(scene, camera);
@@ -871,6 +926,7 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       material.dispose();
       nebulaGeo.dispose();
       nebulaMat.dispose();
+      nebulaTexture.dispose();
       renderer.dispose();
       if (canvas.parentElement === container) {
         container.removeChild(canvas);
@@ -883,6 +939,7 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       ref={mountRef}
       aria-hidden="true"
       className={`MilkyWayGalaxy fixed inset-0 w-full h-full pointer-events-none z-[2] overflow-hidden ${className}`.trim()}
+      style={{ contain: 'strict', transform: 'translateZ(0)' }}
     />
   );
 };

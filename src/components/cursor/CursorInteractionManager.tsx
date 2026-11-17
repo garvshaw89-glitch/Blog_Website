@@ -35,19 +35,18 @@ export class CursorInteractionController {
 
   public isOverTextContext(el: EventTarget | null): boolean {
     if (!(el instanceof Element)) return false;
-    const textEl = el.closest(
-      'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select, [contenteditable="true"], [data-cursor="text"]'
-    );
-    if (textEl) return true;
-
-    const sel = typeof window !== 'undefined' ? window.getSelection() : null;
-    if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) {
-      const anchor = sel.anchorNode?.parentElement;
-      if (anchor && anchor.contains(el)) {
-        return true;
-      }
+    // Never restore native OS cursor when interacting with clickable elements
+    if (
+      el.closest(
+        'button, a, [role="button"], [data-cursor="button"], [data-cursor="link"], [data-cursor="project"]'
+      )
+    ) {
+      return false;
     }
-    return false;
+    const textEl = el.closest(
+      'input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, [contenteditable="true"]'
+    );
+    return Boolean(textEl);
   }
 
   public evaluate(

@@ -307,7 +307,7 @@ class InteractionEngine {
     window.addEventListener('pointerdown', this.onPointerDown, { passive: true });
     window.addEventListener('scroll', this.onScroll, { passive: true });
     window.addEventListener('resize', () => {
-      this.lastBoundsCacheTime = 0;
+      this.lastDocHeight = 0;
       this.cachedSectionBounds = [];
     }, { passive: true });
   }
@@ -417,7 +417,7 @@ class InteractionEngine {
     });
   };
 
-  private lastBoundsCacheTime = 0;
+  private lastDocHeight = 0;
   private cachedSectionBounds: {
     id: string;
     name: string;
@@ -429,10 +429,10 @@ class InteractionEngine {
   }[] = [];
 
   private updateSectionAtmosphere(scrollY: number) {
-    const now = performance.now();
-    // Cache true document-space bounds using unscaled [data-scroll-anchor] wrappers when present
-    if (this.cachedSectionBounds.length === 0 || now - this.lastBoundsCacheTime > 500) {
-      this.lastBoundsCacheTime = now;
+    const docHeight = document.documentElement.scrollHeight;
+    // Recalculate bounds only once initially or when layout height/viewport genuinely changes (zero reflow mid-scroll)
+    if (this.cachedSectionBounds.length === 0 || Math.abs(docHeight - this.lastDocHeight) > 8) {
+      this.lastDocHeight = docHeight;
       const sections = [
         { id: 'hero-section', name: 'hero', primary: 0x06b6d4, secondary: 0x3b82f6, ambient: 0x081528 },
         { id: 'about', name: 'about', primary: 0x6366f1, secondary: 0x06b6d4, ambient: 0x0c1126 },
@@ -503,10 +503,16 @@ class InteractionEngine {
     }
   }
 
+  private lastStepTime = 0;
+
   /**
-   * Called per-frame in unified tick to decay velocities naturally
+   * Called per-frame in unified tick to decay velocities naturally (deduplicated across loops)
    */
   public step() {
+    const now = performance.now();
+    if (now - this.lastStepTime < 12) return;
+    this.lastStepTime = now;
+
     this.state.smoothedSpeed += (this.state.speed - this.state.smoothedSpeed) * 0.08;
     this.state.speed *= 0.91; // decay
 

@@ -69,10 +69,15 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     }
 
     const finePointerQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
-    let isFinePointer = finePointerQuery.matches;
+    const anyFineQuery = window.matchMedia('(any-pointer: fine)');
+    let isFinePointer = finePointerQuery.matches || anyFineQuery.matches;
+    let lastNativeHidden: boolean | null = null;
 
     const syncCursorClass = (shouldHideNative: boolean) => {
-      if (shouldHideNative && isFinePointer) {
+      const nextHidden = Boolean(shouldHideNative && isFinePointer);
+      if (lastNativeHidden === nextHidden) return;
+      lastNativeHidden = nextHidden;
+      if (nextHidden) {
         document.documentElement.classList.add('custom-cursor-enabled');
       } else {
         document.documentElement.classList.remove('custom-cursor-enabled');
@@ -80,25 +85,28 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     };
     syncCursorClass(true);
 
-    const handlePointerMediaChange = (e: MediaQueryListEvent) => {
-      isFinePointer = e.matches;
+    const handlePointerMediaChange = () => {
+      isFinePointer = finePointerQuery.matches || anyFineQuery.matches;
       syncCursorClass(isFinePointer);
       if (badgeWrapRef.current) {
         badgeWrapRef.current.style.opacity = isFinePointer ? '1' : '0';
       }
     };
     finePointerQuery.addEventListener('change', handlePointerMediaChange);
+    anyFineQuery.addEventListener('change', handlePointerMediaChange);
 
     if (!canvas) {
       return () => {
         finePointerQuery.removeEventListener('change', handlePointerMediaChange);
+        anyFineQuery.removeEventListener('change', handlePointerMediaChange);
         document.documentElement.classList.remove('custom-cursor-enabled');
       };
     }
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) {
       return () => {
         finePointerQuery.removeEventListener('change', handlePointerMediaChange);
+        anyFineQuery.removeEventListener('change', handlePointerMediaChange);
         document.documentElement.classList.remove('custom-cursor-enabled');
       };
     }
@@ -107,12 +115,20 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const clickPulses: ClickImpactPulse[] = [];
     let isPointerPressed = false;
-    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    let viewW = window.innerWidth;
+    let viewH = window.innerHeight;
+    let needsFullClear = true;
+    let prevDrawRect: { x: number; y: number; w: number; h: number } | null = null;
 
     const resizeCanvas = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.floor(window.innerWidth * dpr);
-      canvas.height = Math.floor(window.innerHeight * dpr);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      viewW = window.innerWidth;
+      viewH = window.innerHeight;
+      canvas.width = Math.floor(viewW * dpr);
+      canvas.height = Math.floor(viewH * dpr);
+      needsFullClear = true;
+      prevDrawRect = null;
     };
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas, { passive: true });
@@ -155,6 +171,13 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     };
 
     const handleRawPointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' && !isFinePointer) {
+        isFinePointer = true;
+        syncCursorClass(true);
+      } else if (e.pointerType === 'touch' && isFinePointer) {
+        isFinePointer = false;
+        syncCursorClass(false);
+      }
       lastHoverTargetRef.current = e.target;
     };
 
@@ -230,9 +253,14 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
 
     const handlePointerDown = (e: PointerEvent) => {
       const now = performance.now();
+      lastHoverTargetRef.current = e.target;
+      if (e.pointerType === 'mouse' && !isFinePointer) {
+        isFinePointer = true;
+      }
       controller.notifyClick(now);
       isPointerPressed = true;
       boostUntilRef.current = now + 260;
+      applyInteractionTargets(now);
 
       if (clickPulses.length >= 6) clickPulses.shift();
       clickPulses.push({
@@ -315,94 +343,136 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
       const sc = currentScaleRef.current;
       const asteroidScale = sc * 1.24;
 
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-
-      // 1. Render crisp Asteroid Impact Click Shockwave Rings right at click point
-      if (clickPulses.length > 0) {
-        for (let i = clickPulses.length - 1; i >= 0; i--) {
-          const pulse = clickPulses[i];
-          pulse.age += dt;
-          if (pulse.age >= pulse.maxAge) {
-            clickPulses.splice(i, 1);
-            continue;
-          }
-
-          const p = pulse.age / pulse.maxAge;
-          const ease = 1 - Math.pow(1 - p, 3);
-          const fade = Math.pow(1 - p, 1.5);
-          const maxR = prefersReducedMotion ? 22 : pulse.isTouch ? 34 : 38;
-
-          ctx.save();
-          ctx.translate(pulse.x, pulse.y);
-
-          // Outer electric-cyan shockwave ring
-          const outerR = 3 + ease * maxR;
-          ctx.strokeStyle = `rgba(125, 211, 252, ${(0.88 * fade).toFixed(3)})`;
-          ctx.lineWidth = Math.max(0.75, 2.1 * (1 - p));
-          ctx.beginPath();
-          ctx.arc(0, 0, outerR, 0, Math.PI * 2);
-          ctx.stroke();
-
-          // Inner warm-amber meteorite strike ring
-          const innerR = 2 + ease * (maxR * 0.56);
-          ctx.strokeStyle = `rgba(251, 146, 60, ${(0.78 * fade).toFixed(3)})`;
-          ctx.lineWidth = Math.max(0.65, 1.6 * (1 - p));
-          ctx.beginPath();
-          ctx.arc(0, 0, innerR, 0, Math.PI * 2);
-          ctx.stroke();
-
-          // Brief pinpoint impact glint cross right at tip (first 0.16s)
-          if (p < 0.38 && !prefersReducedMotion) {
-            const glintFade = 1 - p / 0.38;
-            const glintLen = 6 + (1 - glintFade) * 6;
-            ctx.strokeStyle = `rgba(255, 251, 235, ${(0.95 * glintFade).toFixed(3)})`;
-            ctx.lineWidth = 1.4 * glintFade;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(-glintLen, 0);
-            ctx.lineTo(glintLen, 0);
-            ctx.moveTo(0, -glintLen);
-            ctx.lineTo(0, glintLen);
-            ctx.stroke();
-          }
-
-          ctx.restore();
-        }
-      }
-
       const shouldDrawAsteroid =
         isFinePointer && isVisibleRef.current && currentAlphaMultRef.current > 0.02;
 
-      if (shouldDrawAsteroid) {
-        const rx = cursorPos.current.x;
-        const ry = cursorPos.current.y;
+      const hasPulses = clickPulses.length > 0;
+      const isSettled =
+        !hasPulses &&
+        !isPointerPressed &&
+        !isBoosting &&
+        Math.abs(tx - cursorPos.current.x) < 0.15 &&
+        Math.abs(ty - cursorPos.current.y) < 0.15 &&
+        Math.abs(targetTiltRef.current - tiltAngleRef.current) < 0.08 &&
+        Math.abs(desiredScale - currentScaleRef.current) < 0.004 &&
+        Math.abs((isFinePointer ? targetAlphaMultRef.current : 0) - currentAlphaMultRef.current) < 0.004;
 
-        ctx.save();
-        ctx.translate(rx, ry);
-        ctx.rotate((tiltAngleRef.current * Math.PI) / 180);
+      // Skip redundant 2D canvas repaints when pointer is completely stationary (e.g. during wheel scrolling)
+      if (!isSettled || needsFullClear || !prevDrawRect) {
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (needsFullClear || hasPulses || !prevDrawRect) {
+          ctx.clearRect(0, 0, viewW, viewH);
+          needsFullClear = false;
+        } else {
+          ctx.clearRect(prevDrawRect.x, prevDrawRect.y, prevDrawRect.w, prevDrawRect.h);
+        }
 
-        ctx.shadowColor = isPointerPressed || isBoosting
-          ? 'rgba(251, 146, 60, 0.55)'
-          : hoverGlowRef.current > 0.25
-            ? 'rgba(56, 189, 248, 0.45)'
-            : 'rgba(2, 6, 23, 0.68)';
-        ctx.shadowBlur = isPointerPressed || isBoosting ? 10 : hoverGlowRef.current > 0.25 ? 8 : 5;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 1.5;
+        let minX = viewW;
+        let minY = viewH;
+        let maxX = 0;
+        let maxY = 0;
+        let drewAnything = false;
 
-        drawRealAsteroid(
-          ctx,
-          asteroidScale,
-          currentEnergyRef.current,
-          currentAlphaMultRef.current,
-          timeSec,
-          hoverGlowRef.current
-        );
-        ctx.restore();
+        // 1. Render crisp Asteroid Impact Click Shockwave Rings right at click point
+        if (hasPulses) {
+          for (let i = clickPulses.length - 1; i >= 0; i--) {
+            const pulse = clickPulses[i];
+            pulse.age += dt;
+            if (pulse.age >= pulse.maxAge) {
+              clickPulses.splice(i, 1);
+              continue;
+            }
 
-        ctx.globalAlpha = 1;
-        ctx.globalCompositeOperation = 'source-over';
+            const p = pulse.age / pulse.maxAge;
+            const ease = 1 - Math.pow(1 - p, 3);
+            const fade = Math.pow(1 - p, 1.5);
+            const maxR = prefersReducedMotion ? 22 : pulse.isTouch ? 34 : 38;
+
+            ctx.save();
+            ctx.translate(pulse.x, pulse.y);
+
+            const outerR = 3 + ease * maxR;
+            ctx.strokeStyle = `rgba(125, 211, 252, ${(0.88 * fade).toFixed(3)})`;
+            ctx.lineWidth = Math.max(0.75, 2.1 * (1 - p));
+            ctx.beginPath();
+            ctx.arc(0, 0, outerR, 0, Math.PI * 2);
+            ctx.stroke();
+
+            const innerR = 2 + ease * (maxR * 0.56);
+            ctx.strokeStyle = `rgba(251, 146, 60, ${(0.78 * fade).toFixed(3)})`;
+            ctx.lineWidth = Math.max(0.65, 1.6 * (1 - p));
+            ctx.beginPath();
+            ctx.arc(0, 0, innerR, 0, Math.PI * 2);
+            ctx.stroke();
+
+            if (p < 0.38 && !prefersReducedMotion) {
+              const glintFade = 1 - p / 0.38;
+              const glintLen = 6 + (1 - glintFade) * 6;
+              ctx.strokeStyle = `rgba(255, 251, 235, ${(0.95 * glintFade).toFixed(3)})`;
+              ctx.lineWidth = 1.4 * glintFade;
+              ctx.lineCap = 'round';
+              ctx.beginPath();
+              ctx.moveTo(-glintLen, 0);
+              ctx.lineTo(glintLen, 0);
+              ctx.moveTo(0, -glintLen);
+              ctx.lineTo(0, glintLen);
+              ctx.stroke();
+            }
+
+            ctx.restore();
+            minX = Math.min(minX, pulse.x - outerR - 8);
+            minY = Math.min(minY, pulse.y - outerR - 8);
+            maxX = Math.max(maxX, pulse.x + outerR + 8);
+            maxY = Math.max(maxY, pulse.y + outerR + 8);
+            drewAnything = true;
+          }
+          // Ensure clean sweep on the frame right after pulses finish
+          if (clickPulses.length === 0) {
+            needsFullClear = true;
+          }
+        }
+
+        if (shouldDrawAsteroid) {
+          const rx = cursorPos.current.x;
+          const ry = cursorPos.current.y;
+
+          ctx.save();
+          ctx.translate(rx, ry);
+          ctx.rotate((tiltAngleRef.current * Math.PI) / 180);
+
+          drawRealAsteroid(
+            ctx,
+            asteroidScale,
+            currentEnergyRef.current,
+            currentAlphaMultRef.current,
+            timeSec,
+            hoverGlowRef.current
+          );
+          ctx.restore();
+
+          ctx.globalAlpha = 1;
+          ctx.globalCompositeOperation = 'source-over';
+
+          const pad = Math.ceil(56 * Math.max(1, asteroidScale));
+          minX = Math.min(minX, rx - pad);
+          minY = Math.min(minY, ry - pad);
+          maxX = Math.max(maxX, rx + pad);
+          maxY = Math.max(maxY, ry + pad);
+          drewAnything = true;
+        }
+
+        if (drewAnything) {
+          const cx = Math.max(0, Math.floor(minX));
+          const cy = Math.max(0, Math.floor(minY));
+          prevDrawRect = {
+            x: cx,
+            y: cy,
+            w: Math.min(viewW - cx, Math.ceil(maxX - cx)),
+            h: Math.min(viewH - cy, Math.ceil(maxY - cy)),
+          };
+        } else {
+          prevDrawRect = null;
+        }
       }
 
       rafId = requestAnimationFrame(tick);
@@ -413,6 +483,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     return () => {
       unsubscribe();
       finePointerQuery.removeEventListener('change', handlePointerMediaChange);
+      anyFineQuery.removeEventListener('change', handlePointerMediaChange);
       window.removeEventListener('resize', resizeCanvas);
       window.removeEventListener('orientationchange', resizeCanvas);
       window.removeEventListener('mouseenter', handlePointerEnter);
