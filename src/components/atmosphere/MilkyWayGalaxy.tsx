@@ -743,7 +743,7 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
     };
 
-    const particleCount = isMobile ? 16500 : 29000;
+    const particleCount = isSoftwareGl ? 24000 : isMobile ? 28000 : 58000;
     const positions = new Float32Array(particleCount * 3);
     const aColor = new Float32Array(particleCount * 3);
     const aRadius = new Float32Array(particleCount);
@@ -767,22 +767,22 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
 
     const tightness = 3.25;
 
-    // 7 crisp 3D Globular Clusters orbiting above/below the galactic core for parallax depth
-    const globularClusters = Array.from({ length: 7 }, () => ({
-      r: 0.14 + rand() * 0.42,
+    // 11 crisp 3D Globular Clusters orbiting above/below the galactic core for parallax depth
+    const globularClusters = Array.from({ length: 11 }, () => ({
+      r: 0.14 + rand() * 0.56,
       angle: rand() * Math.PI * 2,
-      height: (rand() < 0.5 ? -1 : 1) * (0.65 + rand() * 1.15),
+      height: (rand() < 0.5 ? -1 : 1) * (0.55 + rand() * 1.35),
     }));
 
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
       const roll = rand();
 
-      if (roll < 0.21) {
+      if (roll < 0.19) {
         // ------------------------------------------------------------------
         // A. CRISP LUMINOUS GALACTIC CORE & BAR (DIAMOND-WHITE TO ICE-BLUE)
         // ------------------------------------------------------------------
-        const rRaw = Math.pow(rand(), 2.15) * 0.29;
+        const rRaw = Math.pow(rand(), 2.1) * 0.30;
         const theta = rand() * Math.PI * 2;
         const bx = Math.cos(theta) * rRaw * 1.54;
         const bz = Math.sin(theta) * rRaw * 0.68;
@@ -795,27 +795,27 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
 
         aRadius[i] = rBar;
         aAngle[i] = aBar;
-        aHeight[i] = randGauss() * (0.62 * Math.exp(-rBar * 4.6) + 0.055);
+        aHeight[i] = randGauss() * (0.64 * Math.exp(-rBar * 4.5) + 0.055);
 
         const subRoll = rand();
-        if (subRoll < 0.60) {
+        if (subRoll < 0.64) {
           aKind[i] = 0;
-          aSize[i] = 0.42 + rand() * 0.54;
-          aAlpha[i] = 0.24 + (1 - Math.min(rBar / 0.29, 1)) * 0.34;
+          aSize[i] = 0.36 + rand() * 0.46;
+          aAlpha[i] = 0.18 + (1 - Math.min(rBar / 0.30, 1)) * 0.28;
         } else {
           aKind[i] = 1;
-          const mag = Math.pow(rand(), 2.1);
-          aSize[i] = 0.65 + mag * 1.42;
-          aAlpha[i] = 0.52 + mag * 0.48;
+          const mag = Math.pow(rand(), 2.25);
+          aSize[i] = 0.56 + mag * 1.38;
+          aAlpha[i] = 0.44 + mag * 0.54;
         }
 
         const coreT = Math.min(rBar / 0.28, 1.0);
         tmpCol.copy(colPureWhite).lerp(colSkyIce, Math.pow(coreT, 0.62));
-        if (rand() < 0.24) tmpCol.lerp(colCyanBright, 0.32);
+        if (rand() < 0.26) tmpCol.lerp(colCyanBright, 0.32);
         aColor[i3] = tmpCol.r;
         aColor[i3 + 1] = tmpCol.g;
         aColor[i3 + 2] = tmpCol.b;
-      } else if (roll < 0.84) {
+      } else if (roll < 0.83) {
         // ------------------------------------------------------------------
         // B. GRAND 4-ARM LOGARITHMIC SPIRAL DISK + INTERSTELLAR SHADOW DEPTH
         // ------------------------------------------------------------------
@@ -826,18 +826,18 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
         let shockOffset = 0;
 
         for (let attempt = 0; attempt < 3; attempt++) {
-          r = 0.08 + Math.pow(rand(), 0.86) * 1.02;
-          isPrimary = rand() < 0.68;
+          r = 0.08 + Math.pow(rand(), 0.85) * 1.04;
+          isPrimary = rand() < 0.66;
           const armIdx = (i + attempt) % 2;
           const baseAngle =
             (armIdx / 2) * Math.PI * 2 + (isPrimary ? 0 : Math.PI * 0.5);
 
           const spiralTwist = Math.log(1.0 + r * 5.2) * tightness;
           const gRaw = randGauss();
-          const armSpread = (isPrimary ? 0.105 : 0.145) + r * 0.135;
-          const asymSpread = gRaw < 0 ? gRaw * armSpread * 0.68 : gRaw * armSpread * 1.28;
-          const isSpur = rand() < 0.15;
-          const spurAngle = isSpur ? (rand() - 0.35) * 0.58 : 0;
+          const armSpread = (isPrimary ? 0.105 : 0.145) + r * 0.138;
+          const asymSpread = gRaw < 0 ? gRaw * armSpread * 0.68 : gRaw * armSpread * 1.30;
+          const isSpur = rand() < 0.18;
+          const spurAngle = isSpur ? (rand() - 0.35) * 0.62 : 0;
 
           shockOffset = asymSpread;
           angle = baseAngle + spiralTwist + asymSpread + spurAngle;
@@ -845,42 +845,42 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
           const nx = Math.cos(angle) * r * 3.8;
           const nz = Math.sin(angle) * r * 3.8;
           cloudDensity = fbm2D(nx + 10.2, nz + 5.7, 3);
-          if (cloudDensity > 0.30 || attempt === 2) break;
+          if (cloudDensity > 0.28 || attempt === 2) break;
         }
 
         aRadius[i] = r;
         aAngle[i] = angle;
-        aHeight[i] = randGauss() * (0.065 + 0.16 * r);
+        aHeight[i] = randGauss() * (0.068 + 0.17 * r);
 
-        const isNearShock = Math.abs(shockOffset) < 0.085 && r > 0.18 && r < 0.86;
+        const isNearShock = Math.abs(shockOffset) < 0.085 && r > 0.18 && r < 0.88;
         const isShadowTrough = shockOffset < -0.055 && r > 0.12 && r < 0.74;
-        const isClusterPocket = isNearShock && cloudDensity > 0.58 && rand() < 0.18;
-        const armWeight = isPrimary ? 1.0 : 0.68;
+        const isClusterPocket = isNearShock && cloudDensity > 0.56 && rand() < 0.20;
+        const armWeight = isPrimary ? 1.0 : 0.70;
 
         const subRoll = rand();
-        if (isClusterPocket && subRoll < 0.32) {
+        if (isClusterPocket && subRoll < 0.30) {
           aKind[i] = 2;
-          aSize[i] = 0.85 + rand() * 0.95;
-          aAlpha[i] = (0.14 + cloudDensity * 0.14) * armWeight;
+          aSize[i] = 0.80 + rand() * 0.92;
+          aAlpha[i] = (0.12 + cloudDensity * 0.13) * armWeight;
           tmpCol.copy(colVioletGlow).lerp(colCyanBright, rand() * 0.55);
-        } else if (subRoll < 0.60) {
+        } else if (subRoll < 0.62) {
           aKind[i] = 0;
-          aSize[i] = 0.42 + rand() * 0.56;
-          aAlpha[i] = (0.22 + cloudDensity * 0.30) * armWeight;
+          aSize[i] = 0.36 + rand() * 0.52;
+          aAlpha[i] = (0.19 + cloudDensity * 0.26) * armWeight;
           if (r < 0.30) {
             tmpCol.copy(colIceWhite).lerp(colSkyIce, rand() * 0.65);
-          } else if (rand() < 0.35) {
+          } else if (rand() < 0.36) {
             tmpCol.copy(colSapphire).lerp(colVioletGlow, rand() * 0.55);
           } else {
             tmpCol.copy(colSkyIce).lerp(colCyanBright, rand() * 0.55);
           }
         } else {
           aKind[i] = 1;
-          const mag = Math.pow(rand(), 2.3);
-          aSize[i] = 0.62 + mag * 1.72;
-          aAlpha[i] = (0.48 + mag * 0.52) * armWeight;
+          const mag = Math.pow(rand(), 2.35);
+          aSize[i] = 0.55 + mag * 1.78;
+          aAlpha[i] = (0.44 + mag * 0.56) * armWeight;
 
-          if (isNearShock && rand() < 0.62) {
+          if (isNearShock && rand() < 0.64) {
             tmpCol.copy(colCyanBright).lerp(colIceWhite, rand() * 0.65);
           } else if (r < 0.34) {
             tmpCol.copy(colPureWhite).lerp(colSkyIce, rand() * 0.55);
@@ -909,23 +909,23 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
         // ------------------------------------------------------------------
         // C. 3D GALACTIC HALO & ORBITING GLOBULAR CLUSTERS (Parallax Depth)
         // ------------------------------------------------------------------
-        const inCluster = rand() < 0.48;
+        const inCluster = rand() < 0.52;
         if (inCluster) {
           const cl = globularClusters[i % globularClusters.length];
-          aRadius[i] = Math.max(0.05, cl.r + randGauss() * 0.018);
-          aAngle[i] = cl.angle + randGauss() * 0.045;
-          aHeight[i] = cl.height + randGauss() * 0.14;
+          aRadius[i] = Math.max(0.05, cl.r + randGauss() * 0.017);
+          aAngle[i] = cl.angle + randGauss() * 0.042;
+          aHeight[i] = cl.height + randGauss() * 0.13;
           aKind[i] = 1;
-          aSize[i] = 0.52 + rand() * 0.72;
-          aAlpha[i] = 0.36 + rand() * 0.48;
+          aSize[i] = 0.48 + rand() * 0.70;
+          aAlpha[i] = 0.34 + rand() * 0.48;
           tmpCol.copy(colPureWhite).lerp(colSkyIce, 0.35 + rand() * 0.4);
         } else {
-          aRadius[i] = 0.12 + Math.pow(rand(), 0.7) * 0.95;
+          aRadius[i] = 0.12 + Math.pow(rand(), 0.7) * 0.98;
           aAngle[i] = rand() * Math.PI * 2;
-          aHeight[i] = randGauss() * 1.45;
+          aHeight[i] = randGauss() * 1.55;
           aKind[i] = 1;
-          aSize[i] = 0.45 + rand() * 0.62;
-          aAlpha[i] = 0.24 + rand() * 0.36;
+          aSize[i] = 0.42 + rand() * 0.60;
+          aAlpha[i] = 0.22 + rand() * 0.36;
           tmpCol.copy(colIceWhite).lerp(colOTypeBlue, rand() * 0.55);
         }
         aColor[i3] = tmpCol.r;
@@ -936,17 +936,17 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
         // D. DEEP NIGHT-SKY BACKGROUND & 1ST-MAGNITUDE JEWEL STARS
         // ------------------------------------------------------------------
         aKind[i] = 3;
-        positions[i3] = (rand() - 0.5) * 48.0;
-        positions[i3 + 1] = (rand() - 0.5) * 30.0;
+        positions[i3] = (rand() - 0.5) * 52.0;
+        positions[i3 + 1] = (rand() - 0.5) * 32.0;
         positions[i3 + 2] = -20.0 + rand() * 24.0;
 
         aRadius[i] = -1.0;
         aAngle[i] = rand() * Math.PI * 2;
         aHeight[i] = rand();
 
-        const isJewel = rand() < 0.09;
-        aSize[i] = isJewel ? 1.45 + rand() * 1.45 : 0.42 + rand() * 0.66;
-        aAlpha[i] = isJewel ? 0.68 + rand() * 0.32 : 0.20 + rand() * 0.40;
+        const isJewel = rand() < 0.10;
+        aSize[i] = isJewel ? 1.40 + rand() * 1.50 : 0.38 + rand() * 0.64;
+        aAlpha[i] = isJewel ? 0.68 + rand() * 0.32 : 0.18 + rand() * 0.38;
 
         const skyTemp = rand();
         if (skyTemp < 0.54) {
