@@ -72,7 +72,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   }, []);
 
   // Timed left-side "Explore Work" popup:
-  // Appears 5s after entering main page -> stays visible 3s -> slides toward Milky Way and dissolves
+  // Appears 5s after entering main page -> stays visible 3s -> slides back off the left edge where it came from
   useEffect(() => {
     if (!entered) {
       setPopupPhase('hidden');
@@ -91,7 +91,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
     const clearTimer = window.setTimeout(() => {
       setPopupPhase('hidden');
-    }, 9500);
+    }, 8850);
 
     return () => {
       clearTimeout(showTimer);
@@ -120,19 +120,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     >
       {/* PART 1: Pure Unobstructed Full-Viewport Milky Way Canvas (100dvh) */}
       <div className="relative w-full min-h-screen min-h-[100dvh] pointer-events-none">
-        {/* Left-Side Timed "Explore Work" Popup (5s delay -> 3s visible -> slides into Milky Way & dissolves) */}
+        {/* Left-Side Timed "Explore Work" Popup (5s delay -> 3s visible -> slides back to the left edge) */}
         {popupPhase !== 'hidden' && (
           <motion.div
-            initial={{ opacity: 0, x: -110, y: 0, scale: 0.96, filter: 'blur(0px)' }}
+            initial={{ opacity: 0, x: -150, y: 0, scale: 0.96 }}
             animate={
               popupPhase === 'visible'
-                ? { opacity: 1, x: 0, y: 0, scale: 1, filter: 'blur(0px)' }
-                : { opacity: 0, x: '38vw', y: '-28vh', scale: 0.45, filter: 'blur(12px)' }
+                ? { opacity: 1, x: 0, y: 0, scale: 1 }
+                : { opacity: 0, x: -160, y: 0, scale: 0.96 }
             }
             transition={
               popupPhase === 'visible'
                 ? { duration: 0.75, ease: [0.16, 1, 0.3, 1] }
-                : { duration: 1.45, ease: [0.32, 0, 0.2, 1] }
+                : { duration: 0.7, ease: [0.4, 0, 0.2, 1] }
             }
             className={`fixed left-5 sm:left-8 md:left-12 bottom-10 sm:bottom-14 z-30 ${
               popupPhase === 'visible' ? 'pointer-events-auto' : 'pointer-events-none'
