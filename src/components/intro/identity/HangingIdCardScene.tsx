@@ -22,6 +22,8 @@ export interface HangingIdCardSceneProps {
   isDocked?: boolean;
   isExtractingName?: boolean;
   isRetracting?: boolean;
+  cornerMode?: boolean;
+  anchorScreenX?: number;
   externalImpulseRef?: React.MutableRefObject<{
     velZ: number;
     velY: number;
@@ -238,6 +240,8 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
   isDocked = false,
   isExtractingName = false,
   isRetracting = false,
+  cornerMode = false,
+  anchorScreenX = 88,
   externalImpulseRef,
   onCardHoverChange,
   onGitHubHoverChange,
@@ -255,6 +259,9 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
   const isDockedRef = useRef<boolean>(isDocked);
   const isExtractingNameRef = useRef<boolean>(isExtractingName);
   const isRetractingRef = useRef<boolean>(isRetracting);
+  const cornerModeRef = useRef<boolean>(cornerMode);
+  const anchorScreenXRef = useRef<number>(anchorScreenX);
+  const wakeLoopRef = useRef<((reDrop: boolean) => void) | null>(null);
   const callbacksRef = useRef({
     onCardHoverChange,
     onGitHubHoverChange,
@@ -281,8 +288,23 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
   }, [isExtractingName]);
 
   useEffect(() => {
+    const prev = isRetractingRef.current;
     isRetractingRef.current = isRetracting;
+    if (prev !== isRetracting) {
+      wakeLoopRef.current?.(!isRetracting);
+    }
   }, [isRetracting]);
+
+  useEffect(() => {
+    cornerModeRef.current = cornerMode;
+    if (cornerMode && !isRetractingRef.current) {
+      wakeLoopRef.current?.(true);
+    }
+  }, [cornerMode]);
+
+  useEffect(() => {
+    anchorScreenXRef.current = anchorScreenX;
+  }, [anchorScreenX]);
 
   useEffect(() => {
     callbacksRef.current = {
@@ -860,9 +882,10 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     let extractTriggered = false;
     let extractProgress = 0;
     let retractTriggered = false;
-    let retractElapsed = 0;
     let retractCompleted = false;
-    let retractStartY = 0;
+    let isIdleSleeping = false;
+    let currentRigScale = 1.0;
+    let currentRigX = 0.0;
 
     const updateHoverStates = () => {
       if (!isPointerInside || isEnteringRef.current) {
@@ -1002,8 +1025,8 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
         : null;
     resizeObserver?.observe(container);
 
-    canvas.addEventListener('pointermove', handlePointerMove, { passive: true });
-    canvas.addEventListener('pointerleave', handlePointerLeave, { passive: true });
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    document.addEventListener('mouseleave', handlePointerLeave, { passive: true });
     canvas.addEventListener('click', handleClick);
     window.addEventListener('resize', handleResize, { passive: true });
 
@@ -1061,55 +1084,88 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       lastTime = now;
       elapsed += dt;
 
-      // 1. Trigger weighty lanyard descent after brief opening beat, or retract back up where it came from
+      // 1. Continuous reversible vertical suspension physics (drop <-> retract <-> corner hover-peek)
       if (!dropStarted && elapsed >= (heroDropMode ? 0.04 : 0.12)) {
         dropStarted = true;
       }
 
+      const halfVisibleH = Math.tan(THREE.MathUtils.degToRad(35 * 0.5)) * baseCamZ;
+      const halfVisibleW = halfVisibleH * camera.aspect;
+      const isCorner = cornerModeRef.current;
+
+      const targetRigScale = isCorner ? (camera.aspect < 0.72 ? 0.48 : 0.56) : 1.0;
+      const scaleDamp = 1 - Math.exp(-9.5 * dt);
+      currentRigScale += (targetRigScale - currentRigScale) * scaleDamp;
+      pendulumPivot.scale.setScalar(currentRigScale);
+
+      let targetRigX = 0;
+      if (isCorner) {
+        const vw = container.clientWidth || window.innerWidth || 1280;
+        const anchorNdcX = THREE.MathUtils.clamp((anchorScreenXRef.current / vw) * 2 - 1, -0.95, 0.95);
+        const rawWorldX = anchorNdcX * halfVisibleW + 0.10;
+        const cardHalfWWorld = (CARD_W * 0.5) * currentRigScale;
+        const minSafeX = -halfVisibleW + cardHalfWWorld + 0.16;
+        targetRigX = Math.max(minSafeX, rawWorldX);
+      }
+      currentRigX += (targetRigX - currentRigX) * scaleDamp;
+      dropGroup.position.x = currentRigX;
+
       if (isRetractingRef.current) {
         if (!retractTriggered) {
           retractTriggered = true;
-          retractStartY = dropY;
-          retractElapsed = 0;
-          velZ -= 0.42;
-          velX += 0.28;
-          velY -= 0.35;
+          velZ -= 0.34;
+          velX += 0.22;
+          velY -= 0.28;
         }
-        retractElapsed += dt;
-        const p = Math.min(1, retractElapsed / 1.12);
-        const easeUp =
-          p < 0.45
-            ? 2.2 * p * p
-            : 1 - Math.pow(-2 * p + 2, 3) / 2;
-        const targetRetractY = 7.4;
-        dropY = THREE.MathUtils.lerp(retractStartY, targetRetractY, Math.min(1, easeUp));
+        const targetRetractY = isCorner ? Math.max(4.4, halfVisibleH * 2.35) : 7.4;
+        // Smooth upward spring-damped glide (reverses seamlessly if user re-enters near radius!)
+        const upK = isCorner ? 18.0 : 15.5;
+        const upC = isCorner ? 8.2 : 7.8;
+        const upForce = upK * (targetRetractY - dropY) - upC * dropVel;
+        dropVel += upForce * dt;
+        dropY += dropVel * dt;
         dropGroup.position.y = dropY;
 
-        if (p >= 1 && !retractCompleted) {
-          retractCompleted = true;
-          callbacksRef.current.onRetractComplete?.();
-          return;
+        if (dropY >= targetRetractY - 0.25 && Math.abs(dropVel) < 0.14) {
+          dropY = targetRetractY;
+          dropVel = 0;
+          dropGroup.position.y = dropY;
+          if (!retractCompleted) {
+            retractCompleted = true;
+            callbacksRef.current.onRetractComplete?.();
+          }
+          // Put render loop to sleep when fully retracted offscreen (zero GPU/CPU cost)
+          if (isCorner || heroDropMode) {
+            renderer.clear();
+            isIdleSleeping = true;
+            return;
+          }
         }
       } else if (dropStarted) {
-        // Gravity-weighted spring descent (smoothly settles into hanging position in ~0.95s)
-        const dropK = heroDropMode ? 22.0 : 14.5;
-        const dropC = heroDropMode ? 7.2 : 5.6;
-        const dropForce = -dropK * dropY - dropC * dropVel;
+        retractTriggered = false;
+        const cornerRestY = halfVisibleH * (camera.aspect < 0.72 ? 0.34 : 0.38);
+        const targetDropY = isCorner ? cornerRestY : 0;
+
+        // Gravity-weighted spring descent
+        const dropK = isCorner ? 19.0 : heroDropMode ? 22.0 : 14.5;
+        const dropC = isCorner ? 7.6 : heroDropMode ? 7.2 : 5.6;
+        const dropForce = dropK * (targetDropY - dropY) - dropC * dropVel;
         dropVel += dropForce * dt;
         dropY += dropVel * dt;
         dropGroup.position.y = dropY;
 
         if (
           !dropSettled &&
-          ((Math.abs(dropY) < 0.09 && Math.abs(dropVel) < 0.20) || elapsed >= 1.15)
+          !isCorner &&
+          ((Math.abs(dropY - targetDropY) < 0.09 && Math.abs(dropVel) < 0.20) || elapsed >= 1.15)
         ) {
           dropSettled = true;
           callbacksRef.current.onDropSettled?.();
         }
       }
 
-      // 1b. Name extraction off the front face of the ID card
-      if (isExtractingNameRef.current && !extractTriggered) {
+      // 1b. Name extraction off the front face of the ID card (initial hero drop only)
+      if (!isCorner && isExtractingNameRef.current && !extractTriggered) {
         extractTriggered = true;
         // Subtle tactile recoil as "GARV SHAW" detaches from the card surface
         velX -= 0.38;
@@ -1118,7 +1174,13 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
         callbacksRef.current.onNameScreenRect?.(projectNameScreenRect());
       }
 
-      if (extractTriggered) {
+      if (isCorner) {
+        // Restore complete crisp card face when summoned via top-left corner hover
+        extractTriggered = false;
+        extractProgress = 0;
+        nameMaskMat.uniforms.uExtract.value = 0;
+        nameMaskMat.uniforms.uFlash.value = 0;
+      } else if (extractTriggered) {
         extractProgress = Math.min(1, extractProgress + dt / 0.42);
         const smoothExt = extractProgress * extractProgress * (3 - 2 * extractProgress);
         const flashCurve = Math.sin(Math.min(1, extractProgress * 1.15) * Math.PI);
@@ -1268,15 +1330,36 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       rafId = requestAnimationFrame(tick);
     };
 
+    wakeLoopRef.current = (reDrop: boolean) => {
+      if (disposed) return;
+      if (reDrop) {
+        retractTriggered = false;
+        dropStarted = true;
+        velZ -= 0.32;
+        velX += 0.16;
+        velY += 0.42;
+        if (isIdleSleeping) {
+          isIdleSleeping = false;
+          lastTime = performance.now();
+          rafId = requestAnimationFrame(tick);
+        }
+      } else if (isIdleSleeping && !isRetractingRef.current) {
+        isIdleSleeping = false;
+        lastTime = performance.now();
+        rafId = requestAnimationFrame(tick);
+      }
+    };
+
     rafId = requestAnimationFrame(tick);
 
     return () => {
       disposed = true;
+      wakeLoopRef.current = null;
       cancelAnimationFrame(rafId);
       resizeObserver?.disconnect();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      canvas.removeEventListener('pointermove', handlePointerMove);
-      canvas.removeEventListener('pointerleave', handlePointerLeave);
+      window.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('mouseleave', handlePointerLeave);
       canvas.removeEventListener('click', handleClick);
       window.removeEventListener('resize', handleResize);
 

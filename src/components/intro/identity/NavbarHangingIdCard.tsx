@@ -40,22 +40,37 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
   const [phase, setPhase] = useState<SequencePhase>('idle');
   const [webGlFailed, setWebGlFailed] = useState(false);
   const [showCardScene, setShowCardScene] = useState(false);
+  const [isHoverPeek, setIsHoverPeek] = useState(false);
+  const [anchorScreenX, setAnchorScreenX] = useState(88);
   const [nameGlide, setNameGlide] = useState<ExtractedNameGlide | null>(null);
   const [isNameMoving, setIsNameMoving] = useState(false);
 
   const githubAnchorRef = useRef<HTMLAnchorElement>(null);
   const fallbackNameRef = useRef<HTMLDivElement>(null);
   const timersRef = useRef<number[]>([]);
+  const isHoverPeekRef = useRef(false);
   const onBrandSettledRef = useRef(onBrandSettled);
 
   useEffect(() => {
     onBrandSettledRef.current = onBrandSettled;
   }, [onBrandSettled]);
 
+  useEffect(() => {
+    isHoverPeekRef.current = isHoverPeek;
+  }, [isHoverPeek]);
+
   const clearTimers = useCallback(() => {
     timersRef.current.forEach((id) => window.clearTimeout(id));
     timersRef.current = [];
   }, []);
+
+  // Track horizontal screen center of top-left GARV SHAW anchor for corner hang alignment
+  const syncAnchorX = useCallback(() => {
+    const rect = anchorRef.current?.getBoundingClientRect();
+    if (rect && rect.width > 0) {
+      setAnchorScreenX(rect.left + rect.width * 0.5);
+    }
+  }, [anchorRef]);
 
   // Compute exact pixel-to-pixel flight path from GARV SHAW on the 3D card -> top-left Navbar corner
   const computeNameGlide = useCallback(
@@ -136,16 +151,16 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
       }
     }
 
+    // Wait 1.5s after "GARV SHAW" begins gliding to top-left corner, then smoothly raise the card up
     const retractTimer = window.setTimeout(() => {
       setPhase('retracting');
-    }, 420);
+    }, 1500);
 
     const fallbackEndTimer = window.setTimeout(() => {
       if (webGlFailed) {
-        setShowCardScene(false);
         setPhase('done');
       }
-    }, 1650);
+    }, 2650);
 
     timersRef.current.push(retractTimer, fallbackEndTimer);
   }, [webGlFailed, computeNameGlide]);
@@ -165,10 +180,11 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
   // 1) Big hanging ID card descends from top over the Milky Way
   // 2) Hangs smoothly for a full 3 seconds
   // 3) "GARV SHAW" lifts off the ID card & glides up to the top-left corner
-  // 4) The ID card retracts smoothly back UP where it came from
+  // 4) 1.5 seconds after the name starts moving, the ID card retracts smoothly back UP
   useEffect(() => {
     clearTimers();
     dropSettledStartedRef.current = false;
+    setIsHoverPeek(false);
 
     if (!entered) {
       setPhase('idle');
@@ -185,6 +201,7 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
       return;
     }
 
+    syncAnchorX();
     setPhase('hanging');
     setShowCardScene(true);
     setNameGlide(null);
@@ -198,7 +215,62 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
     timersRef.current.push(fallbackDropTimer);
 
     return () => clearTimers();
-  }, [entered, prefersReducedMotion, clearTimers, startThreeSecondHangCountdown]);
+  }, [entered, prefersReducedMotion, clearTimers, startThreeSecondHangCountdown, syncAnchorX]);
+
+  // Near-radius cursor hover detector around top-left GARV SHAW corner once initial sequence finishes
+  useEffect(() => {
+    if (!entered || prefersReducedMotion || phase !== 'done') return;
+
+    syncAnchorX();
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
+      const anchorEl = anchorRef.current;
+      if (!anchorEl) return;
+
+      const rect = anchorEl.getBoundingClientRect();
+      const cx = rect.left + rect.width * 0.5;
+      const cy = rect.top + rect.height * 0.5;
+
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+
+      if (!isHoverPeekRef.current) {
+        // Cursor enters near radius of GARV SHAW in the top-left corner -> start hanging smoothly
+        if (dist <= 135 || (e.clientX <= rect.right + 75 && e.clientY <= rect.bottom + 75)) {
+          setAnchorScreenX(cx);
+          setIsHoverPeek(true);
+        }
+      } else {
+        // Stay hanging while cursor remains near GARV SHAW or over the hanging corner card;
+        // once cursor moves far away -> smoothly pull the card back up
+        const maxZoneY = Math.min(460, Math.max(320, window.innerHeight * 0.56));
+        const withinZone = e.clientX <= rect.left + 290 && e.clientY <= maxZoneY;
+        if (!withinZone) {
+          setIsHoverPeek(false);
+        }
+      }
+    };
+
+    const handleLeave = () => {
+      if (isHoverPeekRef.current) {
+        setIsHoverPeek(false);
+      }
+    };
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    window.addEventListener('resize', syncAnchorX, { passive: true });
+    document.addEventListener('mouseleave', handleLeave, { passive: true });
+    window.addEventListener('blur', handleLeave);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('resize', syncAnchorX);
+      document.removeEventListener('mouseleave', handleLeave);
+      window.removeEventListener('blur', handleLeave);
+    };
+  }, [entered, prefersReducedMotion, phase, anchorRef, syncAnchorX]);
 
   const handleNameScreenRect = useCallback(
     (rect: NameScreenRect) => {
@@ -212,8 +284,7 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
   }, [startThreeSecondHangCountdown]);
 
   const handleRetractComplete = useCallback(() => {
-    setShowCardScene(false);
-    setPhase('done');
+    setPhase((prev) => (prev === 'retracting' ? 'done' : prev));
   }, []);
 
   const handleNameGlideComplete = useCallback(() => {
@@ -232,8 +303,9 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
 
   if (!entered || prefersReducedMotion) return null;
 
+  const isCornerMode = phase === 'done';
   const isExtracting = phase === 'extracting' || phase === 'retracting';
-  const isRetracting = phase === 'retracting';
+  const isRetracting = isCornerMode ? !isHoverPeek : phase === 'retracting';
 
   return (
     <>
@@ -249,18 +321,26 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
         Open Garv Shaw GitHub Profile
       </a>
 
-      {/* 1. Big Heroic 3D Hanging ID Card descending from top & retracting straight back up */}
+      {/* 1. Hanging 3D ID Card: Initial center drop + corner near-radius hover-peek hang/retract */}
       {showCardScene &&
         (webGlFailed ? (
           <motion.div
             key="fallback-big-id-card"
             initial={{ y: '-110vh' }}
-            animate={{ y: isRetracting ? '-115vh' : '0vh' }}
+            animate={{
+              y: isRetracting ? '-115vh' : isCornerMode ? '3.5rem' : '0vh',
+              scale: isCornerMode ? 0.56 : 1,
+            }}
             transition={{
-              duration: isRetracting ? 1.1 : 1.05,
+              duration: isRetracting ? 0.95 : 1.0,
               ease: LUXURY_EASE,
             }}
-            className="fixed inset-x-0 top-0 z-[45] flex flex-col items-center pointer-events-none select-none"
+            style={{ transformOrigin: 'top center' }}
+            className={`fixed top-0 flex flex-col pointer-events-none select-none ${
+              isCornerMode
+                ? 'left-4 sm:left-8 items-start z-[35]'
+                : 'inset-x-0 items-center z-[45]'
+            }`}
           >
             <div className="w-7 h-28 sm:h-36 bg-gradient-to-b from-[#0A0E17] via-[#131D30] to-[#0D1320] border-x border-sky-400/30 shadow-xl" />
             <div className="w-10 h-4 rounded-sm bg-gradient-to-r from-[#5B8AB2] via-[#CAE8FF] to-[#5B8AB2] -mt-0.5" />
@@ -273,7 +353,7 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
               <div
                 ref={fallbackNameRef}
                 className={`font-editorial-serif text-4xl sm:text-[42px] text-slate-100 leading-none tracking-wide mb-2 transition-opacity duration-300 ${
-                  isExtracting ? 'opacity-0' : 'opacity-100'
+                  !isCornerMode && isExtracting ? 'opacity-0' : 'opacity-100'
                 }`}
               >
                 {IDENTITY_DATA.name}
@@ -292,14 +372,20 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
           </motion.div>
         ) : (
           <div
-            className={`fixed inset-0 z-[45] select-none ${
-              isRetracting ? 'pointer-events-none' : 'pointer-events-auto'
+            className={`fixed inset-0 select-none ${
+              isCornerMode
+                ? 'z-[35] pointer-events-none'
+                : isRetracting
+                  ? 'z-[45] pointer-events-none'
+                  : 'z-[45] pointer-events-auto'
             }`}
           >
             <HangingIdCardScene
               transparent
               heroDropMode
-              isExtractingName={isExtracting}
+              cornerMode={isCornerMode}
+              anchorScreenX={anchorScreenX}
+              isExtractingName={!isCornerMode && isExtracting}
               isRetracting={isRetracting}
               onGitHubClick={handleGitHubClick}
               onNameScreenRect={handleNameScreenRect}

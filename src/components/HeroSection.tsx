@@ -83,15 +83,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
     const showTimer = window.setTimeout(() => {
       setPopupPhase('visible');
-    }, 5600);
+    }, 6650);
 
     const dissolveTimer = window.setTimeout(() => {
       setPopupPhase('dissolving');
-    }, 8600);
+    }, 9650);
 
     const clearTimer = window.setTimeout(() => {
       setPopupPhase('hidden');
-    }, 9450);
+    }, 10500);
 
     return () => {
       clearTimeout(showTimer);

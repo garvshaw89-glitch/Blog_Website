@@ -67,6 +67,73 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsBrandSettled(true);
   }, []);
 
+  const scrollRafRef = useRef<number>(0);
+
+  const smoothScrollToTop = useCallback(() => {
+    if (scrollRafRef.current) {
+      cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = 0;
+    }
+
+    const startY = window.scrollY || window.pageYOffset || 0;
+    if (startY <= 2) return;
+
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) {
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      return;
+    }
+
+    const duration = Math.min(1050, Math.max(480, startY * 0.24));
+    const startTime = performance.now();
+
+    const cancelOnUserInput = () => {
+      if (scrollRafRef.current) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = 0;
+      }
+      cleanupListeners();
+    };
+
+    const cleanupListeners = () => {
+      window.removeEventListener('wheel', cancelOnUserInput);
+      window.removeEventListener('touchstart', cancelOnUserInput);
+      window.removeEventListener('pointerdown', cancelOnUserInput);
+    };
+
+    window.addEventListener('wheel', cancelOnUserInput, { passive: true });
+    window.addEventListener('touchstart', cancelOnUserInput, { passive: true });
+    window.addEventListener('pointerdown', cancelOnUserInput, { passive: true });
+
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const t = Math.min(1, elapsed / duration);
+      // Quartic ease-out for silky luxury deceleration to y = 0 (bypasses CSS scroll-smooth stutter)
+      const easeOut = 1 - Math.pow(1 - t, 4);
+      const nextY = startY * (1 - easeOut);
+      window.scrollTo({ top: nextY, behavior: 'instant' as ScrollBehavior });
+
+      if (t < 1) {
+        scrollRafRef.current = requestAnimationFrame(step);
+      } else {
+        scrollRafRef.current = 0;
+        cleanupListeners();
+      }
+    };
+
+    scrollRafRef.current = requestAnimationFrame(step);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
+  }, []);
+
   const scrollToSection = (sectionId: string) => {
     setMobileMenuOpen(false);
     if (sectionId === 'contact' && onContactClick) {
@@ -94,10 +161,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              onClick={smoothScrollToTop}
               data-cursor="button"
               data-cursor-label="TOP"
-              className="flex items-center gap-2 group text-left cursor-pointer relative"
+              aria-label="Return smoothly to top of website"
+              className="flex items-center gap-2 group text-left cursor-pointer relative py-1 pr-2 active:scale-[0.98] transition-transform"
             >
               <span
                 ref={brandAnchorRef}
