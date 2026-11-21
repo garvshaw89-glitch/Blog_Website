@@ -32,6 +32,7 @@ export interface HangingIdCardSceneProps {
   onGitHubClick?: () => void;
   onCardBodyClick?: () => void;
   onNameScreenRect?: (rect: NameScreenRect) => void;
+  onDropSettled?: () => void;
   onRetractComplete?: () => void;
   onEnterProgress?: (progress: number) => void;
   onEnterComplete?: () => void;
@@ -243,6 +244,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
   onGitHubClick,
   onCardBodyClick,
   onNameScreenRect,
+  onDropSettled,
   onRetractComplete,
   onEnterProgress,
   onEnterComplete,
@@ -259,6 +261,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     onGitHubClick,
     onCardBodyClick,
     onNameScreenRect,
+    onDropSettled,
     onRetractComplete,
     onEnterProgress,
     onEnterComplete,
@@ -288,6 +291,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       onGitHubClick,
       onCardBodyClick,
       onNameScreenRect,
+      onDropSettled,
       onRetractComplete,
       onEnterProgress,
       onEnterComplete,
@@ -299,6 +303,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     onGitHubClick,
     onCardBodyClick,
     onNameScreenRect,
+    onDropSettled,
     onRetractComplete,
     onEnterProgress,
     onEnterComplete,
@@ -324,7 +329,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
 
     const width = container.clientWidth || window.innerWidth || 1280;
     const height = container.clientHeight || window.innerHeight || 720;
-    const pixelRatio = isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+    const pixelRatio = isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
 
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height);
@@ -823,6 +828,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     let prevPtrX = 0;
     let prevPtrY = 0;
     let isPointerInside = false;
+    let pointerDirty = false;
     let isHoveringCard = false;
     let isHoveringGitHub = false;
     let hoverBlend = 0;
@@ -834,13 +840,14 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     let dropY = 6.2;
     let dropVel = 0;
     let dropStarted = false;
+    let dropSettled = false;
 
-    let swingZ = 0.22; // initial release angle for authentic pendulum swing
-    let velZ = -0.78;
-    let swingX = -0.14;
-    let velX = 0.42;
-    let twistY = -0.42; // subtle twist as it drops into frame
-    let velY = 1.35;
+    let swingZ = 0.20; // initial release angle for authentic pendulum swing
+    let velZ = -0.72;
+    let swingX = -0.12;
+    let velX = 0.38;
+    let twistY = -0.36; // subtle twist as it drops into frame
+    let velY = 1.15;
 
     let cardLagRoll = 0;
     let cardLagRollVel = 0;
@@ -921,6 +928,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       prevPtrY = ny;
       pointerNdc.set(nx, ny);
       isPointerInside = true;
+      pointerDirty = true;
 
       // Impart subtle tactile pendulum impulse when gliding over/near the card
       if (!isEnteringRef.current && dropStarted && Math.abs(dropY) < 0.8) {
@@ -934,6 +942,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
 
     const handlePointerLeave = () => {
       isPointerInside = false;
+      pointerDirty = true;
       pointerNdc.set(0, 0);
     };
 
@@ -1001,6 +1010,19 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     // ------------------------------------------------------------------------
     // MAIN 60FPS PHYSICS & STUDIO RENDER LOOP
     // ------------------------------------------------------------------------
+    if (!isSoftwareGl) {
+      renderer.compile(scene, camera);
+    }
+
+    let isTabHidden = typeof document !== 'undefined' ? document.hidden : false;
+    const handleVisibilityChange = () => {
+      isTabHidden = document.hidden;
+      if (!isTabHidden) {
+        lastTime = performance.now();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     let rafId = 0;
     let lastTime = performance.now();
     let elapsed = 0;
@@ -1029,12 +1051,18 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     const tick = (now: number) => {
       if (disposed) return;
 
+      if (isTabHidden) {
+        lastTime = now;
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
       const dt = Math.min((now - lastTime) / 1000, 0.04);
       lastTime = now;
       elapsed += dt;
 
-      // 1. Trigger slow weighty lanyard descent after short opening beat, or retract back up where it came from
-      if (!dropStarted && elapsed >= (heroDropMode ? 0.05 : 0.12)) {
+      // 1. Trigger weighty lanyard descent after brief opening beat, or retract back up where it came from
+      if (!dropStarted && elapsed >= (heroDropMode ? 0.04 : 0.12)) {
         dropStarted = true;
       }
 
@@ -1043,14 +1071,12 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
           retractTriggered = true;
           retractStartY = dropY;
           retractElapsed = 0;
-          // Gentle physical tug sway as the lanyard pulls back upward
           velZ -= 0.42;
           velX += 0.28;
           velY -= 0.35;
         }
         retractElapsed += dt;
-        const p = Math.min(1, retractElapsed / 1.18);
-        // Smooth ease-in-out cubic upward pull right back past the top viewport edge
+        const p = Math.min(1, retractElapsed / 1.12);
         const easeUp =
           p < 0.45
             ? 2.2 * p * p
@@ -1065,13 +1091,21 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
           return;
         }
       } else if (dropStarted) {
-        // Gravity-weighted spring descent (smooth settle with slight natural spring catch)
-        const dropK = heroDropMode ? 17.5 : 14.5;
-        const dropC = heroDropMode ? 6.4 : 5.6;
+        // Gravity-weighted spring descent (smoothly settles into hanging position in ~0.95s)
+        const dropK = heroDropMode ? 22.0 : 14.5;
+        const dropC = heroDropMode ? 7.2 : 5.6;
         const dropForce = -dropK * dropY - dropC * dropVel;
         dropVel += dropForce * dt;
         dropY += dropVel * dt;
         dropGroup.position.y = dropY;
+
+        if (
+          !dropSettled &&
+          ((Math.abs(dropY) < 0.09 && Math.abs(dropVel) < 0.20) || elapsed >= 1.15)
+        ) {
+          dropSettled = true;
+          callbacksRef.current.onDropSettled?.();
+        }
       }
 
       // 1b. Name extraction off the front face of the ID card
@@ -1129,15 +1163,17 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
         }
       }
 
-      // 4. Raycast hover detection
-      updateHoverStates();
+      // 4. Raycast hover detection only when pointer moved or during early drop settle
+      if (pointerDirty || !dropSettled) {
+        pointerDirty = false;
+        updateHoverStates();
+      }
       const targetHover = isHoveringCard && !enterTriggered ? 1 : 0;
       const targetGhHover = isHoveringGitHub && !enterTriggered ? 1 : 0;
       hoverBlend += (targetHover - hoverBlend) * (1 - Math.exp(-9.0 * dt));
       ghHoverBlend += (targetGhHover - ghHoverBlend) * (1 - Math.exp(-11.0 * dt));
 
       // 5. Coupled 3-Axis Pendulum + Torsion Spring Solver
-      // Gentle living air-current micro-sway so the suspended pass never feels frozen
       const ambientRoll = Math.sin(elapsed * 0.82) * 0.016;
       const ambientYaw = Math.sin(elapsed * 0.54 + 0.7) * 0.038;
       const ambientPitch = Math.cos(elapsed * 0.68) * 0.008;
@@ -1185,9 +1221,11 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       pendulumPivot.rotation.set(swingX, twistY, swingZ);
       cardHinge.rotation.set(cardLagPitch, 0, cardLagRoll);
 
-      // Subtle dynamic woven lanyard flex following pendulum velocity
-      flexRibbon(strapGeo, strapBasePos, velZ, velX);
-      flexRibbon(strapBackGeo, strapBackBasePos, velZ, velX);
+      // Subtle dynamic woven lanyard flex when oscillating
+      if (Math.abs(velZ) + Math.abs(velX) > 0.004) {
+        flexRibbon(strapGeo, strapBasePos, velZ, velX);
+        flexRibbon(strapBackGeo, strapBackBasePos, velZ, velX);
+      }
 
       // 6. Cursor-reactive specular light reflections & holographic shimmer
       cursorLight.position.set(smoothPtrX * 2.2, smoothPtrY * 1.9 - 0.1, 2.35);
@@ -1236,6 +1274,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       disposed = true;
       cancelAnimationFrame(rafId);
       resizeObserver?.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       canvas.removeEventListener('pointermove', handlePointerMove);
       canvas.removeEventListener('pointerleave', handlePointerLeave);
       canvas.removeEventListener('click', handleClick);

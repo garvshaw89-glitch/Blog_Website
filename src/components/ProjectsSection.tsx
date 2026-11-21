@@ -66,7 +66,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
               type="button"
               onClick={() => setFilter(cat)}
               data-cursor="button"
-              className={`px-3.5 py-2 min-h-[40px] rounded-lg text-xs font-mono uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              className={`px-3.5 py-2 min-h-[40px] rounded-lg text-xs font-mono uppercase tracking-wider transition-colors duration-200 cursor-pointer whitespace-nowrap shrink-0 ${
                 filter === cat
                   ? 'bg-white text-black font-semibold shadow-[0_0_16px_rgba(255,255,255,0.22)]'
                   : 'bg-white/[0.04] hover:bg-white/[0.08] text-[#A7ADB5] hover:text-white border border-white/[0.09]'
@@ -193,7 +193,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
                   }}
                   data-cursor="project"
                   data-cursor-label="OPEN"
-                  className={`lg:col-span-7 relative rounded-2xl overflow-hidden bg-[#070A10] border border-white/[0.1] group-hover:border-sky-400/45 transition-all duration-500 shadow-[0_24px_60px_rgba(0,0,0,0.82)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+                  className={`lg:col-span-7 relative rounded-2xl overflow-hidden bg-[#070A10] border border-white/[0.1] group-hover:border-sky-400/45 transition-colors duration-500 shadow-[0_24px_60px_rgba(0,0,0,0.82)] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
                     isEven ? 'lg:order-2' : 'lg:order-1'
                   }`}
                 >
@@ -202,8 +202,9 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
                       src={project.col1TopImage}
                       alt={project.title}
                       loading="lazy"
-                      className="w-full h-full object-cover object-top brightness-95 group-hover:scale-[1.03] group-hover:brightness-105 transition-all duration-700 ease-out"
+                      className="w-full h-full object-cover object-top group-hover:scale-[1.03] transition-transform duration-700 ease-out"
                     />
+                    <div className="absolute inset-0 bg-[#050608]/15 group-hover:bg-transparent transition-colors duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#050608]/85 via-transparent to-transparent" />
                     <div className="absolute bottom-4 left-4 sm:bottom-5 sm:left-5 flex items-center gap-2">
                       <span className="px-2.5 py-1 rounded-md bg-[#070A10]/92 border border-white/[0.12] font-mono text-[10px] uppercase tracking-[0.18em] text-sky-300">

@@ -28,11 +28,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   useEffect(() => {
     const unsubscribe = interactionEngine.subscribe((state) => {
-      setHasScrolled(state.scrollY > 40);
+      const nextScrolled = state.scrollY > 40;
+      setHasScrolled((prev) => (prev === nextScrolled ? prev : nextScrolled));
       if (state.activeSectionId) {
-        setActiveSection(state.activeSectionId);
+        const nextSection = state.activeSectionId;
+        setActiveSection((prev) => (prev === nextSection ? prev : nextSection));
       }
-    });
+    }, 'scroll');
 
     return () => unsubscribe();
   }, []);

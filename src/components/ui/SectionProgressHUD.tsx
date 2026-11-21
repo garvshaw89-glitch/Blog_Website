@@ -21,9 +21,10 @@ export const SectionProgressHUD: React.FC = () => {
   useEffect(() => {
     const unsubscribe = interactionEngine.subscribe((state) => {
       if (state.activeSectionId) {
-        setActiveSection(state.activeSectionId);
+        const nextId = state.activeSectionId;
+        setActiveSection((prev) => (prev === nextId ? prev : nextId));
       }
-    });
+    }, 'scroll');
 
     return () => unsubscribe();
   }, []);

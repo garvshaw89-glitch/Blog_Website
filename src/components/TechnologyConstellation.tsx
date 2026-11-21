@@ -414,8 +414,10 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
             >
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute -top-20 -right-20 w-44 h-44 rounded-full blur-[60px] opacity-20 transition-colors duration-500"
-                style={{ backgroundColor: getCategoryAccent(selectedNode.category) }}
+                className="pointer-events-none absolute -top-24 -right-24 w-64 h-64 rounded-full opacity-30 transition-opacity duration-500"
+                style={{
+                  background: `radial-gradient(circle at 50% 50%, ${getCategoryAccent(selectedNode.category)} 0%, transparent 70%)`,
+                }}
               />
 
               <div className="relative z-10">

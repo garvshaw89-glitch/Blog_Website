@@ -21,7 +21,7 @@ export const MarqueeSection: React.FC<MarqueeSectionProps> = ({ id = 'marquee-ga
       key={key}
       onClick={scrollToProjects}
       data-cursor="project"
-      className="shrink-0 w-[290px] sm:w-[360px] md:w-[410px] h-[195px] sm:h-[225px] rounded-2xl overflow-hidden bg-[#070A10]/92 border border-white/[0.09] group relative hover:border-sky-400/50 transition-all duration-300 cursor-pointer flex flex-col justify-end p-5 shadow-[0_18px_45px_rgba(0,0,0,0.75)]"
+      className="shrink-0 w-[290px] sm:w-[360px] md:w-[410px] h-[195px] sm:h-[225px] rounded-2xl overflow-hidden bg-[#070A10]/92 border border-white/[0.09] group relative hover:border-sky-400/50 transition-colors duration-300 cursor-pointer flex flex-col justify-end p-5 shadow-[0_18px_45px_rgba(0,0,0,0.75)]"
     >
       {/* Background Image Preview */}
       <img

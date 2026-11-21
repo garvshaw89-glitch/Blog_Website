@@ -3,7 +3,7 @@ import { AnimatePresence } from 'motion/react';
 import { CursorProvider } from './context/CursorContext';
 import { ScrollProgressBar } from './components/ScrollProgressBar';
 import { AsteroidCursor } from './components/cursor/RocketCursor';
-import { LuxuryIntro } from './components/intro/LuxuryIntro';
+import { LuxuryIntro, IntroPhase } from './components/intro/LuxuryIntro';
 import { CommandPalette } from './components/ui/CommandPalette';
 import { MilkyWayGalaxy } from './components/atmosphere/MilkyWayGalaxy';
 import { SectionProgressHUD } from './components/ui/SectionProgressHUD';
@@ -33,6 +33,7 @@ export default function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   // Fresh initialization on every page load / refresh — kept in React memory only
   const [showIntro, setShowIntro] = useState<boolean>(true);
+  const [introPhase, setIntroPhase] = useState<IntroPhase>('sand');
   // Keep normal default cursor through THINK. CREATE. DISCOVER. until entry asteroid lands & morphs into cursor
   const [isRocketCursorActive, setIsRocketCursorActive] = useState<boolean>(false);
 
@@ -73,6 +74,7 @@ export default function App() {
 
   const handleReplayIntro = () => {
     setIsRocketCursorActive(false);
+    setIntroPhase('sand');
     setShowIntro(true);
   };
 
@@ -115,6 +117,7 @@ export default function App() {
             <LuxuryIntro
               onComplete={handleIntroComplete}
               onRocketCursorReady={() => setIsRocketCursorActive(true)}
+              onPhaseChange={setIntroPhase}
             />
           )}
         </AnimatePresence>
@@ -168,7 +171,14 @@ export default function App() {
         </div>
 
         {/* Interactive 3D Luminous Milky Way Galaxy Particle Field (shines live through PORTFOLIO BY GARV SHAW cutout) */}
-        <MilkyWayGalaxy />
+        <MilkyWayGalaxy
+          paused={
+            showIntro &&
+            introPhase !== 'prompt' &&
+            introPhase !== 'portal' &&
+            introPhase !== 'zooming'
+          }
+        />
 
         <div className="relative z-10 flex flex-col">
           {/* 1. HERO / LANDING PAGE with Identity Core */}

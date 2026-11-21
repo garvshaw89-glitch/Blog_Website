@@ -229,8 +229,10 @@ export const CapabilitiesSection: React.FC<CapabilitiesSectionProps> = ({
             >
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute -top-20 -right-20 w-48 h-48 rounded-full blur-[65px] opacity-20 transition-colors duration-500"
-                style={{ backgroundColor: active.visualTheme }}
+                className="pointer-events-none absolute -top-28 -right-28 w-72 h-72 rounded-full opacity-35 transition-opacity duration-500"
+                style={{
+                  background: `radial-gradient(circle at 50% 50%, ${active.visualTheme} 0%, transparent 70%)`,
+                }}
               />
 
               <div className="relative z-10">

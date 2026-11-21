@@ -87,10 +87,12 @@ export interface SingularityInteractionState {
 }
 
 type Listener = (state: SingularityInteractionState) => void;
+export type InteractionChannel = 'all' | 'scroll';
 
 class InteractionEngine {
   private static instance: InteractionEngine;
-  private listeners = new Set<Listener>();
+  private allListeners = new Set<Listener>();
+  private scrollListeners = new Set<Listener>();
 
   public state: SingularityInteractionState = {
     clientX: typeof window !== 'undefined' ? window.innerWidth / 2 : 0,
@@ -150,6 +152,7 @@ class InteractionEngine {
   private lastTime = 0;
   private prevClientX = 0;
   private prevClientY = 0;
+  private lastPointerTarget: EventTarget | null = null;
   private initialized = false;
   private rocketRafPending = false;
 
@@ -189,7 +192,7 @@ class InteractionEngine {
     this.state.rocketEmitter.machPulse = 1.0;
     this.state.rocketEmitter.wakeIntensity = 0.2;
 
-    this.notify();
+    this.notify('all');
     this.startRocketEmitterLoop();
   }
 
@@ -210,7 +213,7 @@ class InteractionEngine {
         this.state.rocketEmitter.speed = 0;
         this.state.rocketEmitter.velocity.set(0, 0, 0);
         this.rocketRafPending = false;
-        this.notify();
+        this.notify('all');
         return;
       }
 
@@ -274,7 +277,7 @@ class InteractionEngine {
         this.state.rocketEmitter.machPulse = 1.0 + 0.45 * Math.sin(elapsed * 32.0);
       }
 
-      this.notify();
+      this.notify('all');
       requestAnimationFrame(tickEmitter);
     };
 
@@ -343,9 +346,10 @@ class InteractionEngine {
     this.state.vy = dy / dt;
     this.state.speed = Math.hypot(this.state.vx, this.state.vy);
 
-    // Contextual hover target inspection (read attributes directly without elementFromPoint)
+    // Contextual hover target inspection (cached per hovered node so 120Hz pointermove skips redundant closest() traversals)
     const target = e.target as HTMLElement | null;
-    if (target) {
+    if (target && target !== this.lastPointerTarget) {
+      this.lastPointerTarget = target;
       const isButton = !!target.closest('button, [role="button"], [data-cursor="button"]');
       const isProject = !!target.closest('[data-cursor="project"], [data-cursor="view"], [data-cursor="image"]');
       const isLink = !isButton && !isProject && !!target.closest('a, [data-cursor="link"], [data-cursor="open"]');
@@ -373,7 +377,7 @@ class InteractionEngine {
       this.state.customCursorLabel = target.closest('[data-cursor-label]')?.getAttribute('data-cursor-label') || undefined;
     }
 
-    this.notify();
+    this.notify('pointer');
   };
 
   private onPointerDown = (e: PointerEvent) => {
@@ -391,7 +395,8 @@ class InteractionEngine {
       worldX: this.state.worldPos.x,
       worldY: this.state.worldPos.y,
     };
-    this.notify();
+    this.lastPointerTarget = null;
+    this.notify('all');
   };
 
   private scrollRafPending = false;
@@ -402,6 +407,7 @@ class InteractionEngine {
 
     requestAnimationFrame(() => {
       this.scrollRafPending = false;
+      this.lastPointerTarget = null;
       const scrollY = window.scrollY || window.pageYOffset || 0;
       const maxScroll = Math.max(
         document.documentElement.scrollHeight - window.innerHeight,
@@ -413,7 +419,7 @@ class InteractionEngine {
       this.state.scrollProgress = Math.min(Math.max(scrollY / maxScroll, 0), 1);
 
       this.updateSectionAtmosphere(scrollY);
-      this.notify();
+      this.notify('scroll');
     });
   };
 
@@ -492,14 +498,22 @@ class InteractionEngine {
     }
   }
 
-  public subscribe(listener: Listener): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+  public subscribe(listener: Listener, channel: InteractionChannel = 'all'): () => void {
+    const targetSet = channel === 'scroll' ? this.scrollListeners : this.allListeners;
+    targetSet.add(listener);
+    return () => {
+      targetSet.delete(listener);
+    };
   }
 
-  private notify() {
-    for (const listener of this.listeners) {
+  private notify(channel: 'pointer' | 'scroll' | 'all' = 'all') {
+    for (const listener of this.allListeners) {
       listener(this.state);
+    }
+    if (channel === 'scroll' || channel === 'all') {
+      for (const listener of this.scrollListeners) {
+        listener(this.state);
+      }
     }
   }
 

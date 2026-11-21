@@ -54,10 +54,10 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
   });
 
   const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: isCompactViewport ? 185 : 155,
-    damping: isCompactViewport ? 32 : 28,
-    mass: 0.5,
-    restDelta: 0.001,
+    stiffness: 185,
+    damping: 28,
+    mass: 0.36,
+    restDelta: 0.002,
   });
 
   // Zero-rerender DOM elevation: start physically UNDER MilkyWayGalaxy (z=1 < z=2),
@@ -75,7 +75,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
       return;
     }
 
-    const shouldCross = isCompactViewport ? latest >= 0.2 : latest >= 0.42;
+    const shouldCross = latest >= 0.34;
     if (shouldCross !== isAboveRef.current) {
       isAboveRef.current = shouldCross;
       outer.style.zIndex = shouldCross ? '10' : '1';
@@ -90,39 +90,33 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
     }
   });
 
-  // Pure GPU-composited under-galaxy emergence transforms (lightweight on mobile/touch)
+  // Unified GPU-composited under-galaxy emergence transforms across mobile, tablet, and desktop
   const portalScale = useTransform(
     smoothProgress,
     [0, 0.42, 1],
-    isCompactViewport ? [0.95, 0.98, 1] : [0.56, 0.85, 1]
+    isCompactViewport ? [0.90, 0.97, 1] : [0.86, 0.96, 1]
   );
   const portalRotateZ = useTransform(
     smoothProgress,
     [0, 0.55, 1],
-    isCompactViewport ? [0, 0, 0] : [-7, -2, 0]
-  );
-  const portalRotateX = useTransform(
-    smoothProgress,
-    [0, 0.55, 1],
-    isCompactViewport ? [0, 0, 0] : [11, 3, 0]
+    isCompactViewport ? [-2, -0.6, 0] : [-3.2, -1, 0]
   );
   const portalY = useTransform(
     smoothProgress,
     [0, 1],
-    isCompactViewport ? [32, 0] : [64, 0]
+    isCompactViewport ? [36, 0] : [52, 0]
   );
   const portalOpacity = useTransform(
     smoothProgress,
     [0, 0.14, 0.42, 0.78, 1],
-    isCompactViewport ? [0.35, 0.72, 0.92, 0.98, 1] : [0.1, 0.58, 0.86, 0.97, 1]
+    [0.14, 0.62, 0.89, 0.98, 1]
   );
 
   const coreGlowOpacity = useTransform(smoothProgress, [0, 0.4, 0.75, 1], [0.08, 0.65, 0.2, 0]);
-  const coreGlowScale = useTransform(smoothProgress, [0, 0.45, 1], [0.46, 1.08, 1.24]);
+  const coreGlowScale = useTransform(smoothProgress, [0, 0.45, 1], [0.55, 1.08, 1.24]);
 
-  const leftColX = useTransform(smoothProgress, [0, 1], isCompactViewport ? [0, 0] : [36, 0]);
-  const rightCardX = useTransform(smoothProgress, [0, 1], isCompactViewport ? [0, 0] : [-36, 0]);
-  const rightCardRotateY = useTransform(smoothProgress, [0, 1], isCompactViewport ? [0, 0] : [-8, 0]);
+  const leftColX = useTransform(smoothProgress, [0, 1], isCompactViewport ? [14, 0] : [26, 0]);
+  const rightCardX = useTransform(smoothProgress, [0, 1], isCompactViewport ? [-14, 0] : [-26, 0]);
 
   const pillar0Y = useTransform(smoothProgress, [0.18, 0.95], isCompactViewport ? [20, 0] : [40, 0]);
   const pillar0Scale = useTransform(smoothProgress, [0.18, 0.95], isCompactViewport ? [0.96, 1] : [0.88, 1]);
@@ -168,7 +162,6 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
       className="relative w-full py-20 sm:py-28 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-x-clip"
       style={{
         zIndex: prefersReducedMotion ? 10 : 1,
-        perspective: isCompactViewport ? undefined : '1400px',
       }}
     >
       {/* Cosmic Galactic Core Emergence Glow while piercing through the Milky Way */}
@@ -179,7 +172,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
           className="pointer-events-none absolute inset-0 flex items-center justify-center z-0"
         >
           <div
-            className="w-[460px] sm:w-[640px] h-[460px] sm:h-[640px] rounded-full"
+            className="w-[78vw] max-w-[620px] aspect-square rounded-full"
             style={{
               background:
                 'radial-gradient(circle at 50% 50%, rgba(255, 226, 178, 0.20) 0%, rgba(125, 211, 252, 0.13) 32%, rgba(56, 189, 248, 0.04) 58%, transparent 74%)',
@@ -197,7 +190,6 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
             : {
                 scale: portalScale,
                 rotateZ: portalRotateZ,
-                rotateX: portalRotateX,
                 y: portalY,
                 opacity: portalOpacity,
                 transformOrigin: '50% 42%',
@@ -246,11 +238,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
           {/* Architectural Profile Card */}
           <motion.div
             className="lg:col-span-5 flex justify-center lg:justify-end"
-            style={
-              prefersReducedMotion
-                ? undefined
-                : { x: rightCardX, rotateY: rightCardRotateY }
-            }
+            style={prefersReducedMotion ? undefined : { x: rightCardX }}
           >
             <div className="relative group max-w-sm w-full p-6 sm:p-7 rounded-2xl bg-[#070A10]/94 border border-white/[0.09] shadow-[0_24px_65px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-white/[0.18] transition-colors duration-300">
               <div className="flex items-center gap-5 mb-5">

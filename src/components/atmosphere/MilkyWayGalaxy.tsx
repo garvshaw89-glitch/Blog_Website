@@ -385,6 +385,7 @@ const NEBULA_FRAGMENT_SHADER = /* glsl */ `
   uniform vec2 uPointer;
   uniform float uLayerGain;
   uniform float uSpinSpeed;
+  uniform float uMaxRadius;
 
   varying vec2 vGalUv;
 
@@ -398,7 +399,7 @@ const NEBULA_FRAGMENT_SHADER = /* glsl */ `
     g += uPointer * 0.012;
 
     float r = length(g);
-    if (r > 1.05) discard;
+    if (r > uMaxRadius) discard;
 
     vec2 texUv = (g / 1.06) * 0.5 + 0.5;
     vec4 neb = texture2D(uDiskMap, texUv);
@@ -417,9 +418,10 @@ const NEBULA_FRAGMENT_SHADER = /* glsl */ `
     float armMask = smoothstep(0.16, 0.62, r);
     vec3 shiftedRgb = mix(neb.rgb, livingHue, armMask * 0.20);
 
+    float radialMask = smoothstep(uMaxRadius, uMaxRadius * 0.60, r);
     float scrollAtten = mix(1.0, 0.78, smoothstep(0.08, 0.45, uScrollProgress));
     float breath = 0.965 + 0.035 * sin(uTime * 0.52 * motion + r * 4.2);
-    float alpha = neb.a * scrollAtten * uOpacity * breath * uLayerGain;
+    float alpha = neb.a * radialMask * scrollAtten * uOpacity * breath * uLayerGain;
 
     if (alpha < 0.003) discard;
     gl_FragColor = vec4(shiftedRgb, clamp(alpha, 0.0, 0.38));
@@ -517,7 +519,7 @@ const DUST_VERTEX_SHADER = /* glsl */ `
     gl_Position = projectionMatrix * mvPosition;
 
     float perspectiveScale = 23.5 / max(-mvPosition.z, 3.0);
-    gl_PointSize = clamp(aSize * perspectiveScale * uPixelRatio, 6.0 * uPixelRatio, 54.0 * uPixelRatio);
+    gl_PointSize = clamp(aSize * perspectiveScale * uPixelRatio, 5.0 * uPixelRatio, 32.0 * uPixelRatio);
 
     float scrollAtten = mix(1.0, 0.80, smoothstep(0.12, 0.48, uScrollProgress));
     vAlpha = aAlpha * scrollAtten;
@@ -529,21 +531,6 @@ const DUST_FRAGMENT_SHADER = /* glsl */ `
   uniform float uOpacity;
   varying float vAlpha;
   varying float vSeed;
-
-  float hash21(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
-
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
-    return mix(
-      mix(hash21(i), hash21(i + vec2(1.0, 0.0)), u.x),
-      mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), u.x),
-      u.y
-    );
-  }
 
   void main() {
     vec2 uv = gl_PointCoord - 0.5;
@@ -557,9 +544,9 @@ const DUST_FRAGMENT_SHADER = /* glsl */ `
     float r2 = dot(ruv, ruv) * 4.0;
     if (r2 > 1.0) discard;
 
-    float n = noise(ruv * 5.2 + vec2(vSeed * 17.3, vSeed * 9.1));
+    float wispPattern = 0.58 + 0.42 * sin(ruv.x * 7.2 + vSeed * 19.0) * cos(ruv.y * 8.4 - vSeed * 13.0);
     float radial = pow(1.0 - r2, 1.9);
-    float wisp = radial * (0.45 + 0.70 * n);
+    float wisp = radial * (0.48 + 0.62 * wispPattern);
     float alpha = clamp(wisp * vAlpha * uOpacity, 0.0, 0.44);
     if (alpha < 0.005) discard;
 
@@ -577,6 +564,7 @@ const DUST_FRAGMENT_SHADER = /* glsl */ `
 const GALAXY_VERTEX_SHADER = /* glsl */ `
   uniform float uTime;
   uniform float uPixelRatio;
+  uniform float uPointScale;
   uniform float uScrollProgress;
   uniform float uScrollVelocity;
   uniform float uAspect;
@@ -688,7 +676,7 @@ const GALAXY_VERTEX_SHADER = /* glsl */ `
     float perspectiveScale = 23.0 / max(-mvPosition.z, 3.0);
 
     float interactiveScale = 1.0 + rocketGlow * 0.8 + abs(velKick) * 0.14 + rippleGlow * 0.45 + cursorHalo * 0.35;
-    float rawPtSize = aSize * perspectiveScale * uPixelRatio * interactiveScale;
+    float rawPtSize = aSize * uPointScale * perspectiveScale * uPixelRatio * interactiveScale;
 
     // Smooth energy-conserving sub-pixel fade (zero shimmer aliasing when tiny stars drift)
     float minRenderPx = (aKind > 1.5 && aKind < 2.5 ? 2.4 : 1.35) * uPixelRatio;
@@ -847,8 +835,8 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       isSoftwareGl
         ? 1
         : isMobile
-        ? Math.min(window.devicePixelRatio || 1, 1.35)
-        : Math.min(window.devicePixelRatio || 1, 1.75);
+        ? Math.min(window.devicePixelRatio || 1, 1.25)
+        : Math.min(window.devicePixelRatio || 1, 1.45);
 
     const pixelRatio = getEffectivePixelRatio();
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -868,8 +856,9 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
     const { nebulaTexture, shadowTexture } = createGalacticDiskTextures(maxAnisotropy);
 
     const diskGeo = new THREE.PlaneGeometry(43, 43);
+    const innerHaloGeo = new THREE.PlaneGeometry(28, 28);
 
-    // Layer 1: Lower volumetric halo slab (adds 3D thickness during oblique tilt)
+    // Layer 1: Compact inner core volumetric halo slab (adds 3D thickness without full-screen overdraw)
     const nebulaBackMat = new THREE.ShaderMaterial({
       vertexShader: DISK_VERTEX_SHADER,
       fragmentShader: NEBULA_FRAGMENT_SHADER,
@@ -890,9 +879,10 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
         uScaleMult: { value: 1.03 },
         uLayerGain: { value: 0.42 },
         uSpinSpeed: { value: 0.025 },
+        uMaxRadius: { value: 0.64 },
       },
     });
-    const nebulaBackMesh = new THREE.Mesh(diskGeo, nebulaBackMat);
+    const nebulaBackMesh = new THREE.Mesh(innerHaloGeo, nebulaBackMat);
     nebulaBackMesh.frustumCulled = false;
     nebulaBackMesh.renderOrder = 1;
     scene.add(nebulaBackMesh);
@@ -918,6 +908,7 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
         uScaleMult: { value: 1.0 },
         uLayerGain: { value: 0.92 },
         uSpinSpeed: { value: 0.026 },
+        uMaxRadius: { value: 1.05 },
       },
     });
     const nebulaMesh = new THREE.Mesh(diskGeo, nebulaMat);
@@ -962,23 +953,21 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
     };
 
-    // Scale particle counts strictly by viewport & CPU tier (not isSoftwareGl)
-    // so visual density remains consistent across hardware & software WebGL
     const particleCount = isSmallMobile
-      ? 18000
+      ? 22000
       : isMobile
-      ? 24000
+      ? 26000
       : isTablet
-      ? 36000
+      ? 34000
       : cpuCores <= 4
-      ? 42000
-      : 58000;
+      ? 38000
+      : 44000;
 
     // Partition cleanly: deep/mid disk stars (rendered behind volumetric dust clouds)
     // vs elevated foreground stars, OB supergiants, & sky jewels (rendered in front of dust)
     const foregroundCount = Math.floor(particleCount * 0.14);
     const mainCount = particleCount - foregroundCount;
-    const dustCloudCount = isSmallMobile ? 220 : isMobile ? 300 : isTablet ? 420 : 560;
+    const dustCloudCount = isSmallMobile ? 160 : isMobile ? 200 : isTablet ? 260 : 320;
 
     const allocStarBuffers = (count: number) => ({
       positions: new Float32Array(count * 3),
@@ -1288,9 +1277,12 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
     const accentTarget = new THREE.Color(0x38bdf8);
     const accentCurrent = new THREE.Color(0x38bdf8);
 
+    const pointScale = isMobile ? 1.15 : isTablet ? 1.06 : 1.0;
+
     const createStarUniforms = () => ({
       uTime: { value: 0 },
       uPixelRatio: { value: pixelRatio },
+      uPointScale: { value: pointScale },
       uScrollProgress: { value: 0 },
       uScrollVelocity: { value: 0 },
       uAspect: { value: width / height },
@@ -1577,6 +1569,7 @@ export const MilkyWayGalaxy: React.FC<MilkyWayGalaxyProps> = ({
       starMaterial.dispose();
       dustMaterial.dispose();
       diskGeo.dispose();
+      innerHaloGeo.dispose();
       nebulaBackMat.dispose();
       nebulaMat.dispose();
       shadowMat.dispose();

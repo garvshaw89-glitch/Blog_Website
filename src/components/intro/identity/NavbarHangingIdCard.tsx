@@ -111,12 +111,64 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
     [anchorRef]
   );
 
+  const triggerExtractAndRetract = useCallback(() => {
+    setPhase((prev) => {
+      if (prev === 'extracting' || prev === 'retracting' || prev === 'done') return prev;
+      return 'extracting';
+    });
+
+    if (webGlFailed) {
+      const rect = fallbackNameRef.current?.getBoundingClientRect();
+      if (rect) {
+        computeNameGlide({
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        });
+      } else {
+        computeNameGlide({
+          left: window.innerWidth * 0.5 - 110,
+          top: window.innerHeight * 0.44,
+          width: 220,
+          height: 44,
+        });
+      }
+    }
+
+    const retractTimer = window.setTimeout(() => {
+      setPhase('retracting');
+    }, 420);
+
+    const fallbackEndTimer = window.setTimeout(() => {
+      if (webGlFailed) {
+        setShowCardScene(false);
+        setPhase('done');
+      }
+    }, 1650);
+
+    timersRef.current.push(retractTimer, fallbackEndTimer);
+  }, [webGlFailed, computeNameGlide]);
+
+  const dropSettledStartedRef = useRef(false);
+
+  const startThreeSecondHangCountdown = useCallback(() => {
+    if (dropSettledStartedRef.current) return;
+    dropSettledStartedRef.current = true;
+    const hangTimer = window.setTimeout(() => {
+      triggerExtractAndRetract();
+    }, 3000);
+    timersRef.current.push(hangTimer);
+  }, [triggerExtractAndRetract]);
+
   // Orchestrate main-page entrance:
-  // 1) Big hanging ID card drops from top over the Milky Way
-  // 2) "GARV SHAW" lifts off the ID card & glides up to the top-left corner
-  // 3) The ID card retracts smoothly back UP where it came from
+  // 1) Big hanging ID card descends from top over the Milky Way
+  // 2) Hangs smoothly for a full 3 seconds
+  // 3) "GARV SHAW" lifts off the ID card & glides up to the top-left corner
+  // 4) The ID card retracts smoothly back UP where it came from
   useEffect(() => {
     clearTimers();
+    dropSettledStartedRef.current = false;
 
     if (!entered) {
       setPhase('idle');
@@ -138,46 +190,15 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
     setNameGlide(null);
     setIsNameMoving(false);
 
-    // Beat 2: Extract "GARV SHAW" directly off the hanging ID card
-    const extractTimer = window.setTimeout(() => {
-      setPhase('extracting');
-      if (webGlFailed) {
-        const rect = fallbackNameRef.current?.getBoundingClientRect();
-        if (rect) {
-          computeNameGlide({
-            left: rect.left,
-            top: rect.top,
-            width: rect.width,
-            height: rect.height,
-          });
-        } else {
-          computeNameGlide({
-            left: window.innerWidth * 0.5 - 110,
-            top: window.innerHeight * 0.44,
-            width: 220,
-            height: 44,
-          });
-        }
-      }
-    }, 2250);
+    // Safety fallback if WebGL fails or fallback DOM card is active (1.15s descent -> 3s hang)
+    const fallbackDropTimer = window.setTimeout(() => {
+      startThreeSecondHangCountdown();
+    }, 1150);
 
-    // Beat 3: Retract the hanging ID card smoothly back up off the top edge where it came from
-    const retractTimer = window.setTimeout(() => {
-      setPhase('retracting');
-    }, 2680);
-
-    // Fallback cleanup safety in case WebGL fallback finishes retracting
-    const fallbackEndTimer = window.setTimeout(() => {
-      if (webGlFailed) {
-        setShowCardScene(false);
-        setPhase('done');
-      }
-    }, 3950);
-
-    timersRef.current.push(extractTimer, retractTimer, fallbackEndTimer);
+    timersRef.current.push(fallbackDropTimer);
 
     return () => clearTimers();
-  }, [entered, prefersReducedMotion, webGlFailed, clearTimers, computeNameGlide]);
+  }, [entered, prefersReducedMotion, clearTimers, startThreeSecondHangCountdown]);
 
   const handleNameScreenRect = useCallback(
     (rect: NameScreenRect) => {
@@ -185,6 +206,10 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
     },
     [computeNameGlide]
   );
+
+  const handleDropSettled = useCallback(() => {
+    startThreeSecondHangCountdown();
+  }, [startThreeSecondHangCountdown]);
 
   const handleRetractComplete = useCallback(() => {
     setShowCardScene(false);
@@ -232,7 +257,7 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
             initial={{ y: '-110vh' }}
             animate={{ y: isRetracting ? '-115vh' : '0vh' }}
             transition={{
-              duration: isRetracting ? 1.1 : 1.25,
+              duration: isRetracting ? 1.1 : 1.05,
               ease: LUXURY_EASE,
             }}
             className="fixed inset-x-0 top-0 z-[45] flex flex-col items-center pointer-events-none select-none"
@@ -278,6 +303,7 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
               isRetracting={isRetracting}
               onGitHubClick={handleGitHubClick}
               onNameScreenRect={handleNameScreenRect}
+              onDropSettled={handleDropSettled}
               onRetractComplete={handleRetractComplete}
               onWebGLError={handleWebGLError}
             />

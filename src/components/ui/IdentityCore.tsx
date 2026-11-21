@@ -181,8 +181,10 @@ export const IdentityCore: React.FC = () => {
       {/* Subtle Ambient Aura Matched to Active Subsystem */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -inset-x-6 -inset-y-4 rounded-full blur-[84px] opacity-15 transition-colors duration-700"
-        style={{ backgroundColor: current.themeColor }}
+        className="pointer-events-none absolute -inset-x-10 -inset-y-8 rounded-full opacity-25 transition-opacity duration-700"
+        style={{
+          background: `radial-gradient(ellipse at 50% 50%, ${current.themeColor} 0%, transparent 70%)`,
+        }}
       />
 
       {/* Compact Multi-Plane Architectural Runtime Console */}

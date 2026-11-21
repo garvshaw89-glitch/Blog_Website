@@ -10,12 +10,13 @@ import { IntroScene } from './IntroScene';
 import { WebGlFallback } from './WebGlFallback';
 import { introAudio } from './introAudio';
 
+export type IntroPhase = 'sand' | 'asteroid' | 'prompt' | 'portal' | 'zooming';
+
 interface LuxuryIntroProps {
   onComplete: () => void;
   onRocketCursorReady?: () => void;
+  onPhaseChange?: (phase: IntroPhase) => void;
 }
-
-type IntroPhase = 'sand' | 'asteroid' | 'prompt' | 'portal' | 'zooming';
 
 const SAND_HOLD_END_SEC = 8.75;
 const SAND_EXIT_DURATION_SEC = 0.85;
@@ -26,6 +27,7 @@ const PORTAL_ZOOM_THRESHOLD = 0.78;
 export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
   onComplete,
   onRocketCursorReady,
+  onPhaseChange,
 }) => {
   const [prefersReducedMotion] = useState(() =>
     typeof window !== 'undefined'
@@ -58,6 +60,7 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
   const completedRef = useRef<boolean>(false);
   const onCompleteRef = useRef(onComplete);
   const onRocketCursorReadyRef = useRef(onRocketCursorReady);
+  const onPhaseChangeRef = useRef(onPhaseChange);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
@@ -66,6 +69,14 @@ export const LuxuryIntro: React.FC<LuxuryIntroProps> = ({
   useEffect(() => {
     onRocketCursorReadyRef.current = onRocketCursorReady;
   }, [onRocketCursorReady]);
+
+  useEffect(() => {
+    onPhaseChangeRef.current = onPhaseChange;
+  }, [onPhaseChange]);
+
+  useEffect(() => {
+    onPhaseChangeRef.current?.(phase);
+  }, [phase]);
 
   const setPhaseSafe = useCallback((next: IntroPhase) => {
     phaseRef.current = next;

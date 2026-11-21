@@ -106,16 +106,18 @@ export const StickySectionHeader: React.FC<StickySectionHeaderProps> = ({
 
   useEffect(() => {
     const unsubscribe = interactionEngine.subscribe((state) => {
-      setIsVisible(state.scrollY > 160);
+      const nextVisible = state.scrollY > 160;
+      setIsVisible((prev) => (prev === nextVisible ? prev : nextVisible));
 
       if (state.activeSectionId) {
         const matched = PORTFOLIO_SECTIONS.find((sec) => sec.id === state.activeSectionId);
         if (matched) {
-          setActiveSection(matched);
+          setActiveSection((prev) => (prev.id === matched.id ? prev : matched));
         }
       }
-      setSectionProgress(Math.round(state.scrollProgress * 100));
-    });
+      const nextProgress = Math.round(state.scrollProgress * 100);
+      setSectionProgress((prev) => (prev === nextProgress ? prev : nextProgress));
+    }, 'scroll');
 
     return () => unsubscribe();
   }, []);

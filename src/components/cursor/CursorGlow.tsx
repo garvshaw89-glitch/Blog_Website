@@ -21,15 +21,24 @@ export const CursorGlow: React.FC<CursorGlowProps> = ({
     return null;
   }
 
-  const getGlowGradient = () => {
+  const getGlowStyle = (): React.CSSProperties => {
     switch (cursorTheme) {
       case 'light':
-        return 'from-white/10 via-slate-400/5 to-transparent';
+        return {
+          background:
+            'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.12) 0%, rgba(148,163,184,0.05) 45%, transparent 72%)',
+        };
       case 'violet':
-        return 'from-indigo-500/15 via-purple-600/5 to-transparent';
+        return {
+          background:
+            'radial-gradient(circle at 50% 50%, rgba(99,102,241,0.18) 0%, rgba(147,51,234,0.06) 45%, transparent 72%)',
+        };
       case 'cyan':
       default:
-        return 'from-cyan-500/15 via-blue-600/5 to-transparent';
+        return {
+          background:
+            'radial-gradient(circle at 50% 50%, rgba(6,182,212,0.18) 0%, rgba(37,99,235,0.06) 45%, transparent 72%)',
+        };
     }
   };
 
@@ -41,10 +50,11 @@ export const CursorGlow: React.FC<CursorGlowProps> = ({
         translateX: '-50%',
         translateY: '-50%',
       }}
-      className="absolute top-0 left-0 pointer-events-none z-10 w-[220px] h-[220px] will-change-transform"
+      className="absolute top-0 left-0 pointer-events-none z-10 w-[260px] h-[260px] will-change-transform"
     >
       <div
-        className={`w-full h-full rounded-full bg-radial ${getGlowGradient()} blur-[45px] opacity-75 transition-opacity duration-300`}
+        className="w-full h-full rounded-full opacity-80 transition-opacity duration-300"
+        style={getGlowStyle()}
       />
     </motion.div>
   );
