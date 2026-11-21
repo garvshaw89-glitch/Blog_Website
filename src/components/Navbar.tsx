@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Command, Menu, X, Sparkles } from 'lucide-react';
 import { interactionEngine } from '../context/SingularityInteractionEngine';
 import { NavbarHangingIdCard } from './intro/identity/NavbarHangingIdCard';
@@ -21,8 +21,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [activeSection, setActiveSection] = useState<string>('hero');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
+  const [isBrandSettled, setIsBrandSettled] = useState(false);
 
-  const brandAnchorRef = useRef<HTMLDivElement | null>(null);
+  const brandAnchorRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     const unsubscribe = interactionEngine.subscribe((state) => {
@@ -33,6 +34,17 @@ export const Navbar: React.FC<NavbarProps> = ({
     });
 
     return () => unsubscribe();
+  }, []);
+
+  // Reset top-left GARV SHAW wordmark visibility whenever the intro replays
+  useEffect(() => {
+    if (!entered) {
+      setIsBrandSettled(false);
+    }
+  }, [entered]);
+
+  const handleBrandSettled = useCallback(() => {
+    setIsBrandSettled(true);
   }, []);
 
   const scrollToSection = (sectionId: string) => {
@@ -58,12 +70,26 @@ export const Navbar: React.FC<NavbarProps> = ({
         }`}
       >
         <div className="w-full max-w-7xl mx-auto px-5 sm:px-8 flex items-center justify-between">
-          {/* Top-Left Anchor Slot: occupied by the Hanging 3D Developer ID Card */}
-          <div
-            ref={brandAnchorRef}
-            aria-hidden="true"
-            className="w-[72px] sm:w-[92px] h-7 shrink-0"
-          />
+          {/* Top-Left: GARV SHAW Brand Wordmark (receives the name detached from the hanging ID card) */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              data-cursor="button"
+              data-cursor-label="TOP"
+              className="flex items-center gap-2 group text-left cursor-pointer relative"
+            >
+              <span
+                ref={brandAnchorRef}
+                className="font-editorial text-sm sm:text-base font-bold tracking-tight text-[#F2F3F5] group-hover:text-white transition-opacity duration-200 whitespace-nowrap"
+                style={{
+                  opacity: entered && isBrandSettled ? 1 : 0,
+                }}
+              >
+                GARV SHAW
+              </span>
+            </button>
+          </div>
 
           {/* Desktop Top-Center/Right: Editorial Nav Links */}
           <nav
@@ -233,11 +259,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         )}
       </header>
 
-      {/* Hanging 3D Developer ID Card replacing the GARV SHAW center-to-top-left-corner entrance */}
+      {/* Big Hanging 3D ID Card -> Extracts GARV SHAW to Top-Left Corner -> Retracts Back Up */}
       <NavbarHangingIdCard
         entered={entered}
-        hasScrolled={hasScrolled}
         anchorRef={brandAnchorRef}
+        onBrandSettled={handleBrandSettled}
       />
     </>
   );

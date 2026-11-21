@@ -4,13 +4,24 @@ import {
   createCardPbrTextures,
   GITHUB_REGION_UV,
   HOLO_STRIP_UV,
+  NAME_REGION_UV,
   CardPbrTextureSet,
 } from './cardTextureFactory';
+
+export interface NameScreenRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
 
 export interface HangingIdCardSceneProps {
   isEntering?: boolean;
   transparent?: boolean;
+  heroDropMode?: boolean;
   isDocked?: boolean;
+  isExtractingName?: boolean;
+  isRetracting?: boolean;
   externalImpulseRef?: React.MutableRefObject<{
     velZ: number;
     velY: number;
@@ -20,6 +31,8 @@ export interface HangingIdCardSceneProps {
   onGitHubHoverChange?: (hovering: boolean) => void;
   onGitHubClick?: () => void;
   onCardBodyClick?: () => void;
+  onNameScreenRect?: (rect: NameScreenRect) => void;
+  onRetractComplete?: () => void;
   onEnterProgress?: (progress: number) => void;
   onEnterComplete?: () => void;
   onWebGLError: () => void;
@@ -220,12 +233,17 @@ const HOLO_FRAGMENT_SHADER = /* glsl */ `
 export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
   isEntering = false,
   transparent = false,
+  heroDropMode = false,
   isDocked = false,
+  isExtractingName = false,
+  isRetracting = false,
   externalImpulseRef,
   onCardHoverChange,
   onGitHubHoverChange,
   onGitHubClick,
   onCardBodyClick,
+  onNameScreenRect,
+  onRetractComplete,
   onEnterProgress,
   onEnterComplete,
   onWebGLError,
@@ -233,11 +251,15 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
   const mountRef = useRef<HTMLDivElement>(null);
   const isEnteringRef = useRef<boolean>(isEntering);
   const isDockedRef = useRef<boolean>(isDocked);
+  const isExtractingNameRef = useRef<boolean>(isExtractingName);
+  const isRetractingRef = useRef<boolean>(isRetracting);
   const callbacksRef = useRef({
     onCardHoverChange,
     onGitHubHoverChange,
     onGitHubClick,
     onCardBodyClick,
+    onNameScreenRect,
+    onRetractComplete,
     onEnterProgress,
     onEnterComplete,
     onWebGLError,
@@ -252,11 +274,21 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
   }, [isDocked]);
 
   useEffect(() => {
+    isExtractingNameRef.current = isExtractingName;
+  }, [isExtractingName]);
+
+  useEffect(() => {
+    isRetractingRef.current = isRetracting;
+  }, [isRetracting]);
+
+  useEffect(() => {
     callbacksRef.current = {
       onCardHoverChange,
       onGitHubHoverChange,
       onGitHubClick,
       onCardBodyClick,
+      onNameScreenRect,
+      onRetractComplete,
       onEnterProgress,
       onEnterComplete,
       onWebGLError,
@@ -266,6 +298,8 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     onGitHubHoverChange,
     onGitHubClick,
     onCardBodyClick,
+    onNameScreenRect,
+    onRetractComplete,
     onEnterProgress,
     onEnterComplete,
     onWebGLError,
@@ -319,8 +353,14 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 45);
     const computeBaseCamZ = (w: number, h: number) => {
       const aspect = w / Math.max(h, 1);
+      if (heroDropMode) {
+        // Bold, big commanding presence over the live Milky Way while keeping long strap visible above clasp
+        if (aspect < 0.62) return 8.35;
+        if (aspect < 0.85) return 7.1;
+        if (aspect < 1.15) return 6.45;
+        return 5.85;
+      }
       if (transparent) {
-        // Dedicated portrait floating card stage: ensure generous horizontal swing room & long top strap
         return Math.max(7.9, 5.2 / Math.max(aspect, 0.42));
       }
       if (aspect < 0.62) return 10.6;
@@ -329,8 +369,8 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       return 7.75;
     };
     let baseCamZ = computeBaseCamZ(width, height);
-    camera.position.set(0, -0.05, baseCamZ);
-    camera.lookAt(0, -0.28, 0);
+    camera.position.set(0, -0.08, baseCamZ);
+    camera.lookAt(0, -0.34, 0);
 
     // ------------------------------------------------------------------------
     // CINEMATIC STUDIO LIGHTING & SOFT SHADOW RECEIVER BACKDROP (Main Page Palette)
@@ -689,6 +729,90 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     ghGlowMesh.position.set(ghCenterX, ghCenterY, CARD_DEPTH / 2 + 0.023);
     cardGroup.add(ghGlowMesh);
 
+    // Name Extraction Cover & Cyan Energy Pulse Mesh (aligned to GARV SHAW on card face)
+    // Smoothly masks GARV SHAW into a recessed dark-obsidian slot with a cyan flash as the name peels off the card!
+    const nameW = NAME_REGION_UV.w * CARD_W;
+    const nameH = NAME_REGION_UV.h * CARD_H;
+    const nameCenterX = (NAME_REGION_UV.x + NAME_REGION_UV.w / 2 - 0.5) * CARD_W;
+    const nameCenterY = (0.5 - (NAME_REGION_UV.y + NAME_REGION_UV.h / 2)) * CARD_H;
+    const nameMaskGeo = new THREE.PlaneGeometry(nameW + 0.03, nameH + 0.03);
+    const nameMaskMat = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      uniforms: {
+        uExtract: { value: 0 },
+        uFlash: { value: 0 },
+      },
+      vertexShader: /* glsl */ `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform float uExtract;
+        uniform float uFlash;
+        varying vec2 vUv;
+        void main() {
+          if (uExtract <= 0.004 && uFlash <= 0.004) discard;
+          float featherX = smoothstep(0.0, 0.08, vUv.x) * smoothstep(1.0, 0.92, vUv.x);
+          float featherY = smoothstep(0.0, 0.16, vUv.y) * smoothstep(1.0, 0.84, vUv.y);
+          float mask = featherX * featherY;
+
+          // Match card obsidian-midnight substrate so GARV SHAW cleanly leaves an empty recessed space
+          vec3 recessCol = mix(vec3(0.035, 0.052, 0.095), vec3(0.048, 0.068, 0.115), vUv.x);
+          // Luminous cyan-platinum extraction pulse sweeping across the detached name slot
+          float sweep = exp(-pow((vUv.x - (1.0 - uFlash)) * 4.5, 2.0));
+          vec3 glowCol = vec3(0.38, 0.86, 1.0) * (uFlash * 0.85 + sweep * uFlash * 0.95);
+
+          vec3 col = recessCol + glowCol;
+          float alpha = clamp(uExtract * 0.96 + uFlash * 0.55, 0.0, 1.0) * mask;
+          gl_FragColor = vec4(col, alpha);
+        }
+      `,
+    });
+    const nameMaskMesh = new THREE.Mesh(nameMaskGeo, nameMaskMat);
+    nameMaskMesh.position.set(nameCenterX, nameCenterY, CARD_DEPTH / 2 + 0.024);
+    cardGroup.add(nameMaskMesh);
+
+    // Pre-allocated vectors for projecting exact GARV SHAW 3D bounds to viewport CSS pixels (zero GC)
+    const _nameTopLeft = new THREE.Vector3();
+    const _nameBottomRight = new THREE.Vector3();
+    const projectNameScreenRect = (): NameScreenRect => {
+      cardGroup.updateWorldMatrix(true, false);
+      camera.updateMatrixWorld();
+      const rect = canvas.getBoundingClientRect();
+      _nameTopLeft.set(
+        nameCenterX - nameW * 0.5,
+        nameCenterY + nameH * 0.5,
+        CARD_DEPTH / 2 + 0.025
+      );
+      _nameBottomRight.set(
+        nameCenterX + nameW * 0.5,
+        nameCenterY - nameH * 0.5,
+        CARD_DEPTH / 2 + 0.025
+      );
+      cardGroup.localToWorld(_nameTopLeft);
+      cardGroup.localToWorld(_nameBottomRight);
+      _nameTopLeft.project(camera);
+      _nameBottomRight.project(camera);
+
+      const x1 = rect.left + (_nameTopLeft.x * 0.5 + 0.5) * rect.width;
+      const y1 = rect.top + (-_nameTopLeft.y * 0.5 + 0.5) * rect.height;
+      const x2 = rect.left + (_nameBottomRight.x * 0.5 + 0.5) * rect.width;
+      const y2 = rect.top + (-_nameBottomRight.y * 0.5 + 0.5) * rect.height;
+
+      const left = Math.min(x1, x2);
+      const top = Math.min(y1, y2);
+      return {
+        left,
+        top,
+        width: Math.max(40, Math.abs(x2 - x1)),
+        height: Math.max(16, Math.abs(y2 - y1)),
+      };
+    };
+
     // ------------------------------------------------------------------------
     // RAYCASTER & POINTER INTERACTION
     // ------------------------------------------------------------------------
@@ -726,6 +850,12 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
     let enterTriggered = false;
     let enterProgress = 0;
     let enterCompleted = false;
+    let extractTriggered = false;
+    let extractProgress = 0;
+    let retractTriggered = false;
+    let retractElapsed = 0;
+    let retractCompleted = false;
+    let retractStartY = 0;
 
     const updateHoverStates = () => {
       if (!isPointerInside || isEnteringRef.current) {
@@ -903,19 +1033,63 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       lastTime = now;
       elapsed += dt;
 
-      // 1. Trigger slow weighty lanyard descent after 0.12s near-black opening beat
-      if (!dropStarted && elapsed >= 0.12) {
+      // 1. Trigger slow weighty lanyard descent after short opening beat, or retract back up where it came from
+      if (!dropStarted && elapsed >= (heroDropMode ? 0.05 : 0.12)) {
         dropStarted = true;
       }
 
-      if (dropStarted) {
+      if (isRetractingRef.current) {
+        if (!retractTriggered) {
+          retractTriggered = true;
+          retractStartY = dropY;
+          retractElapsed = 0;
+          // Gentle physical tug sway as the lanyard pulls back upward
+          velZ -= 0.42;
+          velX += 0.28;
+          velY -= 0.35;
+        }
+        retractElapsed += dt;
+        const p = Math.min(1, retractElapsed / 1.18);
+        // Smooth ease-in-out cubic upward pull right back past the top viewport edge
+        const easeUp =
+          p < 0.45
+            ? 2.2 * p * p
+            : 1 - Math.pow(-2 * p + 2, 3) / 2;
+        const targetRetractY = 7.4;
+        dropY = THREE.MathUtils.lerp(retractStartY, targetRetractY, Math.min(1, easeUp));
+        dropGroup.position.y = dropY;
+
+        if (p >= 1 && !retractCompleted) {
+          retractCompleted = true;
+          callbacksRef.current.onRetractComplete?.();
+          return;
+        }
+      } else if (dropStarted) {
         // Gravity-weighted spring descent (smooth settle with slight natural spring catch)
-        const dropK = 14.5;
-        const dropC = 5.6;
+        const dropK = heroDropMode ? 17.5 : 14.5;
+        const dropC = heroDropMode ? 6.4 : 5.6;
         const dropForce = -dropK * dropY - dropC * dropVel;
         dropVel += dropForce * dt;
         dropY += dropVel * dt;
         dropGroup.position.y = dropY;
+      }
+
+      // 1b. Name extraction off the front face of the ID card
+      if (isExtractingNameRef.current && !extractTriggered) {
+        extractTriggered = true;
+        // Subtle tactile recoil as "GARV SHAW" detaches from the card surface
+        velX -= 0.38;
+        velZ += 0.24;
+        velY += 0.22;
+        callbacksRef.current.onNameScreenRect?.(projectNameScreenRect());
+      }
+
+      if (extractTriggered) {
+        extractProgress = Math.min(1, extractProgress + dt / 0.42);
+        const smoothExt = extractProgress * extractProgress * (3 - 2 * extractProgress);
+        const flashCurve = Math.sin(Math.min(1, extractProgress * 1.15) * Math.PI);
+        nameMaskMat.uniforms.uExtract.value = smoothExt;
+        nameMaskMat.uniforms.uFlash.value = Math.max(0, flashCurve);
       }
 
       // 2. Smooth pointer tracking
@@ -1043,7 +1217,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       const currentCamX = camBreathX * (1 - zEase * 0.9);
 
       camera.position.set(currentCamX, currentCamY, currentCamZ);
-      camera.lookAt(0, THREE.MathUtils.lerp(-0.28, -0.48, zEase), 0);
+      camera.lookAt(0, THREE.MathUtils.lerp(heroDropMode ? -0.34 : -0.28, -0.48, zEase), 0);
 
       // Subtle studio light fade-in on open + soft exposure lift on zoom
       const openLight = transparent
@@ -1086,7 +1260,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
         container.removeChild(canvas);
       }
     };
-  }, [transparent, externalImpulseRef]);
+  }, [transparent, heroDropMode, externalImpulseRef]);
 
   return (
     <div

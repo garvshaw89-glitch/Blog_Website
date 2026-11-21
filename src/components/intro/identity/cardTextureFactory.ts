@@ -14,6 +14,16 @@ export const IDENTITY_DATA = {
 };
 
 /**
+ * Normalized UV region (0..1 from top-left) of the GARV SHAW primary name on the front face.
+ */
+export const NAME_REGION_UV = {
+  x: 0.074,
+  y: 0.232,
+  w: 0.65,
+  h: 0.074,
+};
+
+/**
  * Normalized UV region (0..1 from top-left) of the interactive GitHub inset on the front face.
  * Used both for painting the canvas and for 3D raycast hover/click detection.
  */
