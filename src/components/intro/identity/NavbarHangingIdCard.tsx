@@ -223,31 +223,30 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
 
     syncAnchorX();
 
+    const getBoxDistance = (px: number, py: number, rect: DOMRect) => {
+      const dx = Math.max(rect.left - px, 0, px - rect.right);
+      const dy = Math.max(rect.top - py, 0, py - rect.bottom);
+      return Math.hypot(dx, dy);
+    };
+
     const handlePointerMove = (e: PointerEvent) => {
       if (e.pointerType === 'touch') return;
       const anchorEl = anchorRef.current;
       if (!anchorEl) return;
 
       const rect = anchorEl.getBoundingClientRect();
-      const cx = rect.left + rect.width * 0.5;
-      const cy = rect.top + rect.height * 0.5;
-
-      const dx = e.clientX - cx;
-      const dy = e.clientY - cy;
-      const dist = Math.hypot(dx, dy);
+      const boxDist = getBoxDistance(e.clientX, e.clientY, rect);
 
       if (!isHoverPeekRef.current) {
-        // Cursor enters near radius of GARV SHAW in the top-left corner -> start hanging smoothly
-        if (dist <= 135 || (e.clientX <= rect.right + 75 && e.clientY <= rect.bottom + 75)) {
-          setAnchorScreenX(cx);
+        // Cursor enters near radius around GARV SHAW in the top-left corner -> start hanging smoothly
+        if (boxDist <= 90) {
+          setAnchorScreenX(rect.left + rect.width * 0.5);
           setIsHoverPeek(true);
         }
       } else {
-        // Stay hanging while cursor remains near GARV SHAW or over the hanging corner card;
-        // once cursor moves far away -> smoothly pull the card back up
-        const maxZoneY = Math.min(460, Math.max(320, window.innerHeight * 0.56));
-        const withinZone = e.clientX <= rect.left + 290 && e.clientY <= maxZoneY;
-        if (!withinZone) {
+        // Stay hanging while cursor stays near GARV SHAW (with smooth hysteresis);
+        // as soon as cursor moves far away -> smoothly go up
+        if (boxDist > 155) {
           setIsHoverPeek(false);
         }
       }

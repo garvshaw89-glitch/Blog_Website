@@ -1094,17 +1094,17 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       const isCorner = cornerModeRef.current;
 
       const targetRigScale = isCorner ? (camera.aspect < 0.72 ? 0.48 : 0.56) : 1.0;
-      const scaleDamp = 1 - Math.exp(-9.5 * dt);
+      const scaleDamp = 1 - Math.exp(-10.5 * dt);
       currentRigScale += (targetRigScale - currentRigScale) * scaleDamp;
       pendulumPivot.scale.setScalar(currentRigScale);
 
+      const vw = container.clientWidth || window.innerWidth || 1280;
+      const anchorNdcX = THREE.MathUtils.clamp((anchorScreenXRef.current / vw) * 2 - 1, -0.95, 0.95);
       let targetRigX = 0;
       if (isCorner) {
-        const vw = container.clientWidth || window.innerWidth || 1280;
-        const anchorNdcX = THREE.MathUtils.clamp((anchorScreenXRef.current / vw) * 2 - 1, -0.95, 0.95);
-        const rawWorldX = anchorNdcX * halfVisibleW + 0.10;
+        const rawWorldX = anchorNdcX * halfVisibleW + 0.12;
         const cardHalfWWorld = (CARD_W * 0.5) * currentRigScale;
-        const minSafeX = -halfVisibleW + cardHalfWWorld + 0.16;
+        const minSafeX = -halfVisibleW + cardHalfWWorld + 0.18;
         targetRigX = Math.max(minSafeX, rawWorldX);
       }
       currentRigX += (targetRigX - currentRigX) * scaleDamp;
@@ -1113,20 +1113,20 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       if (isRetractingRef.current) {
         if (!retractTriggered) {
           retractTriggered = true;
-          velZ -= 0.34;
-          velX += 0.22;
-          velY -= 0.28;
+          velZ -= 0.28;
+          velX += 0.18;
+          velY -= 0.24;
         }
-        const targetRetractY = isCorner ? Math.max(4.4, halfVisibleH * 2.35) : 7.4;
+        const targetRetractY = isCorner ? halfVisibleH + 1.25 : 7.4;
         // Smooth upward spring-damped glide (reverses seamlessly if user re-enters near radius!)
-        const upK = isCorner ? 18.0 : 15.5;
-        const upC = isCorner ? 8.2 : 7.8;
+        const upK = isCorner ? 13.5 : 15.5;
+        const upC = isCorner ? 7.2 : 7.8;
         const upForce = upK * (targetRetractY - dropY) - upC * dropVel;
         dropVel += upForce * dt;
         dropY += dropVel * dt;
         dropGroup.position.y = dropY;
 
-        if (dropY >= targetRetractY - 0.25 && Math.abs(dropVel) < 0.14) {
+        if (dropY >= targetRetractY - 0.18 && Math.abs(dropVel) < 0.14) {
           dropY = targetRetractY;
           dropVel = 0;
           dropGroup.position.y = dropY;
@@ -1146,9 +1146,9 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
         const cornerRestY = halfVisibleH * (camera.aspect < 0.72 ? 0.34 : 0.38);
         const targetDropY = isCorner ? cornerRestY : 0;
 
-        // Gravity-weighted spring descent
-        const dropK = isCorner ? 19.0 : heroDropMode ? 22.0 : 14.5;
-        const dropC = isCorner ? 7.6 : heroDropMode ? 7.2 : 5.6;
+        // Smooth gravity-weighted spring descent
+        const dropK = isCorner ? 15.0 : heroDropMode ? 22.0 : 14.5;
+        const dropC = isCorner ? 6.8 : heroDropMode ? 7.2 : 5.6;
         const dropForce = dropK * (targetDropY - dropY) - dropC * dropVel;
         dropVel += dropForce * dt;
         dropY += dropVel * dt;
@@ -1249,12 +1249,15 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
           : isHoveringCard
             ? 1.0
             : 0.42;
-      const targetZ = ambientRoll - smoothPtrX * 0.045 * interactScale;
+      const tiltPtrX = isCorner
+        ? THREE.MathUtils.clamp((smoothPtrX - anchorNdcX) * 2.2, -1, 1)
+        : smoothPtrX;
+      const targetZ = ambientRoll - tiltPtrX * 0.045 * interactScale;
       const targetX = ambientPitch + smoothPtrY * 0.055 * interactScale;
       const targetY =
         enterTriggered
           ? 0
-          : ambientYaw + smoothPtrX * 0.25 * interactScale;
+          : ambientYaw + tiltPtrX * 0.25 * interactScale;
 
       // Spring stiffness & viscous air damping
       const kRoll = 12.0;
@@ -1335,13 +1338,34 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       if (reDrop) {
         retractTriggered = false;
         dropStarted = true;
-        velZ -= 0.32;
-        velX += 0.16;
-        velY += 0.42;
         if (isIdleSleeping) {
+          // If waking from offscreen corner sleep, align scale/X/height directly above GARV SHAW before first visible frame
+          if (cornerModeRef.current) {
+            const halfH = Math.tan(THREE.MathUtils.degToRad(35 * 0.5)) * baseCamZ;
+            const halfW = halfH * camera.aspect;
+            const cScale = camera.aspect < 0.72 ? 0.48 : 0.56;
+            const cVw = container.clientWidth || window.innerWidth || 1280;
+            const cAnchorNdc = THREE.MathUtils.clamp((anchorScreenXRef.current / cVw) * 2 - 1, -0.95, 0.95);
+            const rawX = cAnchorNdc * halfW + 0.12;
+            const minX = -halfW + (CARD_W * 0.5) * cScale + 0.18;
+            currentRigScale = cScale;
+            currentRigX = Math.max(minX, rawX);
+            pendulumPivot.scale.setScalar(currentRigScale);
+            dropGroup.position.x = currentRigX;
+            dropY = halfH + 1.25;
+            dropVel = 0;
+            dropGroup.position.y = dropY;
+          }
+          velZ -= 0.28;
+          velX += 0.14;
+          velY += 0.36;
           isIdleSleeping = false;
           lastTime = performance.now();
           rafId = requestAnimationFrame(tick);
+        } else {
+          velZ -= 0.24;
+          velX += 0.12;
+          velY += 0.28;
         }
       } else if (isIdleSleeping && !isRetractingRef.current) {
         isIdleSleeping = false;
