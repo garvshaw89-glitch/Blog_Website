@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Sparkles,
   Send,
@@ -8,13 +8,164 @@ import {
   RotateCcw,
   CheckCircle2,
   Cpu,
+  Braces,
 } from 'lucide-react';
 import { GlitchHeading } from './ui/GlitchHeading';
+import {
+  PROJECTS,
+  ENGINEERING_LOGS,
+  SKILLS,
+  ENGINEERING_DOMAINS,
+} from '../data/portfolioData';
 
 interface AiLabSectionProps {
   inSheet?: boolean;
   id?: string;
 }
+
+interface CorpusChunk {
+  id: string;
+  source: string;
+  title: string;
+  text: string;
+  tokens: string[];
+}
+
+interface RagMatch {
+  chunk: CorpusChunk;
+  score: number;
+  matchedTerms: string[];
+}
+
+interface AgentScenario {
+  id: string;
+  label: string;
+  steps: Array<{
+    step: number;
+    title: string;
+    desc: string;
+    accent: string;
+    payload: Record<string, unknown>;
+  }>;
+}
+
+const STOP_WORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'to', 'of', 'in', 'on', 'for', 'with',
+  'is', 'are', 'was', 'does', 'do', 'how', 'what', 'why', 'where', 'this', 'that',
+]);
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s.-]/g, ' ')
+    .split(/\s+/)
+    .filter((tok) => tok.length > 1 && !STOP_WORDS.has(tok));
+}
+
+const AGENT_SCENARIOS: AgentScenario[] = [
+  {
+    id: 'arogyaseva-webrtc',
+    label: 'ArogyaSeva WebRTC Latency',
+    steps: [
+      {
+        step: 1,
+        title: 'STEP 01 · INTENT DECOMPOSITION',
+        desc: 'User Objective: Analyze ArogyaSeva WebRTC packet latency and propose edge optimization.',
+        accent: 'text-sky-400',
+        payload: { goal: 'reduce_signaling_rtt', service: 'arogyaseva-signaling', target_p95_ms: 40 },
+      },
+      {
+        step: 2,
+        title: 'STEP 02 · TOOL CALL · inspect_webrtc_signaling()',
+        desc: 'Querying STUN/TURN latency matrix across cellular regions.',
+        accent: 'text-indigo-300',
+        payload: { tool: 'inspect_webrtc_signaling', region: 'ap-south-1', turn_rtt_ms: 68, blocking_ice: true },
+      },
+      {
+        step: 3,
+        title: 'STEP 03 · HEURISTIC PROPOSAL',
+        desc: 'Enable trickle ICE candidates + Opus DTX voice fallback above 8% packet loss.',
+        accent: 'text-violet-300',
+        payload: { patch: 'enable_trickle_ice', projected_handshake_delta: '-42%', audio_codec: 'opus/48000' },
+      },
+      {
+        step: 4,
+        title: 'STEP 04 · VERIFICATION AUDIT',
+        desc: 'Deterministic verification passed; telemetry schema validated via Zod.',
+        accent: 'text-emerald-400',
+        payload: { status: 'VERIFIED', handshake_p95_ms: 39, regression_checks: '4/4 passed' },
+      },
+    ],
+  },
+  {
+    id: 'stockmentor-canvas',
+    label: 'StockMentor Ticker Pipeline',
+    steps: [
+      {
+        step: 1,
+        title: 'STEP 01 · INTENT DECOMPOSITION',
+        desc: 'Isolate React re-render drops during 120+ WebSocket ticker bursts/sec.',
+        accent: 'text-sky-400',
+        payload: { goal: 'eliminate_frame_drops', module: 'stockmentor-terminal', budget_ms: 16.6 },
+      },
+      {
+        step: 2,
+        title: 'STEP 02 · TOOL CALL · profile_tick_pipeline()',
+        desc: 'Measuring main-thread state reconciliations per tick frame.',
+        accent: 'text-indigo-300',
+        payload: { tool: 'profile_tick_pipeline', events_per_sec: 140, react_commits_per_sec: 140, frame_time_ms: 29.4 },
+      },
+      {
+        step: 3,
+        title: 'STEP 03 · BUFFER OPTIMIZATION',
+        desc: 'Batch incoming frames in a ring buffer synced to requestAnimationFrame + Canvas double-buffer.',
+        accent: 'text-violet-300',
+        payload: { pattern: 'raf_ring_buffer', max_draw_hz: 60, gc_pause_reduction: '88%' },
+      },
+      {
+        step: 4,
+        title: 'STEP 04 · VERIFICATION AUDIT',
+        desc: 'Locked 60 FPS frame pacing confirmed under synthetic burst replay.',
+        accent: 'text-emerald-400',
+        payload: { status: 'VERIFIED', median_frame_ms: 8.2, dropped_frames: 0 },
+      },
+    ],
+  },
+  {
+    id: 'salaryos-worker',
+    label: 'SalaryOS Worker Math',
+    steps: [
+      {
+        step: 1,
+        title: 'STEP 01 · INTENT DECOMPOSITION',
+        desc: 'Keep slider interactions zero-lag while computing Monte Carlo wealth trajectories.',
+        accent: 'text-sky-400',
+        payload: { goal: 'offload_forecast_compute', module: 'salaryos-engine', iterations: 10000 },
+      },
+      {
+        step: 2,
+        title: 'STEP 02 · TOOL CALL · measure_sync_forecast()',
+        desc: 'Benchmarking compound tax & inflation solver synchronously on UI thread.',
+        accent: 'text-indigo-300',
+        payload: { tool: 'measure_sync_forecast', horizon_years: 30, blocking_ms: 142 },
+      },
+      {
+        step: 3,
+        title: 'STEP 03 · WORKER ISOLATION',
+        desc: 'Moved projection kernel into dedicated Web Worker with transferable Float64Array.',
+        accent: 'text-violet-300',
+        payload: { worker: 'compensation.worker.ts', transfer: 'Float64Array', main_thread_ms: 1.4 },
+      },
+      {
+        step: 4,
+        title: 'STEP 04 · VERIFICATION AUDIT',
+        desc: 'Deterministic precision verified against baseline reference tests.',
+        accent: 'text-emerald-400',
+        payload: { status: 'VERIFIED', delta_error: 0, input_latency_ms: 2.1 },
+      },
+    ],
+  },
+];
 
 export const AiLabSection: React.FC<AiLabSectionProps> = ({
   inSheet = false,
@@ -32,12 +183,12 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
   ]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [ragQuery, setRagQuery] = useState('How does Garv handle high-frequency trading updates?');
-  const [ragSimilarityScore, setRagSimilarityScore] = useState<number | null>(null);
+  const [ragQuery, setRagQuery] = useState('How does StockMentor handle high-frequency WebSocket trading updates?');
+  const [ragResults, setRagResults] = useState<RagMatch[] | null>(null);
   const [isSimulatingRag, setIsSimulatingRag] = useState(false);
-  const [matchedChunk, setMatchedChunk] = useState<string | null>(null);
 
-  const [agentStep, setAgentStep] = useState(0);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string>(AGENT_SCENARIOS[0].id);
+  const [agentStep, setAgentStep] = useState(1);
   const [isRunningAgent, setIsRunningAgent] = useState(false);
   const timersRef = useRef<number[]>([]);
 
@@ -47,11 +198,141 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
     };
   }, []);
 
+  // Build real portfolio knowledge corpus & IDF index for client-side cosine similarity
+  const { corpus, idfMap } = useMemo(() => {
+    const items: CorpusChunk[] = [];
+
+    PROJECTS.forEach((p) => {
+      const text = [
+        p.title,
+        p.category,
+        p.description,
+        p.tags.join(' '),
+        p.caseStudy?.architectureSummary || '',
+        p.caseStudy?.solution || '',
+        ...(p.caseStudy?.engineeringChallenges || []),
+      ].join(' ');
+      items.push({
+        id: `project-${p.id}`,
+        source: `PROJECT · ${p.title.toUpperCase()}`,
+        title: `${p.title} — ${p.category}`,
+        text: `${p.caseStudy?.architectureSummary || p.description} ${p.caseStudy?.engineeringChallenges?.[0] || ''}`.trim(),
+        tokens: tokenize(text),
+      });
+    });
+
+    ENGINEERING_LOGS.forEach((log) => {
+      const text = `${log.title} ${log.category} ${log.summary} ${log.technologies.join(' ')} ${log.details.join(' ')}`;
+      items.push({
+        id: log.id,
+        source: `LOG · ${log.relatedProject.toUpperCase()}`,
+        title: log.title,
+        text: `${log.summary} ${log.details[0] || ''}`.trim(),
+        tokens: tokenize(text),
+      });
+    });
+
+    SKILLS.forEach((sk) => {
+      const text = `${sk.title} ${sk.description} ${sk.tags.join(' ')} ${sk.capabilities.join(' ')}`;
+      items.push({
+        id: `skill-${sk.id}`,
+        source: 'CAPABILITY SPEC',
+        title: sk.title,
+        text: sk.description,
+        tokens: tokenize(text),
+      });
+    });
+
+    ENGINEERING_DOMAINS.forEach((dom) => {
+      const text = `${dom.title} ${dom.tagline} ${dom.description} ${dom.technologies.join(' ')}`;
+      items.push({
+        id: `domain-${dom.id}`,
+        source: 'DOMAIN ARCHITECTURE',
+        title: dom.title,
+        text: `${dom.tagline}. ${dom.description}`,
+        tokens: tokenize(text),
+      });
+    });
+
+    const df = new Map<string, number>();
+    items.forEach((doc) => {
+      const unique = new Set(doc.tokens);
+      unique.forEach((term) => df.set(term, (df.get(term) || 0) + 1));
+    });
+
+    const N = items.length;
+    const idf = new Map<string, number>();
+    df.forEach((count, term) => {
+      idf.set(term, Math.log((N + 1) / (count + 1)) + 1);
+    });
+
+    return { corpus: items, idfMap: idf };
+  }, []);
+
+  const executeCosineSearch = (queryStr: string): RagMatch[] => {
+    const qTokens = tokenize(queryStr);
+    if (qTokens.length === 0) return [];
+
+    const qTf = new Map<string, number>();
+    qTokens.forEach((t) => qTf.set(t, (qTf.get(t) || 0) + 1));
+
+    const qVec = new Map<string, number>();
+    let qNormSq = 0;
+    qTf.forEach((tf, term) => {
+      const w = tf * (idfMap.get(term) || 1);
+      qVec.set(term, w);
+      qNormSq += w * w;
+    });
+    const qNorm = Math.sqrt(qNormSq) || 1;
+
+    const scored: RagMatch[] = corpus.map((doc) => {
+      const dTf = new Map<string, number>();
+      doc.tokens.forEach((t) => dTf.set(t, (dTf.get(t) || 0) + 1));
+
+      let dot = 0;
+      let dNormSq = 0;
+      const matchedTerms: string[] = [];
+
+      dTf.forEach((tf, term) => {
+        const w = tf * (idfMap.get(term) || 1);
+        dNormSq += w * w;
+        const qW = qVec.get(term);
+        if (qW) {
+          dot += w * qW;
+          matchedTerms.push(term);
+        }
+      });
+
+      const dNorm = Math.sqrt(dNormSq) || 1;
+      const rawCos = dot / (qNorm * dNorm);
+      // Slight lexical coverage boost so multi-term overlap ranks above single common term hits
+      const coverage = matchedTerms.length / Math.max(1, qVec.size);
+      const combined = Math.min(0.999, rawCos * 0.8 + coverage * 0.2);
+
+      return {
+        chunk: doc,
+        score: Number(combined.toFixed(3)),
+        matchedTerms,
+      };
+    });
+
+    return scored
+      .filter((r) => r.score > 0.02)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+  };
+
   const suggestedPrompts = [
     'What projects use AI and how are they architected?',
     'Tell me about ArogyaSeva and its realtime triage agent.',
     'What cloud & DevOps technologies does Garv use?',
     'How does StockMentor achieve sub-millisecond chart feeds?',
+  ];
+
+  const ragSampleQueries = [
+    'StockMentor WebSocket requestAnimationFrame Canvas ticker updates',
+    'ArogyaSeva FastAPI WebRTC trickle ICE latency triage',
+    'SalaryOS Web Worker Monte Carlo tax forecast',
   ];
 
   const handleSendPrompt = async (textToSend?: string) => {
@@ -84,12 +365,16 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
         },
       ]);
     } catch {
+      const localMatches = executeCosineSearch(query);
+      const topContext = localMatches[0]
+        ? `Closest verified context (${localMatches[0].chunk.title}): ${localMatches[0].chunk.text}`
+        : 'Garv Shaw specializes in AI & Cloud Engineering (Gemini 3.8 Flash, PyTorch, LangChain, Next.js, and Cloud Run).';
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          text: "I am operating in offline knowledge mode. Garv Shaw specializes in AI & Cloud Engineering (Gemini 3.8 Flash, PyTorch, LangChain, Next.js, and Cloud Run). Explore the featured projects above to inspect live deployments.",
-          model: 'embedded-knowledge-base',
+          text: topContext,
+          model: 'tf-idf-local-retrieval',
         },
       ]);
     } finally {
@@ -97,31 +382,35 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
     }
   };
 
-  const handleRunRagSimulation = () => {
+  const handleRunRagSimulation = (customQuery?: string) => {
+    const targetQuery = customQuery ?? ragQuery;
+    if (customQuery !== undefined) setRagQuery(customQuery);
     setIsSimulatingRag(true);
-    setRagSimilarityScore(null);
-    setMatchedChunk(null);
+    setRagResults(null);
 
     const t = window.setTimeout(() => {
-      setRagSimilarityScore(0.942);
-      setMatchedChunk(
-        'Matched Knowledge Chunk #42 [StockMentor Ticker Engine]: Batched WebSocket payloads rendered via requestAnimationFrame using HTML5 Canvas double-buffering to eliminate garbage collection latency at 60 FPS.'
-      );
+      setRagResults(executeCosineSearch(targetQuery));
       setIsSimulatingRag(false);
-    }, 520);
+    }, 180);
     timersRef.current.push(t);
   };
 
-  const handleRunAgentWorkflow = () => {
+  const activeScenario =
+    AGENT_SCENARIOS.find((s) => s.id === selectedScenarioId) || AGENT_SCENARIOS[0];
+
+  const handleRunAgentWorkflow = (scenarioId?: string) => {
+    timersRef.current.forEach((t) => clearTimeout(t));
+    timersRef.current = [];
+    if (scenarioId) setSelectedScenarioId(scenarioId);
     setIsRunningAgent(true);
     setAgentStep(1);
 
-    const t1 = window.setTimeout(() => setAgentStep(2), 550);
-    const t2 = window.setTimeout(() => setAgentStep(3), 1100);
+    const t1 = window.setTimeout(() => setAgentStep(2), 380);
+    const t2 = window.setTimeout(() => setAgentStep(3), 780);
     const t3 = window.setTimeout(() => {
       setAgentStep(4);
       setIsRunningAgent(false);
-    }, 1650);
+    }, 1180);
     timersRef.current.push(t1, t2, t3);
   };
 
@@ -147,7 +436,7 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
           AI ENGINEERING LAB.
         </GlitchHeading>
         <p className="font-sans text-[#A7ADB5] text-sm sm:text-base leading-relaxed font-light [text-wrap:balance]">
-          Interact with live AI endpoints, inspect vector similarity retrieval, and step through autonomous agent execution traces.
+          Interact with portfolio AI endpoints, inspect live TF-IDF cosine vector ranking over indexed architecture docs, and step through multi-step agent traces.
         </p>
       </div>
 
@@ -156,7 +445,8 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
         <button
           type="button"
           onClick={() => setActiveTab('assistant')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+          data-cursor="button"
+          className={`flex items-center gap-2 px-4 py-2.5 min-h-[42px] rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeTab === 'assistant'
               ? 'bg-white text-black font-semibold shadow-[0_0_16px_rgba(255,255,255,0.22)]'
               : 'bg-white/[0.04] text-[#A7ADB5] hover:text-white hover:bg-white/[0.08] border border-white/[0.09]'
@@ -168,21 +458,26 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
 
         <button
           type="button"
-          onClick={() => setActiveTab('rag')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+          onClick={() => {
+            setActiveTab('rag');
+            if (!ragResults) setRagResults(executeCosineSearch(ragQuery));
+          }}
+          data-cursor="button"
+          className={`flex items-center gap-2 px-4 py-2.5 min-h-[42px] rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeTab === 'rag'
               ? 'bg-white text-black font-semibold shadow-[0_0_16px_rgba(255,255,255,0.22)]'
               : 'bg-white/[0.04] text-[#A7ADB5] hover:text-white hover:bg-white/[0.08] border border-white/[0.09]'
           }`}
         >
           <Database className="w-3.5 h-3.5" />
-          <span>RAG &amp; Semantic Retrieval</span>
+          <span>RAG Vector Search ({corpus.length} Docs)</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('agent')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+          data-cursor="button"
+          className={`flex items-center gap-2 px-4 py-2.5 min-h-[42px] rounded-lg font-mono text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeTab === 'agent'
               ? 'bg-white text-black font-semibold shadow-[0_0_16px_rgba(255,255,255,0.22)]'
               : 'bg-white/[0.04] text-[#A7ADB5] hover:text-white hover:bg-white/[0.08] border border-white/[0.09]'
@@ -195,7 +490,7 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
 
       {/* Tab 1: AI Portfolio Assistant */}
       {activeTab === 'assistant' && (
-        <div className="max-w-4xl mx-auto rounded-2xl bg-[#070A10]/92 border border-white/[0.09] p-5 sm:p-7 shadow-[0_24px_65px_rgba(0,0,0,0.85)]">
+        <div className="max-w-4xl mx-auto rounded-2xl bg-[#070A10]/94 border border-white/[0.09] p-5 sm:p-7 shadow-[0_24px_65px_rgba(0,0,0,0.85)]">
           {/* Clean Metadata Bar */}
           <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.08] mb-4 font-mono text-[11px]">
             <span className="text-[#A7ADB5] uppercase tracking-[0.18em]">
@@ -215,6 +510,7 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
                   key={idx}
                   type="button"
                   onClick={() => handleSendPrompt(p)}
+                  data-cursor="button"
                   className="text-left font-sans text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sky-300 hover:border-sky-400/50 hover:bg-sky-500/10 transition-colors cursor-pointer"
                 >
                   &ldquo;{p}&rdquo;
@@ -277,8 +573,9 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
             <button
               type="submit"
               disabled={isLoading || !prompt.trim()}
+              data-cursor="button"
               aria-label="Send prompt"
-              className="p-2.5 rounded-xl bg-white text-black hover:bg-sky-300 disabled:opacity-40 transition-colors cursor-pointer shrink-0"
+              className="p-2.5 min-w-[42px] min-h-[42px] flex items-center justify-center rounded-xl bg-white text-black hover:bg-sky-300 disabled:opacity-40 transition-colors cursor-pointer shrink-0"
             >
               <Send className="w-4 h-4" />
             </button>
@@ -286,66 +583,116 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
         </div>
       )}
 
-      {/* Tab 2: RAG Simulator */}
+      {/* Tab 2: Live TF-IDF Cosine Similarity RAG Retrieval Engine */}
       {activeTab === 'rag' && (
-        <div className="max-w-4xl mx-auto rounded-2xl bg-[#070A10]/92 border border-white/[0.09] p-6 sm:p-8 shadow-[0_24px_65px_rgba(0,0,0,0.85)]">
-          <h3 className="font-editorial font-bold text-xl sm:text-2xl text-[#F2F3F5] uppercase mb-2">
-            RAG Vector Retrieval Simulator
-          </h3>
-          <p className="font-sans text-xs sm:text-sm text-[#A7ADB5] leading-relaxed mb-6 font-light">
-            Simulates how queries are converted into high-dimensional embeddings and ranked against indexed codebase chunks via cosine similarity.
+        <div className="max-w-4xl mx-auto rounded-2xl bg-[#070A10]/94 border border-white/[0.09] p-6 sm:p-8 shadow-[0_24px_65px_rgba(0,0,0,0.85)]">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <h3 className="font-editorial font-bold text-xl sm:text-2xl text-[#F2F3F5] uppercase">
+              TF-IDF Cosine Retrieval Engine
+            </h3>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-sky-400">
+              {corpus.length} INDEXED CHUNKS
+            </span>
+          </div>
+          <p className="font-sans text-xs sm:text-sm text-[#A7ADB5] leading-relaxed mb-5 font-light">
+            Computes live TF-IDF vectors and cosine similarity scores in-browser across Garv&apos;s indexed project architectures, logs, and technical specs.
           </p>
 
           <div className="space-y-4 mb-6">
+            <div className="flex flex-wrap gap-1.5">
+              {ragSampleQueries.map((sample) => (
+                <button
+                  key={sample}
+                  type="button"
+                  onClick={() => handleRunRagSimulation(sample)}
+                  data-cursor="button"
+                  className="font-mono text-[10px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-sky-500/10 border border-white/[0.08] hover:border-sky-400/40 text-sky-300 transition-colors cursor-pointer text-left"
+                >
+                  {sample}
+                </button>
+              ))}
+            </div>
+
             <div>
               <label className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#626A73] block mb-2">
-                SAMPLE QUERY VECTOR
+                QUERY VECTOR INPUT
               </label>
               <input
                 type="text"
                 value={ragQuery}
                 onChange={(e) => setRagQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleRunRagSimulation();
+                }}
+                placeholder="Type keywords (e.g., WebRTC latency, PostgreSQL AES-256, SM-2)..."
                 className="w-full bg-[#0B1018] border border-white/[0.1] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-[#F2F3F5] focus:outline-none focus:border-sky-400 font-sans"
               />
             </div>
 
             <button
               type="button"
-              onClick={handleRunRagSimulation}
-              disabled={isSimulatingRag}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-black font-mono font-semibold text-xs uppercase tracking-wider hover:bg-sky-300 transition-colors cursor-pointer"
+              onClick={() => handleRunRagSimulation()}
+              disabled={isSimulatingRag || !ragQuery.trim()}
+              data-cursor="button"
+              className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[42px] rounded-lg bg-white text-black font-mono font-semibold text-xs uppercase tracking-wider hover:bg-sky-300 disabled:opacity-40 transition-colors cursor-pointer"
             >
               {isSimulatingRag ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Computing Vector Distance...</span>
+                  <span>Computing Cosine Vectors...</span>
                 </>
               ) : (
                 <>
                   <Database className="w-4 h-4" />
-                  <span>Execute Cosine Similarity Search</span>
+                  <span>Rank Top-3 Vector Matches</span>
                 </>
               )}
             </button>
           </div>
 
-          {ragSimilarityScore !== null && matchedChunk && (
-            <div className="p-5 rounded-xl bg-[#0B1018] border border-sky-400/25 space-y-3">
-              <div className="flex items-center justify-between font-mono text-xs">
-                <span className="text-sky-400 uppercase tracking-wider font-semibold">
-                  Cosine Similarity Score
-                </span>
-                <span className="font-bold text-emerald-400 tabular-nums">
-                  {ragSimilarityScore} · TOP MATCH
-                </span>
-              </div>
-              <p className="font-mono text-xs text-[#E2E6EC] leading-relaxed bg-[#05070B] p-3.5 rounded-lg border border-white/[0.08]">
-                {matchedChunk}
-              </p>
-              <div className="flex items-center gap-2 text-[11px] font-mono text-[#A7ADB5]">
-                <CheckCircle2 className="w-3.5 h-3.5 text-sky-400" />
-                <span>Context window hydrated with verified facts · Ready for inference</span>
-              </div>
+          {ragResults && (
+            <div className="space-y-3">
+              {ragResults.length === 0 ? (
+                <div className="p-4 rounded-xl bg-[#0B1018] border border-white/[0.08] font-mono text-xs text-[#A7ADB5]">
+                  No corpus terms overlapped your query. Try terms like WebSockets, FastAPI, PostgreSQL, Gemini, or React.
+                </div>
+              ) : (
+                ragResults.map((match, rank) => (
+                  <div
+                    key={match.chunk.id}
+                    className={`p-4 sm:p-5 rounded-xl bg-[#0B1018] border space-y-2.5 ${
+                      rank === 0 ? 'border-sky-400/35' : 'border-white/[0.08]'
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+                      <span className="text-sky-400 uppercase tracking-wider font-semibold">
+                        #{rank + 1} · {match.chunk.source}
+                      </span>
+                      <span className="font-bold text-emerald-400 tabular-nums">
+                        cosθ = {match.score.toFixed(3)}
+                      </span>
+                    </div>
+                    <h4 className="font-editorial text-base font-bold text-white uppercase tracking-tight">
+                      {match.chunk.title}
+                    </h4>
+                    <p className="font-mono text-xs text-[#E2E6EC] leading-relaxed bg-[#05070B] p-3 rounded-lg border border-white/[0.06]">
+                      {match.chunk.text}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono text-[#A7ADB5]">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                      <span>Matched tokens:</span>
+                      {match.matchedTerms.slice(0, 5).map((term) => (
+                        <span
+                          key={term}
+                          className="px-1.5 py-0.5 rounded bg-sky-500/10 border border-sky-400/20 text-sky-300"
+                        >
+                          {term}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
@@ -353,54 +700,49 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
 
       {/* Tab 3: Autonomous Agent Trace */}
       {activeTab === 'agent' && (
-        <div className="max-w-4xl mx-auto rounded-2xl bg-[#070A10]/92 border border-white/[0.09] p-6 sm:p-8 shadow-[0_24px_65px_rgba(0,0,0,0.85)]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/[0.08]">
+        <div className="max-w-4xl mx-auto rounded-2xl bg-[#070A10]/94 border border-white/[0.09] p-6 sm:p-8 shadow-[0_24px_65px_rgba(0,0,0,0.85)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-white/[0.08]">
             <div>
               <h3 className="font-editorial font-bold text-xl sm:text-2xl text-[#F2F3F5] uppercase">
                 Multi-Step Agent Workflow Trace
               </h3>
               <p className="font-sans text-xs sm:text-sm text-[#A7ADB5] mt-1 font-light">
-                State machine execution: Goal Formulation → Planning → Tool Invocation → Output Validation.
+                State machine execution with structured JSON tool calls &amp; deterministic verification.
               </p>
             </div>
             <button
               type="button"
-              onClick={handleRunAgentWorkflow}
+              onClick={() => handleRunAgentWorkflow()}
               disabled={isRunningAgent}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white text-black font-mono font-semibold text-xs uppercase tracking-wider hover:bg-sky-300 transition-colors cursor-pointer shrink-0 w-fit"
+              data-cursor="button"
+              className="flex items-center gap-1.5 px-4 py-2.5 min-h-[40px] rounded-lg bg-white text-black font-mono font-semibold text-xs uppercase tracking-wider hover:bg-sky-300 disabled:opacity-45 transition-colors cursor-pointer shrink-0 w-fit"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Run Agent Trace</span>
+              <span>Run Trace</span>
             </button>
           </div>
 
+          {/* Scenario Selector */}
+          <div className="flex flex-wrap gap-2 mb-5">
+            {AGENT_SCENARIOS.map((sc) => (
+              <button
+                key={sc.id}
+                type="button"
+                onClick={() => handleRunAgentWorkflow(sc.id)}
+                data-cursor="button"
+                className={`px-3 py-1.5 min-h-[36px] rounded-lg font-mono text-[11px] transition-colors cursor-pointer ${
+                  activeScenario.id === sc.id
+                    ? 'bg-sky-400/15 border border-sky-400/50 text-sky-300 font-semibold'
+                    : 'bg-white/[0.03] border border-white/[0.08] text-[#A7ADB5] hover:text-white'
+                }`}
+              >
+                {sc.label}
+              </button>
+            ))}
+          </div>
+
           <div className="space-y-3">
-            {[
-              {
-                step: 1,
-                title: 'STEP 01 · INTENT DECOMPOSITION',
-                desc: 'User Objective: Analyze ArogyaSeva WebRTC packet latency and propose optimization.',
-                accent: 'text-sky-400',
-              },
-              {
-                step: 2,
-                title: 'STEP 02 · TOOL CALL · inspect_webrtc_signaling()',
-                desc: 'Querying STUN/TURN latency matrix. Result: 68ms roundtrip via Frankfurt edge proxy.',
-                accent: 'text-indigo-300',
-              },
-              {
-                step: 3,
-                title: 'STEP 03 · HEURISTIC VALIDATION & PROPOSAL',
-                desc: 'Recommendation: Implement trickle ICE candidates to eliminate blocking roundtrips.',
-                accent: 'text-violet-300',
-              },
-              {
-                step: 4,
-                title: 'STEP 04 · VERIFICATION AUDIT',
-                desc: 'Deterministic audit check passed. Changes logged in Engineering Log.',
-                accent: 'text-emerald-400',
-              },
-            ].map((item) => {
+            {activeScenario.steps.map((item) => {
               const done = agentStep >= item.step;
               return (
                 <div
@@ -416,10 +758,18 @@ export const AiLabSection: React.FC<AiLabSectionProps> = ({
                       {item.title}
                     </span>
                     <span className="font-mono text-[10px] tracking-wider">
-                      {done ? 'COMPLETED' : item.step === 1 ? 'IDLE' : 'WAITING'}
+                      {done ? 'COMPLETED' : 'QUEUED'}
                     </span>
                   </div>
-                  <p className="font-mono text-xs">{item.desc}</p>
+                  <p className="font-mono text-xs mb-2.5">{item.desc}</p>
+                  {done && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[#05070B] border border-white/[0.06] font-mono text-[11px] text-cyan-300/90 overflow-x-auto">
+                      <Braces className="w-3.5 h-3.5 text-[#626A73] shrink-0" />
+                      <code className="whitespace-nowrap">
+                        {JSON.stringify(item.payload)}
+                      </code>
+                    </div>
+                  )}
                 </div>
               );
             })}

@@ -43,7 +43,7 @@ export const SectionProgressHUD: React.FC = () => {
   return (
     <nav
       aria-label="Section navigation timeline"
-      className="hidden xl:flex fixed right-6 top-1/2 -translate-y-1/2 z-30 flex-col items-end gap-2.5 select-none pointer-events-auto"
+      className="hidden 2xl:flex fixed right-6 top-1/2 -translate-y-1/2 z-30 flex-col items-end gap-2.5 select-none pointer-events-auto"
     >
       {SECTIONS.map((sec) => {
         const isActive = activeSection === sec.id;

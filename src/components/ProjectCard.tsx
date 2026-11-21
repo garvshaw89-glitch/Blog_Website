@@ -50,7 +50,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         onMouseMove={handleCardMouseMove}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="w-full max-w-6xl rounded-2xl sm:rounded-3xl border border-white/[0.08] hover:border-white/[0.18] bg-[#0B0E12]/90 hover:bg-[#11151A] p-6 sm:p-8 md:p-10 shadow-[0_20px_60px_rgba(0,0,0,0.85)] overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] backdrop-blur-xl relative hover:-translate-y-1"
+        className="w-full max-w-6xl rounded-2xl sm:rounded-3xl border border-white/[0.08] hover:border-white/[0.18] bg-[#0B0E12]/96 hover:bg-[#11151A] p-6 sm:p-8 md:p-10 shadow-[0_20px_60px_rgba(0,0,0,0.85)] overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] relative hover:-translate-y-1"
       >
         {/* Dynamic Subtle Pointer Spotlight */}
         {isHovered && (
@@ -150,10 +150,18 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 
         {/* Bottom Row: Visual Showcase Bento */}
         <div
+          role="button"
+          tabIndex={0}
           onClick={() => onSelectProject(project)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onSelectProject(project);
+            }
+          }}
           data-cursor="image"
           data-cursor-label="EXPLORE"
-          className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4 cursor-pointer group"
+          className="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4 cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 rounded-xl"
           title="Click to inspect detailed engineering case study"
         >
           {/* Main Visual (7 cols) */}
@@ -166,7 +174,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
             <div className="absolute bottom-3 left-4 flex items-center gap-2">
-              <span className="font-mono text-[11px] text-[#F2F3F5] flex items-center gap-1.5 bg-[#050608]/80 backdrop-blur-md px-2.5 py-1 rounded border border-white/[0.08]">
+              <span className="font-mono text-[11px] text-[#F2F3F5] flex items-center gap-1.5 bg-[#050608]/94 px-2.5 py-1 rounded border border-white/[0.08]">
                 <Layers className="w-3 h-3 text-[#7EA7FF]" /> Inspect Case Study & Architecture
               </span>
             </div>
@@ -182,7 +190,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
             <div className="absolute bottom-3 right-4">
-              <span className="font-mono text-[11px] text-[#A7ADB5] flex items-center gap-1 bg-[#050608]/80 backdrop-blur-md px-2.5 py-1 rounded border border-white/[0.08]">
+              <span className="font-mono text-[11px] text-[#A7ADB5] flex items-center gap-1 bg-[#050608]/94 px-2.5 py-1 rounded border border-white/[0.08]">
                 Telemetry Deep Dive <ArrowUpRight className="w-3 h-3 text-[#7EA7FF]" />
               </span>
             </div>

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   motion,
   useScroll,
@@ -7,7 +7,7 @@ import {
   useReducedMotion,
   useMotionValueEvent,
 } from 'motion/react';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Copy, Check } from 'lucide-react';
 import { ArchitectAvatar } from './ui/ArchitectAvatar';
 import { GlitchHeading } from './ui/GlitchHeading';
 
@@ -24,6 +24,29 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
   const prefersReducedMotion = useReducedMotion();
   const isAboveRef = useRef<boolean>(Boolean(prefersReducedMotion));
   const isAnimatingRef = useRef<boolean>(false);
+  const [copiedHandle, setCopiedHandle] = useState(false);
+
+  const [isCompactViewport, setIsCompactViewport] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+    return window.matchMedia('(max-width: 767px), (pointer: coarse)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-width: 767px), (pointer: coarse)');
+    const sync = () => setIsCompactViewport(mql.matches);
+    sync();
+    mql.addEventListener('change', sync);
+    return () => mql.removeEventListener('change', sync);
+  }, []);
+
+  const handleCopyUsername = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText('@garvshaw89-glitch');
+      setCopiedHandle(true);
+      window.setTimeout(() => setCopiedHandle(false), 2000);
+    }
+  };
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
@@ -31,9 +54,9 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
   });
 
   const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 155,
-    damping: 28,
-    mass: 0.52,
+    stiffness: isCompactViewport ? 185 : 155,
+    damping: isCompactViewport ? 32 : 28,
+    mass: 0.5,
     restDelta: 0.001,
   });
 
@@ -52,7 +75,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
       return;
     }
 
-    const shouldCross = latest >= 0.42;
+    const shouldCross = isCompactViewport ? latest >= 0.2 : latest >= 0.42;
     if (shouldCross !== isAboveRef.current) {
       isAboveRef.current = shouldCross;
       outer.style.zIndex = shouldCross ? '10' : '1';
@@ -67,34 +90,50 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
     }
   });
 
-  // Pure GPU-composited under-galaxy emergence transforms
-  const portalScale = useTransform(smoothProgress, [0, 0.42, 1], [0.28, 0.74, 1]);
-  const portalRotateZ = useTransform(smoothProgress, [0, 0.55, 1], [-12, -3.5, 0]);
-  const portalRotateX = useTransform(smoothProgress, [0, 0.55, 1], [18, 5, 0]);
-  const portalY = useTransform(smoothProgress, [0, 1], [96, 0]);
+  // Pure GPU-composited under-galaxy emergence transforms (lightweight on mobile/touch)
+  const portalScale = useTransform(
+    smoothProgress,
+    [0, 0.42, 1],
+    isCompactViewport ? [0.95, 0.98, 1] : [0.56, 0.85, 1]
+  );
+  const portalRotateZ = useTransform(
+    smoothProgress,
+    [0, 0.55, 1],
+    isCompactViewport ? [0, 0, 0] : [-7, -2, 0]
+  );
+  const portalRotateX = useTransform(
+    smoothProgress,
+    [0, 0.55, 1],
+    isCompactViewport ? [0, 0, 0] : [11, 3, 0]
+  );
+  const portalY = useTransform(
+    smoothProgress,
+    [0, 1],
+    isCompactViewport ? [32, 0] : [64, 0]
+  );
   const portalOpacity = useTransform(
     smoothProgress,
     [0, 0.14, 0.42, 0.78, 1],
-    [0.06, 0.54, 0.85, 0.97, 1]
+    isCompactViewport ? [0.35, 0.72, 0.92, 0.98, 1] : [0.1, 0.58, 0.86, 0.97, 1]
   );
 
   const coreGlowOpacity = useTransform(smoothProgress, [0, 0.4, 0.75, 1], [0.08, 0.65, 0.2, 0]);
   const coreGlowScale = useTransform(smoothProgress, [0, 0.45, 1], [0.46, 1.08, 1.24]);
 
-  const leftColX = useTransform(smoothProgress, [0, 1], [56, 0]);
-  const rightCardX = useTransform(smoothProgress, [0, 1], [-56, 0]);
-  const rightCardRotateY = useTransform(smoothProgress, [0, 1], [-12, 0]);
+  const leftColX = useTransform(smoothProgress, [0, 1], isCompactViewport ? [0, 0] : [36, 0]);
+  const rightCardX = useTransform(smoothProgress, [0, 1], isCompactViewport ? [0, 0] : [-36, 0]);
+  const rightCardRotateY = useTransform(smoothProgress, [0, 1], isCompactViewport ? [0, 0] : [-8, 0]);
 
-  const pillar0Y = useTransform(smoothProgress, [0.18, 0.95], [48, 0]);
-  const pillar0Scale = useTransform(smoothProgress, [0.18, 0.95], [0.82, 1]);
+  const pillar0Y = useTransform(smoothProgress, [0.18, 0.95], isCompactViewport ? [20, 0] : [40, 0]);
+  const pillar0Scale = useTransform(smoothProgress, [0.18, 0.95], isCompactViewport ? [0.96, 1] : [0.88, 1]);
   const pillar0Opacity = useTransform(smoothProgress, [0.18, 0.68], [0, 1]);
 
-  const pillar1Y = useTransform(smoothProgress, [0.26, 0.98], [56, 0]);
-  const pillar1Scale = useTransform(smoothProgress, [0.26, 0.98], [0.78, 1]);
+  const pillar1Y = useTransform(smoothProgress, [0.26, 0.98], isCompactViewport ? [24, 0] : [48, 0]);
+  const pillar1Scale = useTransform(smoothProgress, [0.26, 0.98], isCompactViewport ? [0.95, 1] : [0.85, 1]);
   const pillar1Opacity = useTransform(smoothProgress, [0.26, 0.74], [0, 1]);
 
-  const pillar2Y = useTransform(smoothProgress, [0.34, 1], [64, 0]);
-  const pillar2Scale = useTransform(smoothProgress, [0.34, 1], [0.74, 1]);
+  const pillar2Y = useTransform(smoothProgress, [0.34, 1], isCompactViewport ? [28, 0] : [56, 0]);
+  const pillar2Scale = useTransform(smoothProgress, [0.34, 1], isCompactViewport ? [0.94, 1] : [0.82, 1]);
   const pillar2Opacity = useTransform(smoothProgress, [0.34, 0.8], [0, 1]);
 
   const pillarStyles = [
@@ -129,7 +168,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
       className="relative w-full py-20 sm:py-28 px-4 sm:px-6 md:px-12 bg-transparent select-none overflow-x-clip"
       style={{
         zIndex: prefersReducedMotion ? 10 : 1,
-        perspective: '1400px',
+        perspective: isCompactViewport ? undefined : '1400px',
       }}
     >
       {/* Cosmic Galactic Core Emergence Glow while piercing through the Milky Way */}
@@ -213,22 +252,39 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
                 : { x: rightCardX, rotateY: rightCardRotateY }
             }
           >
-            <div className="relative group max-w-sm w-full p-6 sm:p-7 rounded-2xl bg-[#070A10]/92 border border-white/[0.09] shadow-[0_24px_65px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-white/[0.18] transition-colors duration-300">
+            <div className="relative group max-w-sm w-full p-6 sm:p-7 rounded-2xl bg-[#070A10]/94 border border-white/[0.09] shadow-[0_24px_65px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-white/[0.18] transition-colors duration-300">
               <div className="flex items-center gap-5 mb-5">
                 <div className="shrink-0">
                   <ArchitectAvatar size={84} interactive={true} />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <span className="text-sky-400 font-mono text-[10px] tracking-[0.22em] uppercase block mb-1">
                     SYSTEM ARCHITECT
                   </span>
                   <h3 className="font-editorial text-2xl font-bold text-[#F2F3F5] uppercase tracking-tight">
                     GARV SHAW
                   </h3>
-                  <p className="font-mono text-xs text-[#626A73] mt-0.5">
-                    @garvshaw89-glitch
-                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <p className="font-mono text-xs text-[#626A73] truncate">
+                      @garvshaw89-glitch
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleCopyUsername}
+                      data-cursor="button"
+                      data-cursor-label="COPY"
+                      title="Copy GitHub Handle"
+                      aria-label="Copy GitHub Handle"
+                      className="p-1 rounded hover:bg-white/10 text-[#626A73] hover:text-sky-400 transition-colors cursor-pointer shrink-0"
+                    >
+                      {copiedHandle ? (
+                        <Check className="w-3 h-3 text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3 h-3" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -252,7 +308,9 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
                   href="https://github.com/garvshaw89-glitch"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sky-400 hover:text-white transition-colors"
+                  data-cursor="external"
+                  data-cursor-label="GITHUB"
+                  className="inline-flex items-center gap-1.5 min-h-[36px] text-sky-400 hover:text-white transition-colors"
                 >
                   <span>VIEW GITHUB</span>
                   <ArrowUpRight className="w-3.5 h-3.5" />
@@ -269,7 +327,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
             <motion.div
               key={pillar.title}
               style={prefersReducedMotion ? undefined : pillarStyles[i]}
-              className="p-6 sm:p-7 rounded-2xl bg-[#070A10]/90 border border-white/[0.09] hover:border-white/[0.18] transition-colors flex flex-col justify-between h-full shadow-[0_18px_50px_rgba(0,0,0,0.7)]"
+              className="p-6 sm:p-7 rounded-2xl bg-[#070A10]/92 border border-white/[0.09] hover:border-white/[0.18] transition-colors flex flex-col justify-between h-full shadow-[0_18px_50px_rgba(0,0,0,0.7)]"
             >
               <div>
                 <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-sky-400 mb-3">

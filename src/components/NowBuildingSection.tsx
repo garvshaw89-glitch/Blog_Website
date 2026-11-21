@@ -57,14 +57,11 @@ export const NowBuildingSection: React.FC<NowBuildingSectionProps> = ({
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
           {/* Left: NOW BUILDING Box (6 cols) */}
-          <div className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-[#070D18]/90 border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-xl flex flex-col justify-between">
+          <div className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-[#070D18]/96 border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
                 <span className="font-mono text-xs uppercase tracking-wider text-cyan-400 flex items-center gap-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
-                  </span>
+                  <span className="inline-flex rounded-full h-2 w-2 bg-cyan-400" />
                   CURRENTLY BUILDING // Q3-Q4 2026
                 </span>
                 <span className="font-mono text-[10px] uppercase px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
@@ -108,10 +105,7 @@ export const NowBuildingSection: React.FC<NowBuildingSectionProps> = ({
 
             <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
               <span className="text-slate-400 flex items-center gap-1.5">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
+                <span className="inline-flex rounded-full h-2 w-2 bg-emerald-400" />
                 STATUS: DEPLOYED // LIVE PROTOTYPE
               </span>
               <div className="flex items-center gap-3">
@@ -136,7 +130,7 @@ export const NowBuildingSection: React.FC<NowBuildingSectionProps> = ({
           </div>
 
           {/* Right: PORTFOLIO SYSTEM TELEMETRY (6 cols) */}
-          <div className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-[#070D18]/90 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-xl flex flex-col justify-between">
+          <div className="lg:col-span-6 p-6 sm:p-8 rounded-3xl bg-[#070D18]/96 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col justify-between">
             <div>
               {/* Telemetry Header with Live Latency Ticker & Heartbeat Operational Indicator */}
               <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-white/10 mb-5">
@@ -166,18 +160,7 @@ export const NowBuildingSection: React.FC<NowBuildingSectionProps> = ({
                         : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                     }`}
                   >
-                    <span className="relative flex h-2 w-2">
-                      <span
-                        className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 transition-opacity duration-300 ${
-                          isHeartbeat ? 'opacity-100 animate-ping' : 'opacity-40 animate-pulse'
-                        }`}
-                      />
-                      <span
-                        className={`relative inline-flex rounded-full h-2 w-2 bg-emerald-500 transition-all duration-300 ${
-                          isHeartbeat ? 'shadow-[0_0_8px_#34d399]' : ''
-                        }`}
-                      />
-                    </span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 transition-all duration-300" />
                     <span className="font-semibold tracking-wide">OPERATIONAL</span>
                   </span>
                 </div>
@@ -218,18 +201,7 @@ export const NowBuildingSection: React.FC<NowBuildingSectionProps> = ({
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
                   <span className="text-slate-300">Frontend Presentation (Vite 6 / React 19)</span>
                   <span className="text-emerald-400 font-semibold flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span
-                        className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 transition-opacity duration-300 ${
-                          isHeartbeat ? 'opacity-100 animate-ping' : 'opacity-25'
-                        }`}
-                      />
-                      <span
-                        className={`relative inline-flex rounded-full h-2 w-2 bg-emerald-500 transition-all duration-300 ${
-                          isHeartbeat ? 'shadow-[0_0_8px_#10b981]' : ''
-                        }`}
-                      />
-                    </span>
+                    <span className="inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                     <span className={isHeartbeat ? 'text-emerald-300 transition-colors duration-300' : 'text-emerald-400'}>
                       Operational
                     </span>
@@ -240,18 +212,7 @@ export const NowBuildingSection: React.FC<NowBuildingSectionProps> = ({
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
                   <span className="text-slate-300">AI Gateway (Gemini 3.8 Flash Proxy)</span>
                   <span className="text-emerald-400 font-semibold flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span
-                        className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 transition-opacity duration-300 ${
-                          isHeartbeat ? 'opacity-100 animate-ping' : 'opacity-25'
-                        }`}
-                      />
-                      <span
-                        className={`relative inline-flex rounded-full h-2 w-2 bg-emerald-500 transition-all duration-300 ${
-                          isHeartbeat ? 'shadow-[0_0_8px_#10b981]' : ''
-                        }`}
-                      />
-                    </span>
+                    <span className="inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                     <span className={isHeartbeat ? 'text-emerald-300 transition-colors duration-300' : 'text-emerald-400'}>
                       Operational
                     </span>
@@ -262,18 +223,7 @@ export const NowBuildingSection: React.FC<NowBuildingSectionProps> = ({
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
                   <span className="text-slate-300">Edge CDN Routing (Vercel Global Edge)</span>
                   <span className="text-emerald-400 font-semibold flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span
-                        className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 transition-opacity duration-300 ${
-                          isHeartbeat ? 'opacity-100 animate-ping' : 'opacity-25'
-                        }`}
-                      />
-                      <span
-                        className={`relative inline-flex rounded-full h-2 w-2 bg-emerald-500 transition-all duration-300 ${
-                          isHeartbeat ? 'shadow-[0_0_8px_#10b981]' : ''
-                        }`}
-                      />
-                    </span>
+                    <span className="inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                     <span className={isHeartbeat ? 'text-emerald-300 transition-colors duration-300' : 'text-emerald-400'}>
                       Operational
                     </span>
@@ -284,18 +234,7 @@ export const NowBuildingSection: React.FC<NowBuildingSectionProps> = ({
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
                   <span className="text-slate-300">Static Telemetry Cache</span>
                   <span className="text-emerald-400 font-semibold flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span
-                        className={`absolute inline-flex h-full w-full rounded-full bg-emerald-400 transition-opacity duration-300 ${
-                          isHeartbeat ? 'opacity-100 animate-ping' : 'opacity-25'
-                        }`}
-                      />
-                      <span
-                        className={`relative inline-flex rounded-full h-2 w-2 bg-emerald-500 transition-all duration-300 ${
-                          isHeartbeat ? 'shadow-[0_0_8px_#10b981]' : ''
-                        }`}
-                      />
-                    </span>
+                    <span className="inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                     <span className={isHeartbeat ? 'text-emerald-300 transition-colors duration-300' : 'text-emerald-400'}>
                       Operational
                     </span>

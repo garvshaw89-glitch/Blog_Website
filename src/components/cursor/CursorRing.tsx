@@ -107,7 +107,7 @@ export const CursorRing: React.FC<CursorRingProps> = ({
       className="absolute top-0 left-0 pointer-events-none z-20 flex items-center justify-center will-change-transform"
     >
       <div
-        className={`relative flex items-center justify-center border backdrop-blur-[3px] transition-all duration-200 select-none ${
+        className={`relative flex items-center justify-center border transition-all duration-200 select-none ${
           isProject
             ? 'w-20 h-20 rounded-full rotate-[-4deg]'
             : isLabelActive

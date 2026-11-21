@@ -24,6 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isBrandSettled, setIsBrandSettled] = useState(false);
 
   const brandAnchorRef = useRef<HTMLSpanElement | null>(null);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const unsubscribe = interactionEngine.subscribe((state) => {
@@ -42,6 +43,23 @@ export const Navbar: React.FC<NavbarProps> = ({
       setIsBrandSettled(false);
     }
   }, [entered]);
+
+  // Close mobile drawer on Escape or resize to desktop
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    const onResize = () => {
+      if (window.innerWidth >= 768) setMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [mobileMenuOpen]);
 
   const handleBrandSettled = useCallback(() => {
     setIsBrandSettled(true);
@@ -204,58 +222,76 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle Navigation Menu"
-              className="md:hidden p-1.5 text-[#A7ADB5] hover:text-[#F2F3F5] cursor-pointer"
+              aria-expanded={mobileMenuOpen}
+              className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center text-[#A7ADB5] hover:text-[#F2F3F5] cursor-pointer -mr-2"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Drawer */}
+        {/* Mobile Drawer + Outside-Click Dismiss Backdrop */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#0B0E12] border-b border-white/10 px-6 py-6 flex flex-col gap-4 text-xs font-mono tracking-widest uppercase">
-            <button
-              type="button"
-              onClick={() => scrollToSection('about')}
-              className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
+          <>
+            <div
+              aria-hidden="true"
+              onClick={() => setMobileMenuOpen(false)}
+              className="md:hidden fixed inset-0 top-[4.25rem] bg-black/70 z-30"
+            />
+            <div
+              ref={drawerRef}
+              className="md:hidden relative z-40 bg-[#0B0E12] border-b border-white/10 px-6 py-4 flex flex-col gap-1 text-xs font-mono tracking-widest uppercase max-h-[calc(100dvh-4.5rem)] overflow-y-auto shadow-[0_20px_50px_rgba(0,0,0,0.85)]"
             >
-              01 · ABOUT
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('projects')}
-              className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
-            >
-              02 · PROJECTS
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('writing')}
-              className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
-            >
-              03 · WRITING
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('contact')}
-              className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] py-2 border-b border-white/[0.04]"
-            >
-              04 · CONTACT
-            </button>
-            {onReplayIntro && (
               <button
                 type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onReplayIntro();
-                }}
-                className="text-left text-cyan-400 hover:text-cyan-300 py-2 flex items-center gap-2"
+                onClick={() => scrollToSection('about')}
+                className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] min-h-[44px] flex items-center border-b border-white/[0.04]"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>REPLAY CINEMATIC INTRO</span>
+                01 · ABOUT
               </button>
-            )}
-          </div>
+              <button
+                type="button"
+                onClick={() => scrollToSection('projects')}
+                className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] min-h-[44px] flex items-center border-b border-white/[0.04]"
+              >
+                02 · PROJECTS
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSection('writing')}
+                className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] min-h-[44px] flex items-center border-b border-white/[0.04]"
+              >
+                03 · WRITING
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSection('ai-lab')}
+                className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] min-h-[44px] flex items-center border-b border-white/[0.04]"
+              >
+                04 · AI ENGINEERING LAB
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSection('contact')}
+                className="text-left text-[#A7ADB5] hover:text-[#F2F3F5] min-h-[44px] flex items-center border-b border-white/[0.04]"
+              >
+                05 · CONTACT
+              </button>
+              {onReplayIntro && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onReplayIntro();
+                  }}
+                  className="text-left text-cyan-400 hover:text-cyan-300 min-h-[44px] flex items-center gap-2 pt-1"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>REPLAY CINEMATIC INTRO</span>
+                </button>
+              )}
+            </div>
+          </>
         )}
       </header>
 

@@ -80,7 +80,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose }) 
       <div
         id="article-reader-backdrop"
         onClick={onClose}
-        className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/90 backdrop-blur-2xl overflow-y-auto"
+        className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/92 overflow-y-auto"
       >
         {/* Top Reading Progress Line */}
         <div
@@ -98,7 +98,7 @@ export const ArticleModal: React.FC<ArticleModalProps> = ({ article, onClose }) 
           className="relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-[#08090C] border border-white/15 rounded-2xl sm:rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] overflow-hidden text-[#E2E8F0] my-auto"
         >
           {/* Reader Top Action Bar */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0A0C10]/95 backdrop-blur-md shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0A0C10] shrink-0">
             <button
               type="button"
               onClick={onClose}

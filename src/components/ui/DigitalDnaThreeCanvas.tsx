@@ -228,15 +228,16 @@ export const DigitalDnaThreeCanvas: React.FC<DigitalDnaThreeCanvasProps> = ({
     const camera = new THREE.PerspectiveCamera(42, initW / initH, 0.1, 60);
     camera.position.set(0, 0, 9.8);
 
+    const isCompactDevice = initialRect.width < 640 || window.innerWidth < 768;
     const renderer = new THREE.WebGLRenderer({
-      antialias: !isSoftwareGl,
+      antialias: !isSoftwareGl && !isCompactDevice,
       alpha: true,
       powerPreference: 'high-performance',
     });
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
-    const pixelRatio = isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+    const pixelRatio = isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, isCompactDevice ? 1.5 : 2);
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(initW, initH);
     renderer.setClearColor(0x000000, 0);
@@ -253,10 +254,10 @@ export const DigitalDnaThreeCanvas: React.FC<DigitalDnaThreeCanvasProps> = ({
     const helixSpan = 11.4;
     const helixTurns = 3.1;
     const helixRadius = 1.65;
-    const backboneParticlesPerStrand = 720;
-    const rungCount = 30;
-    const particlesPerRung = 26;
-    const ambientCount = 460;
+    const backboneParticlesPerStrand = isSoftwareGl || isCompactDevice ? 460 : 720;
+    const rungCount = isSoftwareGl || isCompactDevice ? 22 : 30;
+    const particlesPerRung = isSoftwareGl || isCompactDevice ? 18 : 26;
+    const ambientCount = isSoftwareGl || isCompactDevice ? 280 : 460;
 
     const totalParticles =
       backboneParticlesPerStrand * 2 + rungCount * particlesPerRung + ambientCount;
@@ -461,10 +462,12 @@ export const DigitalDnaThreeCanvas: React.FC<DigitalDnaThreeCanvasProps> = ({
     let targetActive = 0;
     let currentActive = 0;
     let isVisible = true;
+    let isTabHidden = typeof document !== 'undefined' ? document.hidden : false;
     let disposed = false;
     let frameId = 0;
 
     const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
       const rect = container.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return;
       pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -530,13 +533,18 @@ export const DigitalDnaThreeCanvas: React.FC<DigitalDnaThreeCanvasProps> = ({
       }
     }
 
+    const handleVisibilityChange = () => {
+      isTabHidden = document.hidden;
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const tick = () => {
       if (disposed) return;
 
       const delta = Math.min(clock.getDelta(), 0.05);
       const elapsed = clock.elapsedTime;
 
-      if (isVisible) {
+      if (isVisible && !isTabHidden) {
         const isReduced = reducedMotionRef.current;
 
         // Smooth exponential damping for fluid biological cursor wake & camera parallax
@@ -590,6 +598,7 @@ export const DigitalDnaThreeCanvas: React.FC<DigitalDnaThreeCanvasProps> = ({
       disposed = true;
       cancelAnimationFrame(frameId);
       clearTimeout(frameId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       container.removeEventListener('pointermove', handlePointerMove);
       container.removeEventListener('pointerleave', handlePointerLeave);
       resizeObserver.disconnect();

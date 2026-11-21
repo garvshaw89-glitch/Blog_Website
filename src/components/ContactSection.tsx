@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CheckCircle2, Copy, Check, ArrowUpRight } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { CheckCircle2, Copy, Check, ArrowUpRight, ChevronDown, RotateCcw } from 'lucide-react';
 import { GlitchHeading } from './ui/GlitchHeading';
 
 interface ContactSectionProps {
@@ -14,14 +14,38 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [projectType, setProjectType] = useState('AI & Machine Intelligence');
+  const [domainMenuOpen, setDomainMenuOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'success'>('idle');
   const [copied, setCopied] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!domainMenuOpen) return;
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDomainMenuOpen(false);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDomainMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside, { passive: true });
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [domainMenuOpen]);
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText('garvshawinfo@gmail.com');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2400);
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText('garvshawinfo@gmail.com');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2400);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,7 +60,14 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
         `Name: ${name}\nEmail: ${email}\nDomain: ${projectType}\n\nProject Scope:\n${message}`
       );
       window.location.href = `mailto:garvshawinfo@gmail.com?subject=${subject}&body=${body}`;
-    }, 600);
+    }, 450);
+  };
+
+  const handleReset = () => {
+    setName('');
+    setEmail('');
+    setMessage('');
+    setStatus('idle');
   };
 
   const domains = [
@@ -82,20 +113,22 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
             </p>
 
             {/* Direct Email Card */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-[#070A10]/92 border border-white/[0.09] mb-8 max-w-md shadow-[0_18px_50px_rgba(0,0,0,0.75)]">
+            <div className="p-5 sm:p-6 rounded-2xl bg-[#070A10]/94 border border-white/[0.09] mb-8 max-w-md shadow-[0_18px_50px_rgba(0,0,0,0.75)]">
               <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-sky-400 block mb-2">
                 DIRECT FREQUENCY
               </span>
               <div className="flex items-center justify-between gap-3">
-                <span className="font-mono text-sm sm:text-base text-[#F2F3F5] font-medium select-all">
+                <span className="font-mono text-sm sm:text-base text-[#F2F3F5] font-medium select-all truncate">
                   garvshawinfo@gmail.com
                 </span>
                 <button
                   type="button"
                   onClick={handleCopyEmail}
                   data-cursor="button"
-                  className="p-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[#D5D9DF] hover:text-white transition-colors cursor-pointer"
+                  data-cursor-label={copied ? 'COPIED' : 'COPY'}
+                  className="p-2.5 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[#D5D9DF] hover:text-white transition-colors cursor-pointer shrink-0"
                   title="Copy email to clipboard"
+                  aria-label="Copy email address"
                 >
                   {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                 </button>
@@ -112,7 +145,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
 
         {/* Right Column: Transmission Form */}
         <div className="lg:col-span-6">
-          <div className="p-6 sm:p-9 rounded-2xl bg-[#070A10]/92 border border-white/[0.09] shadow-[0_24px_65px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <div className="p-6 sm:p-9 rounded-2xl bg-[#070A10]/94 border border-white/[0.09] shadow-[0_24px_65px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.06)]">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#A7ADB5] block mb-2">
@@ -142,21 +175,59 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                 />
               </div>
 
-              <div>
+              {/* Custom Obsidian ARIA Dropdown (prevents OS select cursor leak) */}
+              <div ref={dropdownRef} className="relative">
                 <label className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#A7ADB5] block mb-2">
                   PROJECT DOMAIN
                 </label>
-                <select
-                  value={projectType}
-                  onChange={(e) => setProjectType(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-[#0B1018] border border-white/[0.1] text-[#F2F3F5] focus:outline-none focus:border-sky-400 text-sm font-sans cursor-pointer transition-colors"
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={domainMenuOpen}
+                  onClick={() => setDomainMenuOpen((prev) => !prev)}
+                  data-cursor="button"
+                  data-cursor-label="SELECT"
+                  className="w-full min-h-[46px] px-4 py-3 rounded-xl bg-[#0B1018] border border-white/[0.1] hover:border-white/[0.2] focus:border-sky-400 text-left text-[#F2F3F5] text-sm font-sans flex items-center justify-between gap-3 cursor-pointer transition-colors"
                 >
-                  {domains.map((d) => (
-                    <option key={d} value={d} className="bg-[#070A10] text-white">
-                      {d}
-                    </option>
-                  ))}
-                </select>
+                  <span className="truncate">{projectType}</span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-[#A7ADB5] shrink-0 transition-transform duration-200 ${
+                      domainMenuOpen ? 'rotate-180 text-sky-400' : ''
+                    }`}
+                  />
+                </button>
+
+                {domainMenuOpen && (
+                  <ul
+                    role="listbox"
+                    aria-label="Project Domain"
+                    className="absolute left-0 right-0 mt-2 z-30 rounded-xl bg-[#090E17] border border-sky-400/30 shadow-[0_20px_50px_rgba(0,0,0,0.92)] py-1.5 overflow-hidden"
+                  >
+                    {domains.map((d) => {
+                      const active = d === projectType;
+                      return (
+                        <li key={d} role="option" aria-selected={active}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProjectType(d);
+                              setDomainMenuOpen(false);
+                            }}
+                            data-cursor="button"
+                            className={`w-full text-left px-4 py-2.5 min-h-[42px] text-sm font-sans flex items-center justify-between transition-colors cursor-pointer ${
+                              active
+                                ? 'bg-sky-500/15 text-sky-300 font-medium'
+                                : 'text-[#D5D9DF] hover:bg-white/[0.06] hover:text-white'
+                            }`}
+                          >
+                            <span>{d}</span>
+                            {active && <Check className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
 
               <div>
@@ -173,27 +244,42 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={status === 'sending'}
-                data-cursor="button"
-                data-cursor-label="SEND"
-                className="w-full py-3.5 rounded-xl bg-white hover:bg-sky-300 text-black font-mono text-xs font-bold uppercase tracking-[0.18em] transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {status === 'sending' ? (
-                  <span>TRANSMITTING...</span>
-                ) : status === 'success' ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                    <span>DISPATCH OPENED IN CLIENT</span>
-                  </>
-                ) : (
-                  <>
-                    <span>START A CONVERSATION</span>
-                    <ArrowUpRight className="w-4 h-4" />
-                  </>
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <button
+                  type="submit"
+                  disabled={status === 'sending'}
+                  data-cursor="button"
+                  data-cursor-label="SEND"
+                  className="flex-1 min-h-[48px] py-3.5 rounded-xl bg-white hover:bg-sky-300 text-black font-mono text-xs font-bold uppercase tracking-[0.18em] transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {status === 'sending' ? (
+                    <span>TRANSMITTING...</span>
+                  ) : status === 'success' ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                      <span>DISPATCH OPENED IN CLIENT</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>START A CONVERSATION</span>
+                      <ArrowUpRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+
+                {status === 'success' && (
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    data-cursor="button"
+                    aria-label="Reset contact form"
+                    className="min-h-[48px] px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-[#D5D9DF] font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>New</span>
+                  </button>
                 )}
-              </button>
+              </div>
             </form>
           </div>
         </div>

@@ -139,15 +139,12 @@ export const StickySectionHeader: React.FC<StickySectionHeaderProps> = ({
       } ${className}`}
     >
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-8">
-        <div className="flex items-center justify-between py-2 px-3.5 sm:px-4 rounded-md bg-[#080B10]/85 backdrop-blur-md border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.6)] pointer-events-auto">
+        <div className="flex items-center justify-between py-2 px-3.5 sm:px-4 rounded-md bg-[#080B10]/96 border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.6)] pointer-events-auto">
           {/* Left: Dynamic Current Section indicator with fluid animated text transition */}
           <div className="flex items-center gap-2.5 sm:gap-3.5 overflow-hidden">
-            {/* Live radar status beacon */}
+            {/* Static indicator dot */}
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
-              </span>
+              <span className="inline-flex rounded-full h-2 w-2 bg-cyan-400" />
               <span className="font-mono text-[9px] text-[#55606E] tracking-widest uppercase hidden md:inline">
                 LOC //
               </span>

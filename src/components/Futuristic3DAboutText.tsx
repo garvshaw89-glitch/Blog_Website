@@ -109,7 +109,7 @@ export const Futuristic3DAboutText: React.FC<Futuristic3DAboutTextProps> = ({
           rotateY,
           transformStyle: 'preserve-3d',
         }}
-        className="relative w-full rounded-3xl sm:rounded-[36px] bg-[#070B13]/85 backdrop-blur-xl border border-white/10 p-6 sm:p-10 md:p-12 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9),0_0_40px_rgba(6,182,212,0.1)] transition-colors duration-500 hover:border-cyan-500/40"
+        className="relative w-full rounded-3xl sm:rounded-[36px] bg-[#070B13]/94 border border-white/10 p-6 sm:p-10 md:p-12 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9),0_0_40px_rgba(6,182,212,0.1)] transition-colors duration-500 hover:border-cyan-500/40"
       >
         {/* Holographic Ambient Backlight Aura */}
         <div
@@ -143,10 +143,7 @@ export const Futuristic3DAboutText: React.FC<Futuristic3DAboutTextProps> = ({
           style={{ transform: 'translateZ(35px)' }}
           className="relative z-10 flex items-center justify-center gap-2 mb-6"
         >
-          <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
-          </span>
+          <span className="inline-flex rounded-full h-2 w-2 bg-cyan-400" />
           <span className="text-[11px] font-mono tracking-widest text-cyan-300/80 uppercase">
             Engineering Identity // Cyber Profile
           </span>
@@ -197,7 +194,7 @@ export const Futuristic3DAboutText: React.FC<Futuristic3DAboutTextProps> = ({
                 y: -6,
                 transition: { type: 'spring', stiffness: 400, damping: 18 },
               }}
-              className={`group relative flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-full bg-gradient-to-r ${domain.accentBg} bg-[#0A101D]/90 border border-white/15 backdrop-blur-md cursor-pointer transition-all duration-300 shadow-[0_8px_20px_rgba(0,0,0,0.6)] ${domain.borderHover}`}
+              className={`group relative flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-full bg-gradient-to-r ${domain.accentBg} bg-[#0A101D]/96 border border-white/15 cursor-pointer transition-all duration-300 shadow-[0_8px_20px_rgba(0,0,0,0.6)] ${domain.borderHover}`}
             >
               {/* Internal neon shimmer glow on hover */}
               <div

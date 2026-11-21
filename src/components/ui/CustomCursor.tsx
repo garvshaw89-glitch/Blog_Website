@@ -1,13 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { interactionEngine } from '../../context/SingularityInteractionEngine';
 import { applyMagneticAttraction, resetMagneticElement } from '../../hooks/cursor/useCursor';
-import { drawRealAsteroid } from '../intro/drawRealAsteroid';
+import { drawRealAsteroid, drawCosmicReticle } from '../intro/drawRealAsteroid';
 import { CursorInteractionController } from '../cursor/CursorInteractionManager';
 import '../cursor/cursor.css';
 
 export interface CustomCursorProps {
   magneticStrength?: number;
   enabled?: boolean;
+  morphToAsteroid?: boolean;
 }
 
 interface ClickImpactPulse {
@@ -21,6 +22,7 @@ interface ClickImpactPulse {
 export const CustomCursor: React.FC<CustomCursorProps> = ({
   magneticStrength = 0.22,
   enabled = true,
+  morphToAsteroid = true,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const badgeWrapRef = useRef<HTMLDivElement | null>(null);
@@ -42,10 +44,17 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
   const currentAlphaMultRef = useRef<number>(1);
   const hoverGlowRef = useRef<number>(0);
   const boostUntilRef = useRef<number>(0);
+  const isTextInputRef = useRef<boolean>(false);
+  const morphRef = useRef<boolean>(morphToAsteroid);
+  const needsResetPosRef = useRef<boolean>(false);
 
   const activeMagneticRef = useRef<HTMLElement | null>(null);
   const currentCursorKeyRef = useRef<string>('default:');
   const lastHoverTargetRef = useRef<EventTarget | null>(null);
+
+  useEffect(() => {
+    morphRef.current = morphToAsteroid;
+  }, [morphToAsteroid]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -71,6 +80,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     const finePointerQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
     const anyFineQuery = window.matchMedia('(any-pointer: fine)');
     let isFinePointer = finePointerQuery.matches || anyFineQuery.matches;
+    let isTouchSuppressingVisual = !isFinePointer;
     let lastNativeHidden: boolean | null = null;
 
     const syncCursorClass = (shouldHideNative: boolean) => {
@@ -83,10 +93,11 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
         document.documentElement.classList.remove('custom-cursor-enabled');
       }
     };
-    syncCursorClass(true);
+    syncCursorClass(isFinePointer);
 
     const handlePointerMediaChange = () => {
       isFinePointer = finePointerQuery.matches || anyFineQuery.matches;
+      isTouchSuppressingVisual = !isFinePointer;
       syncCursorClass(isFinePointer);
       if (badgeWrapRef.current) {
         badgeWrapRef.current.style.opacity = isFinePointer ? '1' : '0';
@@ -150,7 +161,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     targetTiltRef.current = 0;
     currentScaleRef.current = 1;
     targetScaleRef.current = 1;
-    currentAlphaMultRef.current = 0;
+    currentAlphaMultRef.current = isFinePointer ? 1 : 0;
     targetAlphaMultRef.current = isFinePointer ? 1 : 0;
     isVisibleRef.current = isFinePointer;
     canvas.style.opacity = '1';
@@ -159,7 +170,7 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     }
 
     const handlePointerEnter = () => {
-      if (!isFinePointer) return;
+      if (!isFinePointer || isTouchSuppressingVisual) return;
       isVisibleRef.current = true;
       canvas.style.opacity = '1';
       if (badgeWrapRef.current) badgeWrapRef.current.style.opacity = '1';
@@ -168,32 +179,50 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     const handlePointerLeave = () => {
       isVisibleRef.current = false;
       if (badgeWrapRef.current) badgeWrapRef.current.style.opacity = '0';
+      needsFullClear = true;
+    };
+
+    const handleWindowBlur = () => {
+      isPointerPressed = false;
+      isVisibleRef.current = false;
+      if (badgeWrapRef.current) badgeWrapRef.current.style.opacity = '0';
+      needsFullClear = true;
     };
 
     const handleRawPointerMove = (e: PointerEvent) => {
-      if (e.pointerType === 'mouse' && !isFinePointer) {
+      if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
         isFinePointer = true;
+        isTouchSuppressingVisual = false;
         syncCursorClass(true);
-      } else if (e.pointerType === 'touch' && isFinePointer) {
-        isFinePointer = false;
-        syncCursorClass(false);
+        if (!isVisibleRef.current) {
+          isVisibleRef.current = true;
+          canvas.style.opacity = '1';
+        }
+      } else if (e.pointerType === 'touch') {
+        // Temporarily suppress custom asteroid draw on touch tap, without unlocking OS cursor on hybrid laptops
+        isTouchSuppressingVisual = true;
       }
       lastHoverTargetRef.current = e.target;
     };
 
     window.addEventListener('mouseenter', handlePointerEnter);
     window.addEventListener('mouseleave', handlePointerLeave);
+    window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('pointermove', handleRawPointerMove, { passive: true });
 
     let latestSpeed = 0;
 
     const applyInteractionTargets = (now: number) => {
-      if (!isFinePointer) {
-        syncCursorClass(false);
+      if (!isFinePointer || isTouchSuppressingVisual) {
+        if (!isFinePointer) syncCursorClass(false);
         targetAlphaMultRef.current = 0;
+        isTextInputRef.current = false;
         if (labelRef.current) labelRef.current.style.display = 'none';
         return;
       }
+
+      // Guarantee OS cursor NEVER shows while fine pointer is active
+      syncCursorClass(true);
 
       const state = interactionEngine.state;
       const targets = controller.evaluate(
@@ -207,14 +236,15 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
       targetEnergyRef.current = targets.targetThrust;
       targetAlphaMultRef.current = targets.targetAlphaMult;
       hoverGlowRef.current = targets.hoverGlow;
-      syncCursorClass(!targets.restoreNativeCursor);
+      isTextInputRef.current = targets.cursorType === 'text';
 
       const labelEl = labelRef.current;
       if (labelEl) {
-        const stateKey = `${targets.cursorType}:${targets.labelText}`;
+        const showLabel = morphRef.current && Boolean(targets.labelText);
+        const stateKey = `${targets.cursorType}:${showLabel ? targets.labelText : ''}`;
         if (stateKey !== currentCursorKeyRef.current) {
           currentCursorKeyRef.current = stateKey;
-          if (targets.labelText && !targets.restoreNativeCursor) {
+          if (showLabel) {
             labelEl.textContent = targets.labelText;
             labelEl.style.display = 'block';
           } else {
@@ -228,13 +258,13 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
       targetPos.current.x = state.clientX;
       targetPos.current.y = state.clientY;
 
-      if (isFinePointer && !isVisibleRef.current) {
+      if (isFinePointer && !isTouchSuppressingVisual && !isVisibleRef.current) {
         isVisibleRef.current = true;
         canvas.style.opacity = '1';
         if (badgeWrapRef.current) badgeWrapRef.current.style.opacity = '1';
       }
 
-      if (isFinePointer && state.magneticTarget && !state.prefersReduced) {
+      if (isFinePointer && !isTouchSuppressingVisual && morphRef.current && state.magneticTarget && !state.prefersReduced) {
         if (activeMagneticRef.current && activeMagneticRef.current !== state.magneticTarget) {
           resetMagneticElement(activeMagneticRef.current);
         }
@@ -254,8 +284,12 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
     const handlePointerDown = (e: PointerEvent) => {
       const now = performance.now();
       lastHoverTargetRef.current = e.target;
-      if (e.pointerType === 'mouse' && !isFinePointer) {
+      if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
         isFinePointer = true;
+        isTouchSuppressingVisual = false;
+        syncCursorClass(true);
+      } else if (e.pointerType === 'touch') {
+        isTouchSuppressingVisual = true;
       }
       controller.notifyClick(now);
       isPointerPressed = true;
@@ -282,8 +316,24 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
 
     let rafId = 0;
     let prevTime = performance.now();
+    let isTabHidden = typeof document !== 'undefined' ? document.hidden : false;
+
+    const handleVisibilityChange = () => {
+      isTabHidden = document.hidden;
+      if (!isTabHidden) {
+        prevTime = performance.now();
+        needsFullClear = true;
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     const tick = (now: number) => {
+      if (isTabHidden) {
+        prevTime = now;
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
       const dt = Math.min((now - prevTime) / 1000, 0.05);
       prevTime = now;
       const timeSec = now * 0.001;
@@ -298,12 +348,12 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
       const speed = Math.hypot(dx, dy);
       latestSpeed = speed;
 
-      if (isFinePointer) {
+      if (isFinePointer && !isTouchSuppressingVisual) {
         applyInteractionTargets(now);
       }
 
       // Subtle dynamic rock banking tilt on fast horizontal motion while tip stays locked at (0,0)
-      targetTiltRef.current = Math.max(-14, Math.min(14, dx * 0.55));
+      targetTiltRef.current = morphRef.current ? Math.max(-14, Math.min(14, dx * 0.55)) : 0;
       prevTargetPos.current.x = tx;
       prevTargetPos.current.y = ty;
 
@@ -319,7 +369,11 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
       if (badgeWrapRef.current) {
         badgeWrapRef.current.style.transform = `translate3d(${badgePos.current.x}px, ${badgePos.current.y}px, 0)`;
         badgeWrapRef.current.style.opacity =
-          isFinePointer && isVisibleRef.current && targetAlphaMultRef.current > 0.1
+          morphRef.current &&
+          isFinePointer &&
+          !isTouchSuppressingVisual &&
+          isVisibleRef.current &&
+          targetAlphaMultRef.current > 0.1
             ? '1'
             : '0';
       }
@@ -338,26 +392,42 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
       currentScaleRef.current += (desiredScale - currentScaleRef.current) * damp;
       currentEnergyRef.current += (desiredEnergy - currentEnergyRef.current) * damp;
       currentAlphaMultRef.current +=
-        ((isFinePointer ? targetAlphaMultRef.current : 0) - currentAlphaMultRef.current) * damp;
+        ((isFinePointer && !isTouchSuppressingVisual ? targetAlphaMultRef.current : 0) -
+          currentAlphaMultRef.current) *
+        damp;
 
       const sc = currentScaleRef.current;
       const asteroidScale = sc * 1.24;
 
-      const shouldDrawAsteroid =
-        isFinePointer && isVisibleRef.current && currentAlphaMultRef.current > 0.02;
+      const shouldDrawCursor =
+        isFinePointer &&
+        !isTouchSuppressingVisual &&
+        isVisibleRef.current &&
+        currentAlphaMultRef.current > 0.02;
 
       const hasPulses = clickPulses.length > 0;
+      const isTextCaret = isTextInputRef.current;
       const isSettled =
         !hasPulses &&
         !isPointerPressed &&
         !isBoosting &&
+        !isTextCaret &&
+        morphRef.current === needsResetPosRef.current &&
         Math.abs(tx - cursorPos.current.x) < 0.15 &&
         Math.abs(ty - cursorPos.current.y) < 0.15 &&
         Math.abs(targetTiltRef.current - tiltAngleRef.current) < 0.08 &&
         Math.abs(desiredScale - currentScaleRef.current) < 0.004 &&
-        Math.abs((isFinePointer ? targetAlphaMultRef.current : 0) - currentAlphaMultRef.current) < 0.004;
+        Math.abs(
+          (isFinePointer && !isTouchSuppressingVisual ? targetAlphaMultRef.current : 0) -
+            currentAlphaMultRef.current
+        ) < 0.004;
 
-      // Skip redundant 2D canvas repaints when pointer is completely stationary (e.g. during wheel scrolling)
+      if (morphRef.current !== needsResetPosRef.current) {
+        needsResetPosRef.current = morphRef.current;
+        needsFullClear = true;
+      }
+
+      // Skip redundant 2D canvas repaints when pointer is completely stationary
       if (!isSettled || needsFullClear || !prevDrawRect) {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         if (needsFullClear || hasPulses || !prevDrawRect) {
@@ -426,28 +496,36 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
             maxY = Math.max(maxY, pulse.y + outerR + 8);
             drewAnything = true;
           }
-          // Ensure clean sweep on the frame right after pulses finish
           if (clickPulses.length === 0) {
             needsFullClear = true;
           }
         }
 
-        if (shouldDrawAsteroid) {
+        if (shouldDrawCursor) {
           const rx = cursorPos.current.x;
           const ry = cursorPos.current.y;
 
           ctx.save();
           ctx.translate(rx, ry);
-          ctx.rotate((tiltAngleRef.current * Math.PI) / 180);
-
-          drawRealAsteroid(
-            ctx,
-            asteroidScale,
-            currentEnergyRef.current,
-            currentAlphaMultRef.current,
-            timeSec,
-            hoverGlowRef.current
-          );
+          if (morphRef.current) {
+            ctx.rotate((tiltAngleRef.current * Math.PI) / 180);
+            drawRealAsteroid(
+              ctx,
+              asteroidScale,
+              currentEnergyRef.current,
+              currentAlphaMultRef.current,
+              timeSec,
+              hoverGlowRef.current,
+              isTextInputRef.current
+            );
+          } else {
+            drawCosmicReticle(
+              ctx,
+              currentAlphaMultRef.current,
+              timeSec,
+              hoverGlowRef.current
+            );
+          }
           ctx.restore();
 
           ctx.globalAlpha = 1;
@@ -484,10 +562,12 @@ export const CustomCursor: React.FC<CustomCursorProps> = ({
       unsubscribe();
       finePointerQuery.removeEventListener('change', handlePointerMediaChange);
       anyFineQuery.removeEventListener('change', handlePointerMediaChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('resize', resizeCanvas);
       window.removeEventListener('orientationchange', resizeCanvas);
       window.removeEventListener('mouseenter', handlePointerEnter);
       window.removeEventListener('mouseleave', handlePointerLeave);
+      window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('pointermove', handleRawPointerMove);
       window.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointerup', handlePointerUp);

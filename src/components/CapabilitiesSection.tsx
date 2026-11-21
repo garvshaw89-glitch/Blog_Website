@@ -140,18 +140,20 @@ export const CapabilitiesSection: React.FC<CapabilitiesSectionProps> = ({
           {CAPABILITIES.map((item, idx) => {
             const isSelected = hoveredIndex === idx;
             return (
-              <div
+              <button
                 key={item.number}
+                type="button"
                 onMouseEnter={() => setHoveredIndex(idx)}
                 onClick={() => setHoveredIndex(idx)}
+                aria-expanded={isSelected}
                 data-cursor="button"
                 data-cursor-label="EXPLORE"
-                className={`py-6 sm:py-7 transition-all duration-300 cursor-pointer flex flex-col group ${
-                  isSelected ? 'pl-3 sm:pl-5' : 'hover:pl-2 opacity-60 hover:opacity-100'
+                className={`w-full text-left py-5 sm:py-6 min-h-[56px] transition-all duration-300 cursor-pointer flex flex-col group ${
+                  isSelected ? 'pl-2.5 sm:pl-5' : 'hover:pl-2 opacity-65 hover:opacity-100'
                 }`}
               >
                 <div className="flex items-center justify-between w-full">
-                  <div className="flex items-baseline gap-4 sm:gap-5">
+                  <div className="flex items-baseline gap-3.5 sm:gap-5">
                     <span
                       className="font-mono text-xs tabular-nums transition-colors"
                       style={{ color: isSelected ? item.visualTheme : '#626A73' }}
@@ -159,7 +161,7 @@ export const CapabilitiesSection: React.FC<CapabilitiesSectionProps> = ({
                       {item.number}
                     </span>
                     <h3
-                      className={`font-editorial text-2xl sm:text-4xl font-bold uppercase tracking-tight transition-colors ${
+                      className={`font-editorial text-xl sm:text-4xl font-bold uppercase tracking-tight transition-colors ${
                         isSelected ? 'text-[#F2F3F5]' : 'text-[#A7ADB5] group-hover:text-white'
                       }`}
                     >
@@ -178,21 +180,43 @@ export const CapabilitiesSection: React.FC<CapabilitiesSectionProps> = ({
                 </div>
 
                 {isSelected && (
-                  <motion.p
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="font-mono text-xs tracking-wider mt-2.5"
-                    style={{ color: item.visualTheme }}
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.22 }}
+                    className="mt-2.5 space-y-3"
                   >
-                    {item.tagline}
-                  </motion.p>
+                    <p
+                      className="font-mono text-xs tracking-wider"
+                      style={{ color: item.visualTheme }}
+                    >
+                      {item.tagline}
+                    </p>
+
+                    {/* Inline spec summary visible on mobile/tablet so users don't have to scroll past all rows */}
+                    <div className="lg:hidden pt-2 border-t border-white/[0.06] space-y-2.5">
+                      <p className="font-sans text-xs text-[#A7ADB5] leading-relaxed font-light">
+                        {item.description}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {item.technologies.slice(0, 4).map((tech) => (
+                          <span
+                            key={tech}
+                            className="px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.09] font-mono text-[10px] text-[#D5D9DF]"
+                          >
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
-              </div>
+              </button>
             );
           })}
         </div>
 
-        {/* Right Column: Precision Specification Inspector */}
+        {/* Right Column: Precision Specification Inspector (desktop sticky + tablet/mobile full overview) */}
         <div className="lg:col-span-5 lg:sticky lg:top-24">
           <AnimatePresence mode="wait">
             <motion.div

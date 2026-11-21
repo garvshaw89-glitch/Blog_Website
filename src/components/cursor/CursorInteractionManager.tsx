@@ -63,14 +63,14 @@ export class CursorInteractionController {
 
     if (overText) {
       return {
-        mode: 'text-restore',
+        mode: isClickActive ? 'click' : 'hover',
         cursorType: 'text',
-        labelText: '',
-        targetScale: 0.78,
-        targetThrust: 0.5,
-        targetAlphaMult: 0,
-        restoreNativeCursor: true,
-        hoverGlow: 0,
+        labelText: 'TYPE',
+        targetScale: 0.94,
+        targetThrust: 0.85,
+        targetAlphaMult: 1,
+        restoreNativeCursor: false,
+        hoverGlow: 0.65,
       };
     }
 
@@ -349,8 +349,8 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
           { x: clientX, y: clientY, id: trailIdRef.current },
           ...prevPts.slice(0, 7),
         ]);
-      } else if (speed < 1.2 && trailPoints.length > 0) {
-        setTrailPoints([]);
+      } else if (speed < 1.2) {
+        setTrailPoints((prevPts) => (prevPts.length > 0 ? [] : prevPts));
       }
 
       // 2. Micro-particles burst on quick flick (speed > 4.5)
@@ -525,7 +525,6 @@ export const CursorInteractionManager: React.FC<CursorInteractionManagerProps> =
     setIsPointerDown,
     setIsVisible,
     setIsTouchDevice,
-    trailPoints.length,
     magneticStrength,
   ]);
 

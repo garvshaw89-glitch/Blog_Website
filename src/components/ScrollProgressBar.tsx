@@ -15,7 +15,7 @@ export const ScrollProgressBar: React.FC = () => {
     <aside
       aria-label="Reading and scroll progress indicator"
       aria-hidden="true"
-      className="fixed top-0 left-0 right-0 h-[3px] z-[100] pointer-events-none select-none bg-cyan-950/25 backdrop-blur-[1px]"
+      className="fixed top-0 left-0 right-0 h-[3px] z-[100] pointer-events-none select-none bg-cyan-950/35"
     >
       <motion.div
         style={{ scaleX, transformOrigin: '0%' }}

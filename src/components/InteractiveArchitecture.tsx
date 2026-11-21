@@ -158,7 +158,7 @@ export const InteractiveArchitecture: React.FC<InteractiveArchitectureProps> = (
         </div>
 
         {/* Visual Pipeline Flow Diagram */}
-        <div className="p-4 sm:p-6 md:p-8 rounded-3xl bg-[#070D18]/90 border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] backdrop-blur-xl mb-8">
+        <div className="p-4 sm:p-6 md:p-8 rounded-3xl bg-[#070D18]/96 border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.8)] mb-8">
           {/* Desktop Horizontal Flow / Mobile Vertical Flow */}
           <div className="flex flex-col lg:flex-row items-center justify-between gap-3 lg:gap-2 overflow-x-auto py-2">
             {ARCH_NODES.map((node, index) => {
@@ -210,7 +210,7 @@ export const InteractiveArchitecture: React.FC<InteractiveArchitectureProps> = (
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.2 }}
-            className="p-6 sm:p-8 rounded-3xl bg-[#090E17]/90 border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+            className="p-6 sm:p-8 rounded-3xl bg-[#090E17]/96 border border-cyan-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
           >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* Left Column: Purpose & Tech */}

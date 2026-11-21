@@ -328,19 +328,24 @@ export function AnimatedTopDock({ className = "", ...props }: AnimatedTopDockPro
                 ✦ PORTAL
               </button>
             )}
-            <button
-              className="atd-modern__ghost cursor-pointer"
-              type="button"
-              onClick={() => {
-                if (props.onResumeClick) {
-                  props.onResumeClick();
-                } else {
-                  window.open("https://linkedin.com/in/garvshaw", "_blank", "noopener,noreferrer");
-                }
-              }}
-            >
-              Resume
-            </button>
+            {props.onResumeClick ? (
+              <button
+                className="atd-modern__ghost cursor-pointer"
+                type="button"
+                onClick={props.onResumeClick}
+              >
+                Resume
+              </button>
+            ) : (
+              <a
+                className="atd-modern__ghost cursor-pointer"
+                href="https://linkedin.com/in/garv-shaw-08a33237b"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Resume
+              </a>
+            )}
             <button
               className="atd-modern__cta cursor-pointer"
               type="button"

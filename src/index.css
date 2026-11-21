@@ -56,6 +56,12 @@
     }
   }
 
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   /* Headings & Displays use Space Grotesk / Syne editorial font */
   h1, h2, h3, .font-display {
     font-family: 'Space Grotesk', 'Kanit', sans-serif;
@@ -81,18 +87,23 @@
   }
 }
 
-/* Unlayered Custom Cursor Override: beats Tailwind @layer utilities (.cursor-pointer, etc.) on all descendants */
+/* Unlayered Custom Cursor Override: guarantees OS default cursor NEVER leaks anywhere */
 html.custom-cursor-enabled,
 html.custom-cursor-enabled *,
 html.custom-cursor-enabled *::before,
-html.custom-cursor-enabled *::after {
-  cursor: none !important;
-}
-
-html.custom-cursor-enabled input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.custom-cursor-enabled *::after,
+html.custom-cursor-enabled a,
+html.custom-cursor-enabled button,
+html.custom-cursor-enabled [role="button"],
+html.custom-cursor-enabled label,
+html.custom-cursor-enabled select,
+html.custom-cursor-enabled option,
+html.custom-cursor-enabled canvas,
+html.custom-cursor-enabled svg,
+html.custom-cursor-enabled input,
 html.custom-cursor-enabled textarea,
 html.custom-cursor-enabled [contenteditable="true"] {
-  cursor: text !important;
+  cursor: none !important;
 }
 
 /* Gradient typography utilities */

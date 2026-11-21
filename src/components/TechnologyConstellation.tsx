@@ -200,7 +200,7 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
       {/* Balanced Compact Visual Graph & Inspector Split */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
         {/* Interactive Topology Field (7 cols) */}
-        <div className="lg:col-span-7 relative h-[350px] sm:h-[400px] rounded-2xl bg-[#070A10]/90 border border-white/[0.09] p-3.5 sm:p-5 overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex flex-col justify-between">
+        <div className="lg:col-span-7 relative h-[380px] sm:h-[420px] rounded-2xl bg-[#070A10]/92 border border-white/[0.09] p-4 sm:p-5 overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex flex-col justify-between">
           {/* Dynamic Radial Focus Glow Anchored to Active Node */}
           <div
             aria-hidden="true"
@@ -482,7 +482,8 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
                         key={neighbor.id}
                         type="button"
                         onClick={() => setSelectedId(neighbor.id)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.04] border border-white/10 hover:border-sky-400/50 hover:text-white text-[#D5D9DF] font-mono text-[10px] whitespace-nowrap shrink-0 transition-colors cursor-pointer"
+                        data-cursor="button"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 min-h-[36px] rounded-md bg-white/[0.04] border border-white/10 hover:border-sky-400/50 hover:text-white text-[#D5D9DF] font-mono text-[10px] whitespace-nowrap shrink-0 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
                       >
                         <span style={{ color: getCategoryAccent(neighbor.category) }}>
                           {getNodeIcon(neighbor.category, 'w-3 h-3')}
@@ -503,7 +504,8 @@ export const TechnologyConstellation: React.FC<TechnologyConstellationProps> = (
                     <a
                       key={project}
                       href="#projects"
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/10 hover:border-sky-400/60 hover:text-sky-300 text-[#E2E6EC] font-mono text-[10px] whitespace-nowrap shrink-0 transition-colors"
+                      data-cursor="link"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 min-h-[36px] rounded-md bg-white/[0.04] border border-white/10 hover:border-sky-400/60 hover:text-sky-300 text-[#E2E6EC] font-mono text-[10px] whitespace-nowrap shrink-0 transition-colors"
                     >
                       <span>{project}</span>
                       <ArrowUpRight className="w-3 h-3 text-sky-400" />

@@ -269,7 +269,7 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
         {/* Left/Main Orbital Topology Canvas (8 cols) */}
         <div
           ref={canvasContainerRef}
-          className="lg:col-span-8 relative min-h-[420px] sm:min-h-[500px] md:min-h-[560px] rounded-3xl bg-[#070A10]/88 border border-white/[0.09] p-4 sm:p-6 overflow-hidden shadow-[0_24px_70px_rgba(0,0,0,0.82)]"
+          className="lg:col-span-8 relative min-h-[380px] sm:min-h-[500px] md:min-h-[560px] rounded-3xl bg-[#070A10]/90 border border-white/[0.09] p-4 sm:p-6 overflow-hidden shadow-[0_24px_70px_rgba(0,0,0,0.82)]"
         >
           {/* Three.js 3D Biological Double-Helix Particle Field Reactive to Mouse Proximity */}
           <DigitalDnaThreeCanvas
@@ -384,7 +384,7 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
               >
                 {isCenter ? (
                   <div
-                    className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all duration-300 ${
+                    className={`relative w-16 h-16 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all duration-300 ${
                       isActive
                         ? 'bg-[#0C1422] border-2 border-cyan-300/80 shadow-[0_0_40px_rgba(56,189,248,0.38)]'
                         : 'bg-[#0A0E17]/95 border border-white/25 group-hover:border-cyan-300/60 shadow-[0_0_25px_rgba(0,0,0,0.85)]'
@@ -396,17 +396,17 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
                     />
                     {getNodeIcon(
                       node.id,
-                      `w-4 h-4 mb-1 transition-colors ${
+                      `w-4 h-4 mb-0.5 sm:mb-1 transition-colors ${
                         isActive ? 'text-cyan-300' : 'text-[#7EA7FF]'
                       }`
                     )}
-                    <span className="font-editorial text-[11px] sm:text-xs font-bold tracking-wider text-[#F2F3F5]">
+                    <span className="font-editorial text-[10px] sm:text-xs font-bold tracking-wider text-[#F2F3F5]">
                       {node.label}
                     </span>
                   </div>
                 ) : (
                   <div
-                    className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                    className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 ${
                       isActive
                         ? 'bg-cyan-400 text-[#050608] border border-cyan-200 shadow-[0_0_28px_rgba(56,189,248,0.55)]'
                         : isConnected
@@ -427,10 +427,10 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
                   </div>
                 )}
 
-                <div className="mt-1.5 flex flex-col items-center text-center pointer-events-none">
+                <div className="mt-1 sm:mt-1.5 flex flex-col items-center text-center pointer-events-none">
                   {!isCenter && (
                     <span
-                      className={`font-editorial text-[11px] sm:text-xs font-bold tracking-wider uppercase whitespace-nowrap transition-colors ${
+                      className={`font-editorial text-[10px] sm:text-xs font-bold tracking-wider uppercase whitespace-nowrap transition-colors ${
                         isActive
                           ? 'text-cyan-300'
                           : isConnected
@@ -441,7 +441,7 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
                       {node.label}
                     </span>
                   )}
-                  <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-[#626A73] whitespace-nowrap">
+                  <span className="hidden sm:block font-mono text-[9px] uppercase tracking-[0.18em] text-[#626A73] whitespace-nowrap">
                     {node.category}
                   </span>
                 </div>
@@ -527,7 +527,7 @@ export const DigitalDnaSection: React.FC<DigitalDnaSectionProps> = ({
                       type="button"
                       onClick={() => setActiveNodeId(cn.id)}
                       data-cursor="button"
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-cyan-400/15 border border-white/[0.08] hover:border-cyan-400/40 font-mono text-[11px] text-[#A7ADB5] hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                      className="inline-flex items-center gap-1 px-3 py-2 min-h-[38px] rounded-lg bg-white/[0.04] hover:bg-cyan-400/15 border border-white/[0.08] hover:border-cyan-400/40 font-mono text-[11px] text-[#A7ADB5] hover:text-cyan-300 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     >
                       <span>{cn.label}</span>
                       <ArrowUpRight className="w-3 h-3 opacity-70" />

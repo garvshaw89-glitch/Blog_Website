@@ -77,7 +77,7 @@ export const EasterEggToast: React.FC = () => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -30, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-          className="fixed top-6 right-6 z-[250] max-w-sm sm:max-w-md p-4 rounded-2xl bg-[#090E17]/95 border border-cyan-400 shadow-[0_20px_50px_rgba(6,182,212,0.45),0_0_30px_rgba(6,182,212,0.25)] backdrop-blur-2xl flex items-start gap-3.5 text-[#D7E2EA] pointer-events-auto"
+          className="fixed top-6 right-6 z-[250] max-w-sm sm:max-w-md p-4 rounded-2xl bg-[#090E17] border border-cyan-400/70 shadow-[0_20px_50px_rgba(6,182,212,0.35),0_0_25px_rgba(6,182,212,0.2)] flex items-start gap-3.5 text-[#D7E2EA] pointer-events-auto"
         >
           <div className="p-2.5 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.4)]">
             <Terminal className="w-5 h-5" />
@@ -85,10 +85,7 @@ export const EasterEggToast: React.FC = () => {
 
           <div className="flex-1 min-w-0 pt-0.5">
             <div className="flex items-center gap-2 mb-1">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
-              </span>
+              <span className="inline-flex rounded-full h-2 w-2 bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
               <span className="font-mono text-[10px] uppercase tracking-wider text-cyan-400 font-bold">
                 KERNEL OVERRIDE // 0x7F
               </span>

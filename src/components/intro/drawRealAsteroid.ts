@@ -210,13 +210,50 @@ function getBakedRockCursorSprite(): HTMLCanvasElement {
   return canvas;
 }
 
+export function drawCosmicReticle(
+  ctx: CanvasRenderingContext2D,
+  alpha: number,
+  elapsed: number,
+  hoverGlow = 0
+): void {
+  if (alpha <= 0.01) return;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  const pulse = 1 + Math.sin(elapsed * 3.5) * 0.08;
+  const rOuter = (hoverGlow > 0.2 ? 9.5 : 7.5) * pulse;
+
+  const grad = ctx.createRadialGradient(0, 0, 1, 0, 0, rOuter * 1.9);
+  grad.addColorStop(0, hoverGlow > 0.2 ? 'rgba(125, 211, 252, 0.38)' : 'rgba(226, 232, 240, 0.24)');
+  grad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(0, 0, rOuter * 1.9, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = hoverGlow > 0.2 ? 'rgba(125, 211, 252, 0.78)' : 'rgba(226, 232, 240, 0.45)';
+  ctx.lineWidth = 1.05;
+  ctx.beginPath();
+  ctx.arc(0, 0, rOuter, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = '#f8fafc';
+  ctx.beginPath();
+  ctx.arc(0, 0, 1.9, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
 export function drawRealAsteroid(
   ctx: CanvasRenderingContext2D,
   scale: number,
   energyGlow: number,
   alpha: number,
   elapsed: number,
-  hoverGlow = 0
+  hoverGlow = 0,
+  isTextInput = false
 ): void {
   if (alpha <= 0.005 || scale <= 0.01) return;
 
@@ -230,7 +267,7 @@ export function drawRealAsteroid(
   const auraStrength = Math.min(1, Math.max(energyGlow * 0.5, hoverGlow * 0.92));
   if (auraStrength > 0.05) {
     const auraGrad = ctx.createRadialGradient(11, 11, 2, 11, 11, 17);
-    if (hoverGlow > energyGlow * 0.65) {
+    if (hoverGlow > energyGlow * 0.65 || isTextInput) {
       auraGrad.addColorStop(0, `rgba(56, 189, 248, ${0.34 * auraStrength})`);
       auraGrad.addColorStop(0.55, `rgba(14, 165, 233, ${0.14 * auraStrength})`);
       auraGrad.addColorStop(1, 'rgba(14, 165, 233, 0)');
@@ -254,7 +291,7 @@ export function drawRealAsteroid(
     Math.max(0.14, energyGlow * 0.42 + hoverGlow * 0.6 + 0.08 * Math.sin(elapsed * 4.5))
   );
   ctx.strokeStyle =
-    hoverGlow > 0.35
+    hoverGlow > 0.35 || isTextInput
       ? `rgba(125, 211, 252, ${fissureAlpha})`
       : `rgba(251, 146, 60, ${fissureAlpha * 0.8})`;
   ctx.lineWidth = 0.48;
@@ -269,10 +306,26 @@ export function drawRealAsteroid(
   ctx.stroke();
 
   // Sharp pointer tip pinpoint highlight at (0, 0)
-  ctx.fillStyle = hoverGlow > 0.3 ? '#7dd3fc' : '#f8fafc';
+  ctx.fillStyle = hoverGlow > 0.3 || isTextInput ? '#7dd3fc' : '#f8fafc';
   ctx.beginPath();
   ctx.arc(0.45, 0.45, 0.85, 0, Math.PI * 2);
   ctx.fill();
+
+  // Optional sleek cyan precision text caret accent when hovering inputs/textareas
+  if (isTextInput) {
+    const blink = 0.55 + 0.45 * Math.sin(elapsed * 5.2);
+    ctx.strokeStyle = `rgba(125, 211, 252, ${blink.toFixed(2)})`;
+    ctx.lineWidth = 1.05;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-2.5, -5.5);
+    ctx.lineTo(2.5, -5.5);
+    ctx.moveTo(0, -5.5);
+    ctx.lineTo(0, 6.5);
+    ctx.moveTo(-2.5, 6.5);
+    ctx.lineTo(2.5, 6.5);
+    ctx.stroke();
+  }
 
   ctx.restore();
 }

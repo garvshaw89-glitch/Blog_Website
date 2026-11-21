@@ -122,8 +122,8 @@ export default function App() {
         {/* 1. Thin Animated Scroll Tracker */}
         <ScrollProgressBar />
 
-        {/* 2. Desktop Sculpted Asteroid Cursor transformed from Entry Crash */}
-        <AsteroidCursor enabled={isRocketCursorActive} />
+        {/* 2. Desktop Sculpted Asteroid Cursor (cosmic reticle in intro -> asteroid on crash) */}
+        <AsteroidCursor enabled={true} morphToAsteroid={isRocketCursorActive} />
 
         {/* 3. Global Command Palette (Cmd + K) */}
         <CommandPalette
@@ -240,7 +240,11 @@ export default function App() {
         </div>
 
         {/* Full-Screen Project Case Study Modal */}
-        <ProjectModal project={selectedProject} onClose={handleCloseProject} />
+        <ProjectModal
+          project={selectedProject}
+          onClose={handleCloseProject}
+          onSelectProject={handleSelectProject}
+        />
       </main>
     </CursorProvider>
   );

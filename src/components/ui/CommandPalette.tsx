@@ -15,13 +15,18 @@ import {
   Compass,
   FileCode,
   Rocket,
+  BookOpen,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { interactionEngine } from '../../context/SingularityInteractionEngine';
+import { PROJECTS } from '../../data/portfolioData';
 
 interface CommandItem {
   id: string;
   title: string;
-  category: 'Navigation' | 'Lab' | 'Social' | 'System';
+  keywords?: string;
+  category: 'Project' | 'Navigation' | 'Lab' | 'Social' | 'System';
   shortcut?: string;
   icon: React.ReactNode;
   action: () => void;
@@ -33,12 +38,26 @@ interface CommandPaletteProps {
   onOpenProjectModal?: (projectId: string) => void;
 }
 
+function openExternalViaAnchor(url: string) {
+  if (typeof document === 'undefined') return;
+  const link = document.createElement('a');
+  link.href = url;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
   isOpen,
   onClose,
+  onOpenProjectModal,
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollTo = (id: string) => {
@@ -51,10 +70,39 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     }, 150);
   };
 
+  const copyText = (text: string, label: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setStatusFeedback(`Copied ${label}`);
+      window.setTimeout(() => {
+        setStatusFeedback(null);
+        onClose();
+      }, 650);
+    }
+  };
+
+  const projectCommands: CommandItem[] = PROJECTS.map((proj) => ({
+    id: `proj-${proj.id}`,
+    title: `Open Case Study: ${proj.title} (${proj.category})`,
+    keywords: `${proj.title} ${proj.category} ${proj.tags.join(' ')}`,
+    category: 'Project',
+    shortcut: proj.number,
+    icon: <BookOpen className="w-4 h-4 text-sky-400" />,
+    action: () => {
+      onClose();
+      if (onOpenProjectModal) {
+        setTimeout(() => onOpenProjectModal(proj.id), 100);
+      } else {
+        scrollTo('projects');
+      }
+    },
+  }));
+
   const commands: CommandItem[] = [
+    ...projectCommands,
     {
       id: 'nav-work',
-      title: 'View Selected Projects',
+      title: 'View Selected Projects Showcase',
       category: 'Navigation',
       shortcut: '↵ 01',
       icon: <FolderGit2 className="w-4 h-4 text-cyan-400" />,
@@ -62,7 +110,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: 'nav-lab',
-      title: 'Open AI Engineering Lab & Assistant',
+      title: 'Open AI Engineering Lab (TF-IDF RAG & Agent Traces)',
+      keywords: 'rag cosine vector agent gemini',
       category: 'Lab',
       shortcut: '↵ 02',
       icon: <Sparkles className="w-4 h-4 text-cyan-400" />,
@@ -115,10 +164,26 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
     {
       id: 'nav-github-stats',
-      title: 'Inspect Live GitHub Telemetry',
+      title: 'Inspect Live GitHub Telemetry & Repositories',
       category: 'System',
       icon: <Github className="w-4 h-4 text-slate-300" />,
       action: () => scrollTo('github-telemetry'),
+    },
+    {
+      id: 'action-copy-email',
+      title: 'Copy Email Address (garvshawinfo@gmail.com)',
+      keywords: 'clipboard email contact',
+      category: 'System',
+      icon: <Copy className="w-4 h-4 text-emerald-400" />,
+      action: () => copyText('garvshawinfo@gmail.com', 'email address'),
+    },
+    {
+      id: 'action-copy-github',
+      title: 'Copy GitHub Handle (@garvshaw89-glitch)',
+      keywords: 'clipboard username github',
+      category: 'System',
+      icon: <Copy className="w-4 h-4 text-sky-400" />,
+      action: () => copyText('@garvshaw89-glitch', 'GitHub handle'),
     },
     {
       id: 'action-contact',
@@ -133,7 +198,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       category: 'Social',
       icon: <ExternalLink className="w-4 h-4 text-slate-400" />,
       action: () => {
-        window.open('https://github.com/garvshaw89-glitch', '_blank', 'noopener,noreferrer');
+        openExternalViaAnchor('https://github.com/garvshaw89-glitch');
         onClose();
       },
     },
@@ -143,13 +208,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       category: 'Social',
       icon: <Linkedin className="w-4 h-4 text-blue-400" />,
       action: () => {
-        window.open('https://linkedin.com/in/garv-shaw-08a33237b', '_blank', 'noopener,noreferrer');
+        openExternalViaAnchor('https://linkedin.com/in/garv-shaw-08a33237b');
         onClose();
       },
     },
     {
       id: 'action-launch-rocket',
-      title: 'Ignite Rocket Particle Launch Effect',
+      title: 'Ignite Particle Launch Burst Effect',
       category: 'System',
       shortcut: 'R',
       icon: <Rocket className="w-4 h-4 text-amber-400" />,
@@ -160,35 +225,27 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     },
   ];
 
-  const filtered = commands.filter((cmd) =>
-    cmd.title.toLowerCase().includes(query.toLowerCase()) ||
-    cmd.category.toLowerCase().includes(query.toLowerCase())
+  const q = query.toLowerCase().trim();
+  const filtered = commands.filter(
+    (cmd) =>
+      cmd.title.toLowerCase().includes(q) ||
+      cmd.category.toLowerCase().includes(q) ||
+      (cmd.keywords && cmd.keywords.toLowerCase().includes(q))
   );
 
   useEffect(() => {
     if (isOpen) {
       setQuery('');
       setSelectedIndex(0);
+      setStatusFeedback(null);
       setTimeout(() => inputRef.current?.focus(), 60);
     }
   }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Toggle palette with Cmd+K or Ctrl+K
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        if (isOpen) onClose();
-        else {
-          // Open palette
-          const btn = document.getElementById('cmd-palette-trigger');
-          btn?.click();
-        }
-        return;
-      }
-
-      if (!isOpen) return;
-
       if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
@@ -197,7 +254,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         setSelectedIndex((prev) => (prev + 1) % (filtered.length || 1));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setSelectedIndex((prev) => (prev - 1 + filtered.length) % (filtered.length || 1));
+        setSelectedIndex((prev) => (prev - 1 + (filtered.length || 1)) % (filtered.length || 1));
       } else if (e.key === 'Enter') {
         e.preventDefault();
         if (filtered[selectedIndex]) {
@@ -217,7 +274,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       <div
         id="command-palette-backdrop"
         onClick={onClose}
-        className="fixed inset-0 z-[200] flex items-start sm:items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md"
+        className="fixed inset-0 z-[200] flex items-start sm:items-center justify-center p-3 sm:p-6 bg-black/90"
       >
         <motion.div
           id="command-palette-dialog"
@@ -226,10 +283,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           exit={{ opacity: 0, scale: 0.96, y: -10 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-2xl bg-[#090E17]/95 border border-cyan-500/30 rounded-2xl sm:rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.9),0_0_40px_rgba(6,182,212,0.2)] backdrop-blur-2xl overflow-hidden mt-12 sm:mt-0"
+          className="relative w-full max-w-2xl bg-[#090E17] border border-cyan-500/30 rounded-2xl sm:rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.95),0_0_40px_rgba(6,182,212,0.18)] overflow-hidden mt-12 sm:mt-0"
         >
           {/* Top Search Bar */}
-          <div className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b border-white/10 bg-[#0c1320]/60">
+          <div className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b border-white/10 bg-[#0c1320]">
             <Search className="w-5 h-5 text-cyan-400 shrink-0" />
             <input
               ref={inputRef}
@@ -239,13 +296,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 setQuery(e.target.value);
                 setSelectedIndex(0);
               }}
-              placeholder="Search Garv's portfolio, systems, or projects... (ESC to exit)"
+              placeholder="Search projects, case studies, sections, or actions..."
               className="w-full bg-transparent text-sm sm:text-base text-slate-100 placeholder-slate-500 focus:outline-none font-sans"
             />
+            {statusFeedback && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-500/15 border border-emerald-400/30 text-[11px] font-mono text-emerald-300 shrink-0">
+                <Check className="w-3 h-3" />
+                {statusFeedback}
+              </span>
+            )}
             {query && (
               <button
+                type="button"
                 onClick={() => setQuery('')}
-                className="text-slate-400 hover:text-white p-1"
+                data-cursor="button"
+                aria-label="Clear search query"
+                className="text-slate-400 hover:text-white p-1.5 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -267,11 +333,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 return (
                   <button
                     key={item.id}
+                    type="button"
                     onClick={() => item.action()}
                     onMouseEnter={() => setSelectedIndex(index)}
-                    className={`w-full flex items-center justify-between px-3 sm:px-4 py-3 rounded-xl text-left transition-all duration-150 cursor-pointer ${
+                    data-cursor="button"
+                    className={`w-full min-h-[44px] flex items-center justify-between px-3 sm:px-4 py-2.5 rounded-xl text-left transition-all duration-150 cursor-pointer ${
                       isSelected
-                        ? 'bg-cyan-500/15 border border-cyan-500/40 text-white translate-x-1'
+                        ? 'bg-cyan-500/15 border border-cyan-500/40 text-white translate-x-0.5'
                         : 'text-slate-300 hover:bg-white/5 border border-transparent'
                     }`}
                   >
@@ -300,13 +368,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           </div>
 
           {/* Footer Navigation Hints */}
-          <div className="px-4 py-2.5 bg-black/40 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-slate-400">
+          <div className="px-4 py-2.5 bg-black/50 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-slate-400">
             <div className="flex items-center gap-3">
               <span>↑↓ Navigate</span>
               <span>↵ Execute</span>
               <span>ESC Close</span>
             </div>
-            <span className="text-cyan-400/90 font-medium">Garv Shaw • Engineering Suite</span>
+            <span className="text-cyan-400/90 font-medium">Garv Shaw · Engineering Suite</span>
           </div>
         </motion.div>
       </div>
