@@ -37,13 +37,21 @@ export const FooterSection: React.FC<FooterSectionProps> = ({ id = 'footer', onR
       <div className="max-w-7xl mx-auto flex flex-col justify-between gap-10">
         {/* Top Row */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-10 border-b border-white/[0.08]">
-          <div>
-            <h3 className="font-editorial text-3xl sm:text-4xl font-bold uppercase tracking-tight text-[#F2F3F5] mb-2">
-              GARV SHAW
-            </h3>
-            <p className="font-mono text-xs text-[#626A73] uppercase tracking-[0.2em]">
-              AI × CLOUD × SOFTWARE × DIGITAL PRODUCTS
-            </p>
+          <div className="flex items-center gap-4 sm:gap-5">
+            <img
+              src="/assets/aistudio/image_e833bace.png"
+              alt="Garv Shaw GS Crest"
+              loading="lazy"
+              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-amber-200/25 bg-black shrink-0 shadow-[0_0_24px_rgba(217,179,112,0.14)]"
+            />
+            <div>
+              <h3 className="font-editorial text-3xl sm:text-4xl font-bold uppercase tracking-tight text-[#F2F3F5] mb-1.5">
+                GARV SHAW
+              </h3>
+              <p className="font-mono text-xs text-[#626A73] uppercase tracking-[0.2em]">
+                AI × CLOUD × SOFTWARE × DIGITAL PRODUCTS
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
