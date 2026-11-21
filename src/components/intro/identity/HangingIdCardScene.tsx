@@ -1091,6 +1091,7 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
 
       const halfVisibleH = Math.tan(THREE.MathUtils.degToRad(35 * 0.5)) * baseCamZ;
       const halfVisibleW = halfVisibleH * camera.aspect;
+      const screenTopY = -0.34 + halfVisibleH;
       const isCorner = cornerModeRef.current;
 
       const targetRigScale = isCorner ? (camera.aspect < 0.72 ? 0.48 : 0.56) : 1.0;
@@ -1102,9 +1103,9 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
       const anchorNdcX = THREE.MathUtils.clamp((anchorScreenXRef.current / vw) * 2 - 1, -0.95, 0.95);
       let targetRigX = 0;
       if (isCorner) {
-        const rawWorldX = anchorNdcX * halfVisibleW + 0.12;
+        const rawWorldX = anchorNdcX * halfVisibleW;
         const cardHalfWWorld = (CARD_W * 0.5) * currentRigScale;
-        const minSafeX = -halfVisibleW + cardHalfWWorld + 0.18;
+        const minSafeX = -halfVisibleW + cardHalfWWorld + 0.14;
         targetRigX = Math.max(minSafeX, rawWorldX);
       }
       currentRigX += (targetRigX - currentRigX) * scaleDamp;
@@ -1117,16 +1118,18 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
           velX += 0.18;
           velY -= 0.24;
         }
-        const targetRetractY = isCorner ? halfVisibleH + 1.25 : 7.4;
+        // Place card bottom cleanly above screenTopY (cardBottomWorldY = dropY + PIVOT_Y - 7.24 * scale)
+        const cornerRetractY = screenTopY + 0.45 - (PIVOT_Y - 7.24 * currentRigScale);
+        const targetRetractY = isCorner ? cornerRetractY : 7.4;
         // Smooth upward spring-damped glide (reverses seamlessly if user re-enters near radius!)
-        const upK = isCorner ? 13.5 : 15.5;
-        const upC = isCorner ? 7.2 : 7.8;
+        const upK = isCorner ? 14.5 : 15.5;
+        const upC = isCorner ? 7.4 : 7.8;
         const upForce = upK * (targetRetractY - dropY) - upC * dropVel;
         dropVel += upForce * dt;
         dropY += dropVel * dt;
         dropGroup.position.y = dropY;
 
-        if (dropY >= targetRetractY - 0.18 && Math.abs(dropVel) < 0.14) {
+        if (dropY >= targetRetractY - 0.12 && Math.abs(dropVel) < 0.14) {
           dropY = targetRetractY;
           dropVel = 0;
           dropGroup.position.y = dropY;
@@ -1143,12 +1146,14 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
         }
       } else if (dropStarted) {
         retractTriggered = false;
-        const cornerRestY = halfVisibleH * (camera.aspect < 0.72 ? 0.34 : 0.38);
+        // Place card top clearly below the navbar under GARV SHAW (cardTopWorldY = dropY + PIVOT_Y - 4.64 * scale)
+        const desiredCardTopY = screenTopY - halfVisibleH * (camera.aspect < 0.72 ? 0.20 : 0.25);
+        const cornerRestY = desiredCardTopY - (PIVOT_Y - 4.64 * currentRigScale);
         const targetDropY = isCorner ? cornerRestY : 0;
 
         // Smooth gravity-weighted spring descent
-        const dropK = isCorner ? 15.0 : heroDropMode ? 22.0 : 14.5;
-        const dropC = isCorner ? 6.8 : heroDropMode ? 7.2 : 5.6;
+        const dropK = isCorner ? 16.0 : heroDropMode ? 22.0 : 14.5;
+        const dropC = isCorner ? 7.0 : heroDropMode ? 7.2 : 5.6;
         const dropForce = dropK * (targetDropY - dropY) - dropC * dropVel;
         dropVel += dropForce * dt;
         dropY += dropVel * dt;
@@ -1346,13 +1351,14 @@ export const HangingIdCardScene: React.FC<HangingIdCardSceneProps> = ({
             const cScale = camera.aspect < 0.72 ? 0.48 : 0.56;
             const cVw = container.clientWidth || window.innerWidth || 1280;
             const cAnchorNdc = THREE.MathUtils.clamp((anchorScreenXRef.current / cVw) * 2 - 1, -0.95, 0.95);
-            const rawX = cAnchorNdc * halfW + 0.12;
-            const minX = -halfW + (CARD_W * 0.5) * cScale + 0.18;
+            const rawX = cAnchorNdc * halfW;
+            const minX = -halfW + (CARD_W * 0.5) * cScale + 0.14;
             currentRigScale = cScale;
             currentRigX = Math.max(minX, rawX);
             pendulumPivot.scale.setScalar(currentRigScale);
             dropGroup.position.x = currentRigX;
-            dropY = halfH + 1.25;
+            const cScreenTopY = -0.34 + halfH;
+            dropY = cScreenTopY + 0.45 - (PIVOT_Y - 7.24 * cScale);
             dropVel = 0;
             dropGroup.position.y = dropY;
           }

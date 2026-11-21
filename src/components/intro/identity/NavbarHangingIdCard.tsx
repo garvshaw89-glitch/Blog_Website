@@ -217,6 +217,32 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
     return () => clearTimers();
   }, [entered, prefersReducedMotion, clearTimers, startThreeSecondHangCountdown, syncAnchorX]);
 
+  const lastPointerRef = useRef<{ x: number; y: number; active: boolean }>({
+    x: -9999,
+    y: -9999,
+    active: false,
+  });
+
+  // Track latest pointer coordinates so corner hover activates even if cursor is already parked near GARV SHAW
+  useEffect(() => {
+    if (!entered || prefersReducedMotion) return;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
+      lastPointerRef.current = { x: e.clientX, y: e.clientY, active: true };
+    };
+    const onLeave = () => {
+      lastPointerRef.current.active = false;
+    };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    document.addEventListener('mouseleave', onLeave, { passive: true });
+    window.addEventListener('blur', onLeave);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      document.removeEventListener('mouseleave', onLeave);
+      window.removeEventListener('blur', onLeave);
+    };
+  }, [entered, prefersReducedMotion]);
+
   // Near-radius cursor hover detector around top-left GARV SHAW corner once initial sequence finishes
   useEffect(() => {
     if (!entered || prefersReducedMotion || phase !== 'done') return;
@@ -229,27 +255,35 @@ export const NavbarHangingIdCard: React.FC<NavbarHangingIdCardProps> = ({
       return Math.hypot(dx, dy);
     };
 
-    const handlePointerMove = (e: PointerEvent) => {
-      if (e.pointerType === 'touch') return;
+    const evaluateProximity = (px: number, py: number) => {
       const anchorEl = anchorRef.current;
       if (!anchorEl) return;
 
       const rect = anchorEl.getBoundingClientRect();
-      const boxDist = getBoxDistance(e.clientX, e.clientY, rect);
+      const boxDist = getBoxDistance(px, py, rect);
 
       if (!isHoverPeekRef.current) {
         // Cursor enters near radius around GARV SHAW in the top-left corner -> start hanging smoothly
-        if (boxDist <= 90) {
+        if (boxDist <= 105) {
           setAnchorScreenX(rect.left + rect.width * 0.5);
           setIsHoverPeek(true);
         }
       } else {
         // Stay hanging while cursor stays near GARV SHAW (with smooth hysteresis);
         // as soon as cursor moves far away -> smoothly go up
-        if (boxDist > 155) {
+        if (boxDist > 175) {
           setIsHoverPeek(false);
         }
       }
+    };
+
+    if (lastPointerRef.current.active) {
+      evaluateProximity(lastPointerRef.current.x, lastPointerRef.current.y);
+    }
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return;
+      evaluateProximity(e.clientX, e.clientY);
     };
 
     const handleLeave = () => {
